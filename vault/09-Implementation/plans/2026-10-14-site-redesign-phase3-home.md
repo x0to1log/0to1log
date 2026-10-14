@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** done (2026-10-14) — 실행 결과는 문서 끝 참조.
+
 **Goal:** 홈 Hero를 V2 스타일(큰 제호 + 마침표, 모토, 호수 줄)로 다듬고, 그 아래에 "오늘의 1면"(머리기사 1건 + 같은 날 기사 1줄 + 오늘의 용어 1개)을 붙인다.
 
 **Architecture:**
@@ -739,3 +741,13 @@ git commit -m "feat: soft newsprint home hero with masthead, motto and issue lin
 - [ ] `ACTIVE_SPRINT.md`에 REDESIGN-P3 항목과 증거를 추가한다.
 - [ ] 이 계획 문서에 Status와 실행 결과를 추가한다.
 - [ ] 커밋: `docs: record redesign phase 3 home front page`
+
+
+---
+
+## 실행 결과 (2026-10-14)
+
+- 커밋: `23423a90` homeFront.js, `4fc2a107` 로더, `fc282cc9` 1면 컴포넌트, `8e9d9516` Hero V2, `82fc1d1c` 오늘의 용어 수정, `1fad2005` 위클리 라벨. 품질 리뷰 승인.
+- 검증: 전체 테스트 61 PASS / 23 FAIL(신규 실패 0), `npm run build` 에러 0, 브라우저 /ko/ 종이·다크 × 1280·375px, /en/ 문구.
+- **계획 대비 변경:** DB에 `is_favourite=true` 용어가 0개여서 즐겨찾기 60개 목록 대신 `발행 용어 개수(head) → termIndex(호수 % 개수) → range(i,i) 1행` 방식으로 바꿨다. `selectFrontPage`는 이제 선택된 `term`을 그대로 넘긴다. 머리기사 정렬에 `post_type` 보조 정렬을 추가했다.
+- **교훈:** 계획 단계에서 조건(즐겨찾기)에 맞는 실데이터가 있는지 확인하지 않았다. 단위 테스트는 통과했지만 화면이 비었다. 데이터 조건이 들어가는 기능은 계획 때 실제 행 수를 확인한다.

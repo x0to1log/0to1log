@@ -186,7 +186,7 @@ source: docs/04_Frontend_Spec.md
 
 - **헤더(공통):** 한 줄 — 제호 `0to1log` + 주황 마침표(`.site-brand-dot`), 섹션 메뉴(현재 메뉴 아래 4px 주황 점), 유틸리티 아이콘. 배경은 `--color-bg-primary`, 아래 경계는 점 줄(`.site-header::after`).
 - **푸터:** 위쪽 점 줄(`.site-footer::before`, 헤더와 같은 규칙), 제호 + 모토 "AI 뉴스와 용어를 기록하는 신문", 링크(대문자 없음), 저작권.
-- **큰 제호 + 모토:** 홈에서만 쓴다(실제 신문처럼 1면에만).
+- **큰 제호 + 모토:** 홈 Hero에서만 쓴다(실제 신문처럼 1면에만). 홈 Hero 아래에는 "오늘의 1면"(머리기사 + 오늘의 용어)이 붙는다. 컴포넌트는 `HomeSplitHero.astro`, `HomeFrontPage.astro`.
 - **호수(제N호):** `frontend/src/lib/issue.js` — `ISSUE_EPOCH = 2026-03-18`(첫 발행 뉴스, KST)부터 표시 날짜(KST)까지 일수 + 1. DB 조회 없음. `NewsprintShell` 키커에 표시하며, 기사 페이지는 발행일 기준 호수.
 
 ## Related
