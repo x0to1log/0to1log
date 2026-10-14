@@ -56,3 +56,22 @@ export function applyTheme(theme, env = defaultEnv()) {
   env.doc.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[theme]);
   try { env.storage.setItem(STORAGE_KEY, theme); } catch { /* ignore */ }
 }
+
+/**
+ * Inline <script is:inline> body for MainLayout and auth/callback.
+ * Runs before paint and again after every ViewTransitions swap.
+ * Generated from the constants above so theme names live in one place.
+ */
+export const THEME_BOOT_SCRIPT = `(function(){
+var T=${JSON.stringify(THEMES)},C=${JSON.stringify(THEME_COLORS)},S=${JSON.stringify(COLOR_SCHEMES)},L=${JSON.stringify(LEGACY_THEMES)},K=${JSON.stringify(STORAGE_KEY)};
+function boot(){
+  var s=null;try{s=localStorage.getItem(K);}catch(e){}
+  var t=T.indexOf(s)>=0?s:(Object.prototype.hasOwnProperty.call(L,s)?L[s]:null);
+  if(t&&t!==s){try{localStorage.setItem(K,t);}catch(e){}}
+  if(!t){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+  var d=document.documentElement;d.setAttribute('data-theme',t);d.style.colorScheme=S[t];
+  var m=document.querySelector('meta[name="theme-color"]');if(m){m.setAttribute('content',C[t]);}
+}
+boot();
+if(!window.__themeBootBound){window.__themeBootBound=true;document.addEventListener('astro:after-swap',boot);}
+})();`;
