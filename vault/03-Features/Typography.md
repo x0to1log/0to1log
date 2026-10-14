@@ -2,34 +2,21 @@
 
 > 폰트 시스템. 대상 파일: `frontend/src/styles/global.css`, `frontend/src/components/Head.astro`
 
-## 변경 전 (원본)
+## 현재 적용 중 (Soft Newsprint)
 
-| 역할 | 영문 | 한국어 | 비고 |
-|------|------|--------|------|
-| 마스트헤드 | Playfair Display | Noto Serif KR | |
-| 헤딩 | Playfair Display | Noto Serif KR | |
-| 본문/UI | Lora | Noto Serif KR | 전체 세리프 |
-| 블로그 마스트헤드 | Gowun Batang | Gowun Batang | 블로그 전용 |
-| 블로그 본문/UI | IBM Plex Sans | IBM Plex Sans KR | 블로그만 산세리프 |
-| 코드 | JetBrains Mono | D2Coding | |
+| 역할 | 폰트 | 토큰 | 비고 |
+|------|------|------|------|
+| 마스트헤드 / 로고 (0to1log) | Newsreader 500 | `--font-masthead` | 숫자는 lining-nums |
+| 헤딩 / 디스플레이 | Hahmlet 400/600/700 | `--font-heading`, `--font-display`, `--font-article-heading`, `--font-blog-heading`, `--font-blog-masthead` | |
+| 본문 / UI / 데크 | Pretendard 400-800 | `--font-body`, `--font-sans`, `--font-ui`, `--font-article-deck`, `--font-blog-body`, `--font-blog-ui` | 블로그도 동일 |
+| 코드 | JetBrains Mono (D2Coding 폴백) | `--font-code` | |
 
-## 변경 후 (현재 적용 중)
+- 영문·한글 모두 위 폰트로 처리 (Pretendard/Hahmlet가 한글 포함). Lora, Playfair Display, Gowun, Space Grotesk, Jost, NanumSquare는 사용하지 않는다.
+- 한글에는 이탤릭을 쓰지 않는다 (이탤릭 face 없음, faux italic 금지).
+- 헤딩은 `word-break: keep-all` + `text-wrap: balance`로 한글 단어가 중간에서 끊기지 않게 한다.
+- 드롭캡, 3px 이중 룰(현재 1px solid), 페이지 노이즈 질감, 대문자 스몰캡 kicker는 제거됨.
 
-| 역할 | 영문 | 한국어 | 비고 |
-|------|------|--------|------|
-| **로고 (0to1log)** | Playfair Display | - | 고정, 변경 불가 |
-| 마스트헤드 | Space Grotesk | NanumSquareExtraBold | |
-| 헤딩 | Space Grotesk | NanumSquare | |
-| 본문/UI | Jost | NanumSquare | |
-| 블로그 전체 | 위와 동일 | 위와 동일 | 통일 (별도 로드 제거) |
-| 코드 | JetBrains Mono | JetBrains Mono | |
-
-### 로딩 방식
-- 영문: Google Fonts (`<link>`)
-- 한국어: 네이버 CDN (`hangeul.pstatic.net/hangeul_static/css/nanum-square.css`)
-- CSP: `style-src`, `font-src` 에 `hangeul.pstatic.net` 허용
-
-## 테스트한 후보 폰트들
+## 테스트한 후보 폰트들 (과거 기록)
 
 ### 영문 본문/UI
 
@@ -38,15 +25,15 @@
 | Lora | 세리프 | 클래식, 올드 | 원본. 무겁고 올드한 느낌 |
 | Inter | 산세리프 | 깔끔, 모던, 무난 | 테스트함. 너무 무난 |
 | DM Sans | 산세리프 | 테크/AI, 모던 | 테스트함 |
-| **Jost** | 산세리프 | 기하학적, 세련 | **채택** |
+| **Jost** | 산세리프 | 기하학적, 세련 | 구 채택 (현재 미사용) |
 
 ### 영문 헤딩
 
 | 폰트 | 분류 | 느낌 | 결과 |
 |------|------|------|------|
-| Playfair Display | 세리프 | 뉴스, 클래식, 무게감 | 원본. 로고 전용으로 유지 |
+| Playfair Display | 세리프 | 뉴스, 클래식, 무게감 | 원본. 현재 미사용 |
 | Newsreader | 세리프 | 에디토리얼, 신뢰감 | 테스트함 |
-| **Space Grotesk** | 산세리프 | 테크, 독특한 캐릭터 | **채택** |
+| **Space Grotesk** | 산세리프 | 테크, 독특한 캐릭터 | 구 채택 (현재 미사용) |
 
 ### 한국어
 
@@ -60,7 +47,7 @@
 | Continuous | 둥근 | 독특, 부드러운 | 테스트함. 변화 체감 어려움 |
 | Galmuri9 | 픽셀/도트 | 레트로, 게임 | 테스트함. CDN 로딩 이슈 |
 | NanumSquareRound | 둥근 산세리프 | 친근, 부드러운 | 테스트함 (`font-experiments` 브랜치) |
-| **NanumSquare** | 산세리프 | 깔끔, 균형 | **채택** |
+| **NanumSquare** | 산세리프 | 깔끔, 균형 | 구 채택 (현재 미사용) |
 
 ## font-experiments 브랜치
 
@@ -74,7 +61,6 @@
 
 ## 디자인 결정 근거
 
-- **세리프 → 산세리프**: 원본이 전체 세리프라 무겁고 올드한 느낌. AI/테크 뉴스 사이트에 맞게 모던한 산세리프로 전환
-- **블로그 폰트 통일**: IBM Plex Sans 별도 로드 제거 → Google Fonts 요청 1회로 통합, 사이트 전체 일관성 확보
-- **로고 Playfair Display 고정**: 브랜드 아이덴티티 유지. `.site-brand-link`, `.admin-sidebar-logo`에 직접 지정
-- **한국어 NanumSquare**: 깔끔하고 균형 잡힌 산세리프. 네이버 CDN으로 안정적 로드
+- **세리프 헤딩 + 산세리프 본문**: 신문 느낌은 마스트헤드·헤딩에만 주고, 긴 글 가독성은 Pretendard가 맡는다.
+- **블로그 폰트 통일**: 블로그 전용 폰트 로드 없이 사이트 전체가 같은 3종(Newsreader, Hahmlet, Pretendard)을 쓴다.
+- **한글 이탤릭 금지**: 한글 이탤릭 face가 없어 합성 기울임이 깨져 보임.

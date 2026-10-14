@@ -71,6 +71,15 @@
 
 ## 🏆 스프린트 중 완료 (mid-sprint ship)
 
+### 사이트 리디자인 1단계(기반) — 2026-10-14
+
+> **계획:** [[2026-10-14-site-redesign-phase1-foundation]] / **설계:** [[2026-10-14-site-redesign-soft-newsprint-design]]
+> **commits:** `ffac2fb0..0448f82a` (main, 18개). `8e0c72a4`까지 push·배포됨, `0448f82a`는 로컬
+
+- [x] **REDESIGN-P1** — 테마 3종(light 종이 / white / dark, pink·midnight 폐기 + 저장값 마이그레이션, `src/lib/theme.js` 단일 소스) + 글꼴 체계(Newsreader / Hahmlet / Pretendard) + 레트로 장식 제거(드롭캡, 이중 룰, 노이즈, 대문자 kicker)
+  - **증거:** 전체 테스트 54 PASS / 23 FAIL (23개 전부 기준선의 기존 실패, 신규 실패 0), `npm run build` 에러 0, 브라우저 확인 (/ko/, /ko/news/, 뉴스 기사, 핸드북 용어, 블로그 글 x 3테마 + 375px 모바일), pink→light·midnight→dark 마이그레이션·토글 순환 확인, CSP 콘솔 에러 없음
+  - **후속:** 계획 문서 "실행 결과"의 후속 작업 목록 참조 (no-dropcap 클래스 제거, `.admin-*` faux italic, Pretendard 800 정리, `--color-cat-*` 삭제, 모바일 홈 히어로 제목 크기 → 2단계)
+
 ### News Pipeline v11 — Rubric v2 + Quality Gates + URL Plumbing — 2026-04-18 ~ 2026-04-21
 
 > **Journal:** [[2026-04-21-news-pipeline-v11]]

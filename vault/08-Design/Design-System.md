@@ -10,18 +10,18 @@ source: docs/04_Frontend_Spec.md
 
 # Design System
 
-0to1log의 3-테마 디자인 시스템. ==CSS Variable 토큰== 기반으로 Dark / Light / Midnight Blue 세 가지 무드를 하나의 브랜드 아래 통합한다. Surface Hierarchy로 깊이감을 표현하고, 일관된 타이포그래피와 간격 체계로 콘텐츠 가독성을 최우선으로 설계한다.
+0to1log의 3-테마 디자인 시스템. ==CSS Variable 토큰== 기반으로 Light(종이) / White / Dark 세 가지 무드를 하나의 브랜드 아래 통합한다. Surface Hierarchy로 깊이감을 표현하고, 일관된 타이포그래피와 간격 체계로 콘텐츠 가독성을 최우선으로 설계한다.
 
-## 3-Theme System
+## 3-Theme System (Soft Newsprint)
 
 | 테마 | 셀렉터 | 컨셉 | `--bg-primary` | `--bg-secondary` | `--text-primary` | `--text-secondary` | `--accent` | `--border` |
 |---|---|---|---|---|---|---|---|---|
-| **Dark** (기본) | `[data-theme="dark"]` | Cyberpunk Neon Pink | `#0f0f0f` | `#1a1a1a` | `#f5f5f5` | `#a0a0a0` | `#ff2d78` | `#2a2a2a` |
-| **Light** | `[data-theme="light"]` | Soft Pink Editorial | `#FFFDF9` | `#F5ECCD` | `#2D2024` | `#6B5460` | `#D94070` | `#F0DDD5` |
-| **Midnight Blue** | `[data-theme="midnight"]` | Deep Ocean | `#051923` | `#003554` | `#E4F0F6` | `#8ABED0` | `#00A6FB` | `#0A4D6E` |
+| **Light** (기본, 종이) | `[data-theme="light"]` | 따뜻한 종이 | `#F7F4EE` | `#EFEAE0` | `#24211D` | `#5A544B` | `#B4472A` | `#D9D2C5` |
+| **White** | `[data-theme="white"]` | 쿨 화이트 | `#FFFFFF` | `#F3F5F8` | `#16181B` | `#4D5057` | `#2448A8` | `#E3E4E7` |
+| **Dark** | `[data-theme="dark"]` | 웜 잉크 | `#181715` | `#121110` | `#ECE7DD` | `#B3ACA0` | `#E3774F` | `#35322D` |
 
 > [!note]
-> 각 테마는 고유한 액센트 컬러 계열을 가진다: Dark = ==Neon Pink==, Light = ==Deep Rose==, Midnight = ==Sky Blue==.
+> 상세 팔레트와 `theme.js` 구조는 [[Color-Theme]] 참조. 저장된 `pink`는 `light`로, `midnight`는 `dark`로 마이그레이션된다.
 
 ## CSS Variable Tokens
 
@@ -71,21 +71,22 @@ source: docs/04_Frontend_Spec.md
 
 | 변수 | 폰트 | 용도 |
 |---|---|---|
-| `--font-display` | ==Clash Display==, Pretendard, sans-serif | 히어로, 섹션 타이틀 (영문 전용) |
-| `--font-body` | ==Satoshi==, Pretendard, sans-serif | 본문, UI 전반 (한영 혼용) |
+| `--font-masthead` | ==Newsreader== 500 | 마스트헤드, 로고 |
+| `--font-display` / `--font-heading` | ==Hahmlet== 400/600/700 | 히어로, 헤딩 (블로그 포함) |
+| `--font-body` / `--font-ui` | ==Pretendard== 400-800 | 본문, UI 전반 (한영 혼용) |
 | `--font-code` | JetBrains Mono, D2Coding, monospace | 코드 블록, 인라인 코드 |
+
+한글에는 이탤릭을 쓰지 않고, 헤딩은 `word-break: keep-all` + `text-wrap: balance`를 적용한다. 상세는 [[Typography]].
 
 ### Font Licensing
 
 | 폰트 | 라이선스 | 상업적 사용 |
 |---|---|---|
-| Clash Display | ITF Free Font License | 무료 |
-| Satoshi | ITF Free Font License | 무료 |
+| Newsreader | SIL Open Font License | 무료 |
+| Hahmlet | SIL Open Font License | 무료 |
 | Pretendard | SIL Open Font License | 무료 |
 | JetBrains Mono | SIL Open Font License | 무료 |
 | D2Coding | SIL Open Font License | 무료 |
-
-한국어 폰트로 Noto Sans KR 대신 ==Pretendard== 선택 — Inter + 본고딕 기반 네오 그로테스크로 Satoshi와 자연스럽게 혼용 가능하고, 9 굵기 + 가변 폰트 + 동적 서브셋 로딩을 지원한다.
 
 ### Type Scale
 
@@ -154,15 +155,15 @@ source: docs/04_Frontend_Spec.md
 
 **Astro 설정:** `shikiConfig: { theme: 'css-variables' }`
 
-**테마별 Shiki 토큰 매핑:**
+**테마별 Shiki 토큰 매핑 (값은 `global.css`의 `[data-theme]` 블록):**
 
-| 토큰 | Dark (One Dark Pro) | Light (GitHub Light) | Midnight (Night Owl) |
+| 토큰 | Light | White | Dark |
 |---|---|---|---|
-| `--shiki-token-keyword` | `#c678dd` 보라 | `#d73a49` 빨강 | `#c792ea` 연보라 |
-| `--shiki-token-string` | `#98c379` 초록 | `#22863a` 초록 | `#addb67` 연두 |
-| `--shiki-token-function` | `#61afef` 파랑 | `#6f42c1` 보라 | `#82aaff` 하늘 |
-| `--shiki-token-comment` | `#5c6370` 회색 | `#6a737d` 회색 | `#637777` 바다회색 |
-| `--shiki-token-constant` | `#d19a66` 주황 | `#005cc5` 파랑 | `#f78c6c` 산호 |
+| `--shiki-token-keyword` | `#8B3A3A` | `#8B3A3A` | `#E3A27C` |
+| `--shiki-token-string` | `#2E6F57` | `#2E6F57` | `#8FAE7E` |
+| `--shiki-token-function` | `#5B4A8A` | `#5B4A8A` | `#B8A9D4` |
+| `--shiki-token-comment` | `#615A50` | `#5E6269` | `#948D82` |
+| `--shiki-token-constant` | `#9C3C22` | `#1C3A8A` | `#E3774F` |
 | `--shiki-color-background` | `var(--color-bg-tertiary)` | `var(--color-bg-tertiary)` | `var(--color-bg-tertiary)` |
 
 > [!note]
@@ -170,19 +171,16 @@ source: docs/04_Frontend_Spec.md
 
 ## Theme Switching
 
-**우선순위:** `localStorage` 수동 선택 → OS `prefers-color-scheme` → 기본값 `dark`
+**우선순위:** `localStorage` 수동 선택 → OS `prefers-color-scheme` → 기본값 `light`
 
-**적용 방식:** `document.documentElement.setAttribute('data-theme', theme)`
+**적용 방식:** `document.documentElement.setAttribute('data-theme', theme)` — 로직은 `frontend/src/lib/theme.js`(`readTheme`/`applyTheme`/`nextTheme`)에 모여 있다.
 
-**전환 UI:**
-- Nav 토글: Dark ↔ Light 빠른 전환
-- 프로필 드롭다운 > "테마 설정": 시스템 설정 따르기 / Dark / Light / Midnight Blue 선택
-- 선택값은 `localStorage`에 저장, Phase 4에서 프로필 동기화
+**전환 UI:** Nav 토글이 light → white → dark 순으로 순환 (라벨 종이/화이트/다크, EN Paper/White/Dark). 선택값은 `localStorage`에 저장.
 
 **CSS 전환:** 테마 변경 시 smooth CSS transitions 적용으로 자연스러운 전환 효과
 
 > [!important]
-> **FOUC 방지:** `<head>` 인라인 스크립트로 페이지 렌더 전에 `data-theme` 속성을 즉시 설정해야 한다. 이 스크립트는 반드시 `<head>` 내부, 스타일시트보다 앞에 위치해야 테마 깜빡임(Flash of Unstyled Content)을 방지할 수 있다.
+> **FOUC 방지:** `<head>` 인라인 스크립트로 페이지 렌더 전에 `data-theme` 속성을 즉시 설정해야 한다. `theme.js`의 `THEME_BOOT_SCRIPT`가 이 스크립트를 생성한다. 이 스크립트는 반드시 `<head>` 내부, 스타일시트보다 앞에 위치해야 테마 깜빡임(Flash of Unstyled Content)을 방지할 수 있다.
 
 ## Related
 - [[Component-States]] — 컴포넌트 상태 정의

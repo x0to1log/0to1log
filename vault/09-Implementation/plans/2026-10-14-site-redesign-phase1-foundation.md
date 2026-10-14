@@ -1,5 +1,7 @@
 # 사이트 리디자인 1단계(기반) Implementation Plan
 
+**Status:** done (2026-10-14)
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 사이트 전체를 Soft Newsprint(V2)의 테마 3개(종이/화이트/다크)와 새 글꼴 체계로 전환하고, 레트로 장식을 제거한다. 레이아웃은 바꾸지 않는다.
@@ -1144,3 +1146,21 @@ git commit -m "docs: sync design notes with soft newsprint phase 1"
 - 페이지별 레이아웃(홈, 기사, 목록 등)
 - CSS 파일 분리
 - Pretendard 800 정리, `--color-cat-*` 토큰 삭제
+
+## 실행 결과
+
+**커밋:** `ffac2fb0..0448f82a` (main). **검증:** 전체 테스트 54 PASS / 23 FAIL (23개는 모두 기준선의 기존 실패, 신규 실패 없음), `npm run build` 에러 0, 3개 테마와 375px 모바일에서 주요 페이지 브라우저 확인, 레거시 pink→light / midnight→dark 마이그레이션과 토글 순환 확인, CSP 콘솔 에러 없음.
+
+**계획과 달라진 점**
+- `theme.js`에 방어 로직 추가: localStorage 접근 차단(throw) 대비, 레거시 값 in-place 마이그레이션, 인라인 부트 스크립트(`THEME_BOOT_SCRIPT`)를 MainLayout과 auth/callback에 주입.
+- 대비 부족으로 색 보정: 주석·경고색을 light `#615A50`(주석) / white `#5E6269`(주석) / 경고 `#855C08`로 조정.
+- 한글 faux italic 제거, 헤딩에 `word-break: keep-all` + `text-wrap: balance` 적용.
+- `newsprint-prose--no-dropcap` 클래스는 드롭캡 제거로 무의미해졌지만, 다른 세션이 해당 파일을 편집 중이라 마크업 정리를 미뤘다.
+
+## 후속 작업
+
+- [ ] 무효가 된 `newsprint-prose--no-dropcap` 클래스 제거: BlogArticleLayout, ko/en 핸드북 `[slug]`, admin 핸드북 edit
+- [ ] `.admin-*` 스타일의 faux italic 정리
+- [ ] Pretendard 800 굵기 정리
+- [ ] `--color-cat-*` 토큰 삭제 (현재 모두 accent로 통일된 상태)
+- [ ] 모바일 홈 히어로 제목 크기 조정 (375px에서 40px 제목이 6줄로 줄바꿈) → 3단계
