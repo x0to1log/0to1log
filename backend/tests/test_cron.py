@@ -70,7 +70,9 @@ def test_cron_health_returns_200():
 def test_promote_drafts_attempts_incomplete_batch_recovery_first():
     """The publish cron should repair missing research/business rows before promotion."""
     with patch("routers.cron.recover_incomplete_daily_batch", new_callable=AsyncMock) as recover_mock, \
-         patch("routers.cron.promote_drafts", new_callable=AsyncMock) as promote_mock:
+         patch("routers.cron.promote_drafts", new_callable=AsyncMock) as promote_mock, \
+         patch("routers.cron.get_supabase") as sb_mock, \
+         patch("routers.cron.prune_pipeline_debug_data") as prune_mock:
         recover_mock.return_value = {"recovered": ["research"], "errors": []}
         promote_mock.return_value = {"promoted": 2, "kept_draft": 0, "errors": []}
 
@@ -93,3 +95,4 @@ def test_promote_drafts_attempts_incomplete_batch_recovery_first():
         promote_after_recovery=False,
     )
     promote_mock.assert_awaited_once_with(batch_id="2026-05-22")
+    prune_mock.assert_called_once_with(sb_mock.return_value)

@@ -11,6 +11,7 @@ from core.config import today_kst
 from core.database import get_supabase
 from core.rate_limit import limiter
 from core.security import verify_cron_secret
+from services.retention import prune_pipeline_debug_data
 from services.pipeline import (
     check_existing_batch,
     cleanup_existing_batch,
@@ -336,6 +337,12 @@ async def trigger_promote_drafts(
             )
         except Exception as e:
             logger.error("Promote drafts %s crashed: %s", batch_id, e)
+
+        # Daily retention piggybacks on this cron (no extra Vercel cron slot).
+        try:
+            prune_pipeline_debug_data(get_supabase())
+        except Exception as e:
+            logger.error("Retention prune crashed: %s", e)
 
     background_tasks.add_task(_run)
 
