@@ -30,7 +30,7 @@ import json
 import sys
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import date as date_cls, datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -43,6 +43,7 @@ from models.news_pipeline import ClassifiedGroup, CommunityInsight
 from services.agents.client import extract_usage_metrics
 from services.pipeline import (
     _build_personas_and_frontload_from_rows,
+    _fetch_daily_digest_rows_from_db,
     _fetch_handbook_slugs,
     _generate_digest,
     _load_checkpoint,
@@ -400,20 +401,69 @@ async def rescore_once(judge: str, digest_type: str, qc_inputs: dict[str, Any]) 
     }
 
 
-async def run_rescore(arm_dir: Path, judges: list[str], repeats: int, types: list[str]) -> None:
-    rows = load_recorded_rows(arm_dir)
-    if not rows:
-        raise SystemExit(f"No recorded news_posts rows in {arm_dir / 'writes.json'}")
-    date = rows[0]["pipeline_batch_id"]
-    personas, frontload = _build_personas_and_frontload_from_rows(rows)
+def expand_date_range(spec: str) -> list[str]:
+    """"2026-09-15:2026-09-17" -> each date inclusive; a single date passes through."""
+    first, _, last = spec.partition(":")
+    day = date_cls.fromisoformat(first)
+    end = date_cls.fromisoformat(last or first)
+    dates = []
+    while day <= end:
+        dates.append(day.isoformat())
+        day += timedelta(days=1)
+    return dates
 
+
+def _cap_value(cap: str) -> int | None:
+    tail = cap.rsplit("_", 1)[-1]
+    return int(tail) if tail.isdigit() else None
+
+
+def summarize_threshold(runs: list[dict[str, Any]], *, threshold: int, baseline_judge: str) -> dict[str, Any]:
+    """Pass rates per judge, and posts the baseline judge passes but another blocks.
+
+    cap_blocked counts runs held below threshold by a cap set under it (the
+    84 caps exist to block auto-publish on major issues).
+    """
+    scored = [r for r in runs if r.get("score") is not None]
+    by_judge: dict[str, dict[str, Any]] = {}
+    for judge in dict.fromkeys(r["judge"] for r in scored):
+        mine = [r for r in scored if r["judge"] == judge]
+        by_judge[judge] = {
+            "n": len(mine),
+            "mean": round(sum(r["score"] for r in mine) / len(mine), 1),
+            "pass": sum(1 for r in mine if r["score"] >= threshold),
+            "cap_blocked": sum(
+                1 for r in mine
+                if r["score"] < threshold and any((_cap_value(c) or 100) < threshold for c in r["caps"])
+            ),
+        }
+    baseline = {(r["date"], r["type"]): r["score"] for r in scored if r["judge"] == baseline_judge}
+    newly_blocked: dict[str, list[dict[str, Any]]] = {}
+    for judge in by_judge:
+        if judge == baseline_judge:
+            continue
+        newly_blocked[judge] = [
+            {"date": r["date"], "type": r["type"], "baseline": baseline[(r["date"], r["type"])],
+             "score": r["score"], "caps": r["caps"], "major_issues": r["major_issues"]}
+            for r in scored
+            if r["judge"] == judge and r["score"] < threshold
+            and baseline.get((r["date"], r["type"]), 0) >= threshold
+        ]
+    return {"threshold": threshold, "baseline_judge": baseline_judge,
+            "by_judge": by_judge, "newly_blocked": newly_blocked}
+
+
+async def rescore_rows(
+    date: str, rows: list[dict[str, Any]], judges: list[str], repeats: int, types: list[str],
+) -> tuple[list[dict[str, Any]], dict[str, float]]:
+    """Re-run QC on saved digest rows once per judge x repeat. Never writes to Supabase."""
+    personas, frontload = _build_personas_and_frontload_from_rows(rows)
     sb = get_supabase()
     if sb is None:
         raise SystemExit("Supabase unavailable")
     inputs = load_inputs(sb, date)
     qc_inputs = {**inputs, "personas": personas, "frontload": frontload, "quizzes": quizzes_from_rows(rows)}
     types = [t for t in types if t in personas]
-    print(f"rescoring {arm_dir} ({date}) types={types} judges={judges} repeats={repeats}")
 
     original_judge = settings.openai_model_reasoning
     runs: list[dict[str, Any]] = []
@@ -429,6 +479,18 @@ async def run_rescore(arm_dir: Path, judges: list[str], repeats: int, types: lis
             costs[judge] = round(sum(c.get("cost_usd") or 0.0 for c in meter.calls), 4)
     finally:
         settings.openai_model_reasoning = original_judge
+    for run in runs:
+        run["date"] = date
+    return runs, costs
+
+
+async def run_rescore(arm_dir: Path, judges: list[str], repeats: int, types: list[str]) -> None:
+    rows = load_recorded_rows(arm_dir)
+    if not rows:
+        raise SystemExit(f"No recorded news_posts rows in {arm_dir / 'writes.json'}")
+    date = rows[0]["pipeline_batch_id"]
+    print(f"rescoring {arm_dir} ({date}) types={types} judges={judges} repeats={repeats}")
+    runs, costs = await rescore_rows(date, rows, judges, repeats, types)
 
     print(f"\n{'Judge':<14} {'Type':<9} {'Scores':<18} {'Spread':>6} {'Capped':>7} {'Cost $':>8}")
     for judge in judges:
@@ -445,6 +507,58 @@ async def run_rescore(arm_dir: Path, judges: list[str], repeats: int, types: lis
     print(f"\nDetails (raw_llm, caps, major issues per run): {out}")
 
 
+async def run_rescore_production(dates: list[str], judges: list[str], types: list[str]) -> None:
+    """Re-judge published production digests per date; read-only (Task 1.7)."""
+    sb = get_supabase()
+    if sb is None:
+        raise SystemExit("Supabase unavailable")
+    all_runs: list[dict[str, Any]] = []
+    stored: dict[tuple[str, str], Any] = {}
+    total_cost: dict[str, float] = {}
+    for date in dates:
+        rows = _fetch_daily_digest_rows_from_db(sb, date)
+        if not rows:
+            print(f"{date}: no digest rows, skipped")
+            continue
+        for row in rows:
+            if row.get("locale") == "en":
+                stored[(date, row["post_type"])] = (row.get("fact_pack") or {}).get("quality_score")
+        try:
+            runs, costs = await rescore_rows(date, rows, judges, 1, types)
+        except SystemExit as exc:
+            print(f"{date}: skipped ({exc})")
+            continue
+        all_runs += runs
+        for judge, cost in costs.items():
+            total_cost[judge] = round(total_cost.get(judge, 0.0) + cost, 4)
+        line = "  ".join(
+            f"{r['type'][:3]}/{r['judge']}={r['score']}" for r in sorted(runs, key=lambda r: (r["type"], r["judge"]))
+        )
+        print(f"{date}: {line}")
+
+    threshold = settings.auto_publish_threshold
+    summary = summarize_threshold(all_runs, threshold=threshold, baseline_judge=judges[0])
+    print(f"\n=== threshold {threshold} (baseline judge: {judges[0]}) ===")
+    print(f"{'Judge':<14} {'n':>3} {'mean':>6} {'pass':>6} {'cap-blocked':>12} {'cost $':>8}")
+    for judge, row in summary["by_judge"].items():
+        print(f"{judge:<14} {row['n']:>3} {row['mean']:>6} {row['pass']:>3}/{row['n']:<2} "
+              f"{row['cap_blocked']:>12} {total_cost.get(judge, 0.0):>8.4f}")
+    for judge, posts in summary["newly_blocked"].items():
+        print(f"\nPassed by {judges[0]} but blocked by {judge}: {len(posts)}")
+        for post in posts:
+            print(f"  {post['date']} {post['type']}: {post['baseline']} -> {post['score']} caps={post['caps']}")
+            for issue in post["major_issues"]:
+                print(f"      MAJOR: {issue}")
+
+    OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+    out = OUTPUT_ROOT / f"threshold-{dates[0]}_{dates[-1]}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+    out.write_text(json.dumps({
+        "judges": judges, "stored_scores": {f"{d}/{t}": v for (d, t), v in stored.items()},
+        "costs": total_cost, "summary": summary, "runs": all_runs,
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"\nDetails: {out}")
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--date", help="batch date with saved checkpoints, e.g. 2026-09-27")
@@ -454,7 +568,17 @@ async def main() -> None:
     parser.add_argument("--rescore", type=Path, help="arm output dir to re-judge (skips generation)")
     parser.add_argument("--judges", default="gpt-6-luna,gpt-6.1-sol,gpt-5-mini")
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument(
+        "--rescore-dates",
+        help="re-judge published production digests, e.g. 2026-09-15:2026-10-14 (first judge = baseline)",
+    )
     args = parser.parse_args()
+
+    if args.rescore_dates:
+        judges = [j.strip() for j in args.judges.split(",") if j.strip()]
+        types = [t.strip() for t in args.types.split(",") if t.strip()]
+        await run_rescore_production(expand_date_range(args.rescore_dates), judges, types)
+        return
 
     if args.rescore:
         judges = [j.strip() for j in args.judges.split(",") if j.strip()]

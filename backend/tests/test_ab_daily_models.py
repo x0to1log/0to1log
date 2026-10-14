@@ -51,3 +51,33 @@ def test_quizzes_from_rows_regroups_by_type_persona_and_locale():
         },
         "business": {},
     }
+
+
+def test_expand_date_range_is_inclusive():
+    from scripts.ab_daily_models import expand_date_range
+
+    assert expand_date_range("2026-09-29:2026-10-01") == ["2026-09-29", "2026-09-30", "2026-10-01"]
+    assert expand_date_range("2026-09-28") == ["2026-09-28"]
+
+
+def test_threshold_summary_counts_passes_cap_blocks_and_judge_only_blocks():
+    from scripts.ab_daily_models import summarize_threshold
+
+    runs = [
+        {"date": "d1", "type": "research", "judge": "mini", "score": 91, "caps": [], "major_issues": []},
+        {"date": "d1", "type": "research", "judge": "sol", "score": 84, "caps": ["major_source_cap_84"],
+         "major_issues": ["63x unsupported"]},
+        {"date": "d1", "type": "business", "judge": "mini", "score": 88, "caps": ["daily_primary_source_cap_92"],
+         "major_issues": []},
+        {"date": "d1", "type": "business", "judge": "sol", "score": 82, "caps": [], "major_issues": []},
+    ]
+    summary = summarize_threshold(runs, threshold=85, baseline_judge="mini")
+
+    assert summary["by_judge"]["mini"] == {"n": 2, "mean": 89.5, "pass": 2, "cap_blocked": 0}
+    assert summary["by_judge"]["sol"] == {"n": 2, "mean": 83.0, "pass": 0, "cap_blocked": 1}
+    # Posts the baseline judge would publish but the other judge blocks, with why.
+    assert summary["newly_blocked"]["sol"] == [
+        {"date": "d1", "type": "research", "baseline": 91, "score": 84,
+         "caps": ["major_source_cap_84"], "major_issues": ["63x unsupported"]},
+        {"date": "d1", "type": "business", "baseline": 88, "score": 82, "caps": [], "major_issues": []},
+    ]
