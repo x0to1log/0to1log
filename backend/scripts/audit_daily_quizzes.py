@@ -24,53 +24,12 @@ from typing import Any, Iterator
 import openai
 
 from core.database import get_supabase
-from services.agents.client import (
-    build_completion_kwargs,
-    extract_usage_metrics,
-    get_openai_client,
-    with_flex_retry,
-)
+from services.agents.client import get_openai_client
+from services.agents.quiz_verifier import verify_quiz
 
 PERSONAS = ("expert", "learner", "beginner")
 QUIZ_KEY_PREFIX = "quiz_poll_"
 OUTPUT_ROOT = Path(__file__).resolve().parent.parent / "output" / "quiz-audit"
-
-SYSTEM_PROMPT = """You verify one multiple-choice quiz against the article body it was written from.
-Use ONLY the body. Do not use outside knowledge.
-
-Decide:
-- marked_answer_supported: the body supports the option marked as `answer` as the correct choice.
-- explanation_consistent: the explanation supports the marked answer and does not contradict it.
-- better_option: if a DIFFERENT option is what the body actually supports, copy it verbatim; otherwise null.
-- verdict:
-  - "ok": marked answer is supported, explanation agrees, no other option is equally correct.
-  - "wrong_answer": the body supports a different option than the one marked.
-  - "ambiguous": two or more options are defensible from the body.
-  - "ungrounded": the body does not contain enough to answer the question.
-- evidence: at most 2 sentences quoting or paraphrasing the decisive body passage.
-
-The body and quiz may be Korean; reason in that language but write evidence in English."""
-
-RESPONSE_FORMAT = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "quiz_audit",
-        "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "marked_answer_supported": {"type": "boolean"},
-                "explanation_consistent": {"type": "boolean"},
-                "better_option": {"type": ["string", "null"]},
-                "verdict": {"type": "string", "enum": ["ok", "wrong_answer", "ambiguous", "ungrounded"]},
-                "evidence": {"type": "string"},
-            },
-            "required": ["marked_answer_supported", "explanation_consistent", "better_option", "verdict", "evidence"],
-            "additionalProperties": False,
-        },
-    },
-}
-
 
 def structural_quiz_issue(quiz: dict[str, Any]) -> str | None:
     """Deterministic checks that need no model. Returns a description or None."""
@@ -117,29 +76,11 @@ def fetch_rows(sb: Any, days: int) -> list[dict[str, Any]]:
 
 
 async def judge_quiz(client: Any, model: str, item: dict[str, Any], sem: asyncio.Semaphore) -> dict[str, Any]:
-    quiz = {k: item["quiz"].get(k) for k in ("question", "options", "answer", "explanation")}
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": f"=== BODY ===\n{item['body']}\n\n=== QUIZ ===\n{json.dumps(quiz, ensure_ascii=False)}"},
-    ]
-
-    async def _call(tier: str) -> Any:
-        kwargs = build_completion_kwargs(
-            model=model, messages=messages, max_tokens=600,
-            response_format=RESPONSE_FORMAT, reasoning_effort="medium", service_tier=tier,
-            prompt_cache_key="quiz-audit",
-        )
-        return await client.chat.completions.create(**kwargs)
-
     async with sem:
         try:
-            resp = await with_flex_retry(lambda: _call("flex"))
-            tier = "flex"
+            verdict, usage = await verify_quiz(client, model, item["body"], item["quiz"])
         except openai.RateLimitError:
-            resp = await _call("default")
-            tier = "default"
-    verdict = json.loads(resp.choices[0].message.content or "{}")
-    usage = extract_usage_metrics(resp, model, requested_service_tier=tier)
+            verdict, usage = await verify_quiz(client, model, item["body"], item["quiz"], service_tier="default")
     return {**{k: v for k, v in item.items() if k != "body"}, "judge": verdict, "cost_usd": usage.get("cost_usd") or 0.0}
 
 

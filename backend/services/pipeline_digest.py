@@ -39,6 +39,7 @@ from services.agents.client import (
     with_flex_retry,
 )
 from services.agents.prompts_news_pipeline import get_digest_prompt, get_digest_quiz_prompt
+from services.agents.quiz_verifier import apply_quiz_verdict, verify_quiz
 from services.agents.schemas.news_quiz import build_news_quiz_json_schema
 from services.agents.schemas.news_writer import build_news_writer_json_schema
 
@@ -595,18 +596,36 @@ def _build_digest_quiz_retry_feedback(
     digest_type: str,
     locale: str,
     missing: list[str],
+    verification_issues: dict[str, str] | None = None,
 ) -> str:
-    """Build a targeted validation feedback message for quiz retries."""
+    """Build a targeted validation feedback message for quiz retries.
+
+    `missing` lists personas rejected by shape validation; `verification_issues`
+    maps personas rejected by answer verification to the verifier's reason.
+    """
 
     locale_name = "English" if locale == "en" else "Korean"
-    invalid_keys = ", ".join(missing) if missing else "unknown"
+    verification_issues = verification_issues or {}
+    rejected = list(missing) + [p for p in verification_issues if p not in missing]
+    invalid_keys = ", ".join(rejected) if rejected else "unknown"
+    lines = [
+        "Previous quiz attempt was rejected by validation.",
+        f"Digest type: {digest_type}",
+        f"Locale: {locale} ({locale_name})",
+        f"Rejected or missing persona keys: {invalid_keys}",
+        "Regenerate all three keys: expert, learner, beginner. Do not return only the rejected keys.",
+    ]
+    if verification_issues:
+        lines.append("Answer verification against each persona's body rejected these quizzes:")
+        lines.extend(f"- {persona}: {reason}" for persona, reason in verification_issues.items())
+        lines.append(
+            "Mark as correct only the option that persona's body directly supports, make the explanation "
+            "argue for that same option, and make every other option clearly unsupported by the body."
+        )
+    if not missing:
+        return "\n".join(lines)
     return "\n".join(
-        [
-            "Previous quiz attempt was rejected by validation.",
-            f"Digest type: {digest_type}",
-            f"Locale: {locale} ({locale_name})",
-            f"Rejected or missing persona keys: {invalid_keys}",
-            "Regenerate all three keys: expert, learner, beginner. Do not return only the rejected keys.",
+        lines + [
             "Most likely fix: option shape and answer length. The correct option cannot be the uniquely longest option.",
             "Use short answer choices, not mini-explanations. Put the reasoning in explanation, not in the selected option.",
             "English options: no more than 90 characters and usually 6-14 words.",
@@ -616,6 +635,53 @@ def _build_digest_quiz_retry_feedback(
             "Ask one task only. Do not combine what changed with why it matters in the same question.",
         ]
     )
+
+
+async def _verify_digest_quizzes(
+    *,
+    client: Any,
+    model: str,
+    personas: dict[str, PersonaOutput],
+    quizzes: dict[str, dict[str, dict[str, Any]]],
+    locale: str,
+) -> tuple[dict[str, dict[str, dict[str, Any]]], dict[str, str], list[dict[str, Any]], dict[str, Any]]:
+    """Verify each persona quiz for one locale against that persona's body.
+
+    Returns (accepted, rejected_reasons, verification_log, usage). A verifier
+    failure keeps the quiz (fail-open): quiz problems never block a post.
+    """
+
+    async def _one(persona: str, quiz: dict[str, Any]) -> tuple[str, dict | None, str, dict, dict]:
+        body = getattr(personas[persona], locale)
+        try:
+            verdict, usage = await verify_quiz(client, model, body, quiz)
+        except Exception as exc:
+            logger.warning("Quiz verify %s/%s failed, keeping quiz: %s", persona, locale, exc)
+            return persona, quiz, "unverified", {"error": f"{type(exc).__name__}: {exc}"}, {}
+        kept, action = apply_quiz_verdict(quiz, verdict)
+        return persona, kept, action, verdict, usage
+
+    results = await asyncio.gather(
+        *[_one(persona, localized[locale]) for persona, localized in quizzes.items() if locale in localized]
+    )
+    accepted: dict[str, dict[str, dict[str, Any]]] = {}
+    rejected: dict[str, str] = {}
+    log: list[dict[str, Any]] = []
+    usage_total: dict[str, Any] = {}
+    for persona, kept, action, verdict, usage in results:
+        usage_total = merge_usage_metrics(usage_total, usage)
+        log.append({
+            "persona": persona,
+            "locale": locale,
+            "action": action,
+            "verdict": verdict.get("verdict"),
+            "evidence": str(verdict.get("evidence") or verdict.get("error") or "")[:300],
+        })
+        if kept is None:
+            rejected[persona] = f"{verdict.get('verdict')}: {verdict.get('evidence', '')}"
+        else:
+            accepted.setdefault(persona, {})[locale] = kept
+    return accepted, rejected, log, usage_total
 
 
 async def _generate_digest_quizzes(
@@ -652,8 +718,13 @@ async def _generate_digest_quizzes(
     model = getattr(settings, "openai_model_light", None)
     if not isinstance(model, str) or not model:
         model = Settings.model_fields["openai_model_light"].default
+    verify_model = getattr(settings, "openai_model_reasoning", None)
+    if not isinstance(verify_model, str) or not verify_model:
+        verify_model = Settings.model_fields["openai_model_reasoning"].default
 
     all_quizzes: dict[str, dict[str, dict[str, Any]]] = {}
+    verification_log: list[dict[str, Any]] = []
+    dropped_by_locale: dict[str, list[str]] = {}
     usage_total: dict[str, Any] = {}
     missing_by_locale: dict[str, list[str]] = {}
     error_by_locale: dict[str, str] = {}
@@ -707,10 +778,39 @@ async def _generate_digest_quizzes(
                 )
                 last_missing = missing
                 if not missing:
-                    for persona, localized in quizzes.items():
-                        all_quizzes.setdefault(persona, {}).update(localized)
-                    locale_success = True
-                    break
+                    accepted, rejected, verify_entries, verify_usage = await _verify_digest_quizzes(
+                        client=client,
+                        model=verify_model,
+                        personas=personas,
+                        quizzes=quizzes,
+                        locale=locale,
+                    )
+                    usage_total = merge_usage_metrics(usage_total, verify_usage)
+                    verification_log.extend({**entry, "attempt": attempt + 1} for entry in verify_entries)
+                    is_last_attempt = attempt + 1 >= MAX_DIGEST_QUIZ_ATTEMPTS
+                    if not rejected or is_last_attempt:
+                        for persona, localized in accepted.items():
+                            all_quizzes.setdefault(persona, {}).update(localized)
+                        if rejected:
+                            dropped_by_locale[locale] = sorted(rejected)
+                        locale_success = not rejected
+                        break
+                    logger.warning(
+                        "Digest %s quiz %s attempt %d rejected by answer verification: %s",
+                        digest_type, locale, attempt + 1, sorted(rejected),
+                    )
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": _build_digest_quiz_retry_feedback(
+                                digest_type=digest_type,
+                                locale=locale,
+                                missing=[],
+                                verification_issues=rejected,
+                            ),
+                        }
+                    )
+                    continue
                 logger.warning(
                     "Digest %s quiz %s attempt %d returned invalid quiz keys: %s",
                     digest_type,
@@ -763,7 +863,11 @@ async def _generate_digest_quizzes(
             usage=usage_total,
             post_type=digest_type,
             attempt=MAX_DIGEST_QUIZ_ATTEMPTS,
-            debug_meta={"calls": quiz_call_count, "missing_by_locale": {}},
+            debug_meta={
+                "calls": quiz_call_count,
+                "missing_by_locale": {},
+                "verification": verification_log,
+            },
         )
         return all_quizzes, usage_total
 
@@ -789,6 +893,8 @@ async def _generate_digest_quizzes(
             "generated": generated,
             "missing_by_locale": missing_by_locale,
             "error_by_locale": error_by_locale,
+            "dropped_by_locale": dropped_by_locale,
+            "verification": verification_log,
         },
     )
     return all_quizzes, usage_total

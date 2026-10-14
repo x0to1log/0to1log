@@ -1417,3 +1417,125 @@ async def test_generate_digest_surfaces_url_validation_pass_state_to_fact_pack()
         assert fp.get("url_validation_failed") is False, \
             f"expected url_validation_failed=False, got {fp.get('url_validation_failed')}"
         assert fp.get("url_validation_failures") == []
+
+
+# ---------------------------------------------------------------------------
+# Quiz answer verification (plan 2026-10-13 Task 1.6)
+# ---------------------------------------------------------------------------
+
+def _quiz_personas() -> dict:
+    return {
+        persona: PersonaOutput(
+            en=f"## Research Papers\n\n### {persona}\n\nThe digest says the method is promising but limited.",
+            ko=f"## Research Papers\n\n### {persona}\n\n본문은 이 방법이 유망하지만 제한적이라고 말한다.",
+        )
+        for persona in ("expert", "learner", "beginner")
+    }
+
+
+def _body_key(body: str) -> tuple[str, str]:
+    persona = next(p for p in ("expert", "learner", "beginner") if f"### {p}" in body)
+    return persona, "ko" if "본문은" in body else "en"
+
+
+def _ok_verdict() -> dict:
+    return {"marked_answer_supported": True, "explanation_consistent": True,
+            "better_option": None, "verdict": "ok", "evidence": "fits"}
+
+
+async def _run_quiz_generation(responses: list, verify_side_effect):
+    from services.pipeline import _generate_digest_quizzes
+
+    captured_messages: list[list[dict[str, str]]] = []
+
+    async def _capture_create(*args, **kwargs):
+        captured_messages.append(list(kwargs["messages"]))
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
+    verify = AsyncMock(side_effect=verify_side_effect)
+
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_digest.verify_quiz", verify), \
+         patch("services.pipeline_digest.settings") as mock_settings:
+        mock_settings.openai_model_light = "gpt-6-luna"
+        mock_settings.openai_model_reasoning = "gpt-6.1-sol"
+        quizzes, _usage = await _generate_digest_quizzes(
+            digest_type="research", personas=_quiz_personas(), supabase=MagicMock(), run_id="run-1",
+        )
+    return quizzes, captured_messages, verify
+
+
+@pytest.mark.asyncio
+async def test_quiz_verification_regenerates_rejected_quiz_with_verifier_evidence():
+    rejected_once: set = set()
+
+    async def _verify(client, model, body, quiz):
+        key = _body_key(body)
+        if key == ("learner", "en") and key not in rejected_once:
+            rejected_once.add(key)
+            return ({**_ok_verdict(), "verdict": "ambiguous", "evidence": "TWO OPTIONS FIT THE BODY"}, {})
+        return _ok_verdict(), {}
+
+    quizzes, messages, verify = await _run_quiz_generation(
+        [_mock_quiz_response("en"), _mock_quiz_response("en"), _mock_quiz_response("ko")], _verify,
+    )
+
+    assert len(messages) == 3  # en rejected once, en retry, ko
+    feedback = messages[1][-1]["content"]
+    assert "learner" in feedback and "TWO OPTIONS FIT THE BODY" in feedback
+    assert {p: set(locs) for p, locs in quizzes.items()} == {
+        p: {"en", "ko"} for p in ("expert", "learner", "beginner")
+    }
+    assert verify.await_args_list[0].args[1] == "gpt-6.1-sol"  # judged by the reasoning role
+
+
+@pytest.mark.asyncio
+async def test_quiz_verification_fixes_index_slip_without_regenerating():
+    fixed: dict = {}
+
+    async def _verify(client, model, body, quiz):
+        if _body_key(body) == ("expert", "en"):
+            better = next(o for o in quiz["options"] if o != quiz["answer"])
+            fixed["better"] = better
+            return ({**_ok_verdict(), "verdict": "wrong_answer", "better_option": better,
+                     "explanation_consistent": False}, {})
+        return _ok_verdict(), {}
+
+    quizzes, messages, _ = await _run_quiz_generation(
+        [_mock_quiz_response("en"), _mock_quiz_response("ko")], _verify,
+    )
+
+    assert len(messages) == 2  # no regeneration
+    assert quizzes["expert"]["en"]["answer"] == fixed["better"]
+
+
+@pytest.mark.asyncio
+async def test_quiz_verification_drops_only_quiz_still_rejected_after_last_attempt():
+    async def _verify(client, model, body, quiz):
+        if _body_key(body) == ("beginner", "ko"):
+            return {**_ok_verdict(), "verdict": "ungrounded", "evidence": "not in body"}, {}
+        return _ok_verdict(), {}
+
+    quizzes, messages, _ = await _run_quiz_generation(
+        [_mock_quiz_response("en")] + [_mock_quiz_response("ko") for _ in range(3)], _verify,
+    )
+
+    assert len(messages) == 4  # en once, ko three attempts
+    assert set(quizzes["beginner"]) == {"en"}
+    assert set(quizzes["expert"]) == {"en", "ko"} and set(quizzes["learner"]) == {"en", "ko"}
+
+
+@pytest.mark.asyncio
+async def test_quiz_verification_failure_keeps_generated_quiz():
+    async def _verify(client, model, body, quiz):
+        raise RuntimeError("verifier unavailable")
+
+    quizzes, messages, _ = await _run_quiz_generation(
+        [_mock_quiz_response("en"), _mock_quiz_response("ko")], _verify,
+    )
+
+    assert len(messages) == 2
+    assert sum(len(locs) for locs in quizzes.values()) == 6
