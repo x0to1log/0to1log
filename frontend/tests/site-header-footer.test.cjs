@@ -41,4 +41,12 @@ for (const attr of ['data-auth-only', 'data-guest-only', 'data-admin-only', 'dat
   assert(nav.includes(attr), `Navigation must keep ${attr}`);
 }
 
+const footer = read('components/Footer.astro');
+assert(/<footer class="site-footer">/.test(footer), 'footer uses .site-footer (no inline styles)');
+assert(!/<footer[^>]*style=/.test(footer), 'footer must not use inline styles');
+assert(/class="site-footer-brand"[^>]*>0to1log<span class="site-brand-dot" aria-hidden="true">\.<\/span>/.test(footer), 'footer brand renders 0to1log + accent period');
+assert(footer.includes('AI 뉴스와 용어를 기록하는 신문'), 'footer shows the ko motto');
+assert(rule('.site-footer').includes('var(--color-bg-primary)'), 'footer uses page background');
+assert(!rule('.newsprint-footer-nav').includes('uppercase'), 'footer links must not be uppercase');
+
 console.log('site-header-footer.test.cjs passed');

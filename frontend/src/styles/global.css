@@ -2621,17 +2621,52 @@ button {
   justify-content: center;
 }
 
+.site-footer {
+  position: relative;
+  background-color: var(--color-bg-primary);
+  padding: 2.5rem 1rem 2rem;
+  text-align: center;
+}
+
+.site-footer::before {
+  top: 0;
+}
+
+.site-footer-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.site-footer-brand {
+  font-family: var(--font-masthead);
+  font-variant-numeric: lining-nums;
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.site-footer-motto {
+  margin: 0.35rem 0 1rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.site-footer-copy {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
 /* Footer category nav */
 .newsprint-footer-nav {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.85rem;
 }
 
 .newsprint-footer-nav a {

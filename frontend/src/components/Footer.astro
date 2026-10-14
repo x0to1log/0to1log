@@ -17,16 +17,18 @@ const links = [
 ];
 ---
 
-<footer style={`background-color: var(--color-bg-secondary); border-top: 1px solid var(--color-border); padding: 2rem; text-align: center;`}>
-  <div class="newsprint-footer-nav">
-    {links.map((link, i) => (
-      <>
-        <a href={locale === 'ko' && link.koHref ? link.koHref : link.href}>{locale === 'ko' ? link.ko : link.en}</a>
-        {i < links.length - 1 && <span class="newsprint-footer-dot">&middot;</span>}
-      </>
-    ))}
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <a href={`/${locale}/`} class="site-footer-brand">0to1log<span class="site-brand-dot" aria-hidden="true">.</span></a>
+    <p class="site-footer-motto">{locale === 'ko' ? 'AI 뉴스와 용어를 기록하는 신문' : 'A newspaper that keeps a record of AI news and terms'}</p>
+    <div class="newsprint-footer-nav">
+      {links.map((link, i) => (
+        <>
+          <a href={locale === 'ko' && link.koHref ? link.koHref : link.href}>{locale === 'ko' ? link.ko : link.en}</a>
+          {i < links.length - 1 && <span class="newsprint-footer-dot">&middot;</span>}
+        </>
+      ))}
+    </div>
+    <p class="site-footer-copy">&copy; {year} 0to1log. All rights reserved.</p>
   </div>
-  <p style={`color: var(--color-text-muted); font-size: 0.875rem;`}>
-    &copy; {year} 0to1log. All rights reserved.
-  </p>
 </footer>
