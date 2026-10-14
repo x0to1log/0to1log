@@ -50,4 +50,8 @@ for (const sel of ['.newsprint-deck', '.newsprint-headline-deck', '.handbook-def
   assert(m, `${sel} rule must exist`);
   assert(!/font-style:\s*italic/.test(m[1]), `${sel} must not use font-style: italic`);
 }
+// Hahmlet Hangul is wide: headings must not break Korean words mid-word.
+const headingRule = css.match(/(?:^|\n)h1,\s*h2,\s*h3,\s*h4,\s*h5,\s*h6\s*\{([^}]*)\}/);
+assert(headingRule, 'global heading rule (h1..h6) must exist');
+assert(/word-break:\s*keep-all/.test(headingRule[1]), 'headings must use word-break: keep-all');
 console.log('font-roles.test.cjs passed');

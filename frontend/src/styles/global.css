@@ -2311,6 +2311,17 @@ html {
   color: var(--color-text-primary);
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
 /* 모바일 탭 딜레이 제거: 더블탭 zoom 감지를 비활성화해 즉각 반응 */
 a,
 button {
