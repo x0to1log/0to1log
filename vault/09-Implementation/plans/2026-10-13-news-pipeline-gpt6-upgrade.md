@@ -290,6 +290,21 @@
 
 **Decision (2026-10-14, Amy):** auto-publish = (blocking cap 미적용) AND (score ≥ **70**). sol 전환과 함께 적용.
 
+**Task 1.7 구현 (2026-10-14):**
+- [x] `pipeline_quality.AUTO_PUBLISH_BLOCKING_CAPS` = {`major_source_cap_84`, `frontload_overclaim_cap_84`, `locale_quality_cap_84`} (92/90 계열은 감점용, 비차단) + `passes_auto_publish_gate(score, caps)`
+- [x] daily `promote_drafts`와 weekly `_check_weekly_quality` 모두 같은 gate 사용. draft 알림 메일에 차단 이유 (점수 미달 vs 차단 cap) 표시
+- [x] 테스트 `tests/test_auto_publish_gate.py` 5개. 전체 921 passed
+- [x] **지금 배포해도 운영 동작 불변:** 차단 cap은 점수를 84 이하로 낮추므로 threshold 85에서는 "cap + 85 이상"이 불가능 → 기존 판정과 동일
+- 시뮬레이션 (최신 25개 재채점 데이터):
+
+| judge | T | 점수만 | gate |
+|---|---|---|---|
+| gpt-5-mini | 85 | 25/25 | 25/25 |
+| gpt-6.1-sol | 70 | 23/25 | **11/25** |
+
+  → sol + T=70을 점수만으로 적용했다면 major 있는 12개가 자동 발행됐을 것.
+- [ ] **reasoning → sol 전환 시 함께:** Railway env `AUTO_PUBLISH_THRESHOLD=70` (+ `core/config.py` 기본값 70). 둘 중 하나만 바꾸면 안 됨 (mini+70 → 감점 많은 글 발행 / sol+85 → 1/25만 발행)
+
 **전환 순서 (2026-10-14 합의):** Task 1.7a 커밋 → Task 1.7 판정 재설계 → reasoning만 sol 선전환 + 관찰 (advisor 처리 결정 포함) → main/light/nano 전환 → gpt-5 계열 제거 (12/11 전). gpt-5-mini도 종료 대상 (`gpt-5-mini` → `gpt-5-mini-2025-08-07`).
 
 **발행 콘텐츠 수정 (2026-10-14, Amy 승인):**
