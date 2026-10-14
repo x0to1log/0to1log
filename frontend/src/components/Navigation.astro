@@ -74,9 +74,8 @@ const copy = locale === 'ko'
       languageItem: '언어 · English',
       themeLabel: '테마',
       themeDark: '다크',
-      themeLight: '라이트',
-      themePink: '핑크',
-      themeMidnight: '미드나잇',
+      themeLight: '종이',
+      themeWhite: '화이트',
       signIn: '로그인',
       signOut: '로그아웃',
       settings: '설정',
@@ -99,9 +98,8 @@ const copy = locale === 'ko'
       languageItem: 'Language · 한국어',
       themeLabel: 'Theme',
       themeDark: 'Dark',
-      themeLight: 'Light',
-      themePink: 'Pink',
-      themeMidnight: 'Midnight',
+      themeLight: 'Paper',
+      themeWhite: 'White',
       signIn: 'Sign In',
       signOut: 'Sign Out',
       settings: 'Settings',
@@ -224,8 +222,7 @@ const navItems = [
           data-label-prefix={copy.themeLabel}
           data-dark-label={copy.themeDark}
           data-light-label={copy.themeLight}
-          data-pink-label={copy.themePink}
-          data-midnight-label={copy.themeMidnight}
+          data-white-label={copy.themeWhite}
           aria-label={copy.themeLabel}
           title={copy.themeLabel}
         >
@@ -243,11 +240,9 @@ const navItems = [
             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
           </svg>
-          <svg data-theme-icon="pink" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-          </svg>
-          <svg data-theme-icon="midnight" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          <svg data-theme-icon="white" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
+            <rect x="5" y="3" width="14" height="18" rx="1.5"></rect>
+            <circle cx="12" cy="12" r="1.2" fill="currentColor"></circle>
           </svg>
         </button>
 
@@ -381,13 +376,12 @@ const navItems = [
 </div>
 
 <script>
-  const themes = ['dark', 'light', 'pink', 'midnight'] as const;
-  type Theme = typeof themes[number];
-  const themeColors = { dark: '#171311', light: '#F4F1EA', pink: '#FFF0F3', midnight: '#070910' };
+  import { applyTheme, nextTheme, readTheme } from '../lib/theme.js';
+
+  type Theme = 'light' | 'white' | 'dark';
 
   function getTheme(): Theme {
-    const stored = localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark';
-    return themes.includes(stored as Theme) ? (stored as Theme) : 'dark';
+    return readTheme() as Theme;
   }
 
   function renderThemeCycle(button: HTMLElement | null) {
@@ -403,10 +397,7 @@ const navItems = [
   }
 
   function setTheme(theme: Theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-    const meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
-    if (meta) meta.setAttribute('content', themeColors[theme] || themeColors.dark);
+    applyTheme(theme);
     renderThemeCycle(document.querySelector('[data-theme-cycle]') as HTMLElement | null);
   }
 
@@ -431,10 +422,7 @@ const navItems = [
       replacement.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
-        const current = getTheme();
-        const idx = themes.indexOf(current);
-        const next = themes[(idx + 1) % themes.length];
-        setTheme(next);
+        setTheme(nextTheme(getTheme()) as Theme);
       });
     }
 

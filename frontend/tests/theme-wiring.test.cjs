@@ -17,4 +17,12 @@ assert(callback.includes('nonce={nonce}'), 'auth/callback inline script needs th
 const head = read('components/Head.astro');
 assert(head.includes('<meta name="theme-color" content="#F7F4EE" />'), 'default theme-color must be the paper background');
 
+const nav = read('components/Navigation.astro');
+assert(nav.includes("from '../lib/theme.js'"), 'Navigation must import from lib/theme.js');
+assert(nav.includes('data-white-label={copy.themeWhite}'), 'Navigation needs a white theme label');
+for (const t of ['light', 'white', 'dark']) {
+  assert(nav.includes(`data-theme-icon="${t}"`), `Navigation needs a ${t} icon`);
+}
+assert(!/pink|midnight/i.test(nav), 'Navigation must not mention retired themes');
+
 console.log('theme-wiring.test.cjs passed');
