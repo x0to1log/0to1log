@@ -312,10 +312,57 @@
 - 09-23 research "50%": **수정 안 함.** 재확인 결과 OpenAI 공식 페이지가 "50% cheaper"로 발표, VentureBeat "50% or more". Sol·Luna input은 정확히 50%, Luna output만 58%. 근사 표현으로 타당 → sol judge가 과하게 엄격했던 사례 (앞서 "실제 오류"로 단정한 것은 잘못).
 - 관찰: sol은 cap 없는 글도 76~88점대 (raw 점수 자체가 낮음) → 오판을 걷어내도 threshold는 sol 척도에 맞춰 재설정 필요
 
+### Task 1.5a: reasoning 역할 선전환 (runbook)
+
+**advisor 처리 결정 (2026-10-14, Amy):** 역할 분리하지 않음. advisor/handbook도 `openai_model_reasoning` 공유 → 함께 sol.
+- 근거: `pipeline_logs` 기준 handbook/advisor 호출은 **2026-05-24 이후 0건** (3월 2,005 / 4월 2,672 / 5월 1,330회, 대부분 `handbook.generate` = main 역할). gpt-5 시기 reasoning 사용은 `handbook.quality_rescore` 242회 $0.97 → sol 환산 ~$5~8 (추정).
+- 재검토 시점: HB-SEED-800 재개 시.
+- 관찰: handbook 파이프라인 5개월 정지 → HB-SEED-800 / HB-MIGRATE-138은 사실상 중단. Phase 3 보드 정리 때 계속/보류 결정.
+
+**reasoning 역할을 쓰는 곳 (전환 시 함께 바뀜):**
+- daily QC (`pipeline_quality.py:1219`), **weekly QC (`pipeline_quality.py:1994`)**, 퀴즈 정답 검증 (`pipeline_digest._generate_digest_quizzes`), advisor 14곳
+- ⚠️ weekly QC는 sol로 측정한 적 없음 → 사전 점검 필요
+
+**사전 점검:**
+- [ ] 10/15 07:00 KST daily 실행 정상 (오늘 배포분: 퀴즈 검증 `debug_meta.verification`, QC claim evidence, gate)
+- [x] weekly QC sol 측정 (2026-10-14, `ab_daily_models.py --rescore-weeks`, 비파괴, sol $0.08 / mini $0.02):
+
+| week | 운영 | mini | sol | sol + gate@70 |
+|---|---|---|---|---|
+| W38 | published 91 | 91 | 74 | pass |
+| W37 | published 92 | 92 | 80 | pass |
+| W33 | draft 78 | 75 | 70 + `locale_quality_cap_84`, `major_source_cap_84` | draft |
+
+  - 발행분은 계속 발행, draft는 draft 유지 → weekly도 gate(T=70)로 의도대로 동작
+  - W33 major: KO Trend Analysis "최대 5,000억 달러" vs Top Story "5,000억 달러 이상" 모순 (실제 오류로 보임, draft라 미노출)
+  - mini + T=70이었다면 W33(75)이 발행됐을 것 → threshold만 내리면 안 되는 사례 추가
+  - 다음 weekly 실행: 월요일 10/19 01:00 UTC (10:00 KST)
+
+**Railway env 현황 (2026-10-14, Amy 스크린샷):** `OPENAI_MODEL_MAIN=gpt-5`, `OPENAI_MODEL_LIGHT=gpt-5-mini`만 설정. `OPENAI_MODEL_REASONING`, `OPENAI_MODEL_NANO`, `AUTO_PUBLISH_THRESHOLD`는 미설정 → 운영은 `core/config.py` 기본값 사용 중.
+
+**전환 절차 (reasoning + threshold 동시):**
+1. 코드: `core/config.py` 기본값 `openai_model_reasoning="gpt-6.1-sol"`, `auto_publish_threshold=70`을 **한 커밋**으로 push → 배포 = 전환. Railway 작업 없음. 로컬 `.env` `OPENAI_MODEL_REASONING`도 갱신
+2. `backend/CLAUDE.md` 환경변수 예시 갱신 (현재 gpt-4.1로 stale). 참고: 루트 CLAUDE.md는 `.env.example` 커밋을 요구하지만 저장소에 없음 → 생성 여부는 Phase 3에서
+- 주의: 이 기본값 변경은 push 즉시 운영 전환이므로 사전 점검 완료 전에는 커밋하지 않음
+
+**전환 후 첫 daily 실행 체크리스트:**
+- [ ] `pipeline_runs` success
+- [ ] `quality:{type}` 로그 `model_used=gpt-6.1-sol`, QC 비용 digest당 ~$0.05~0.06
+- [ ] 퀴즈 검증 로그 verifier = sol, action 분포 (kept / answer_fixed / rejected)
+- [ ] 점수 70~89대, draft로 남은 글의 차단 cap과 major issue 직접 확인 → 09-23 "50%"처럼 과잉 판정이 반복되면 QC 프롬프트 보정 검토
+- [ ] draft 알림 메일에 차단 이유 표시 확인
+- [ ] flex 429 / default tier fallback 빈도
+- [ ] run 총비용: 현행 ~$0.52 대비 +$0.13 예상
+
+**롤백:** 전환 커밋 revert + push (reasoning=gpt-5-mini, threshold=85 동시 복구, 12/11 전까지 유효). 급하면 Railway에 `OPENAI_MODEL_REASONING=gpt-5-mini`, `AUTO_PUBLISH_THRESHOLD=85`를 추가해도 같은 효과 (나중에 삭제).
+**관찰 기간:** 3~5일 → 이상 없으면 main/light/nano 전환 (Task 1.5).
+
 ### Task 1.5: Cutover
-- 선행 조건: Task 1.6 (퀴즈 검증) 배포, Task 1.7 (threshold) 결정, advisor reasoning role 처리 결정
+- 선행 조건: Task 1.6 (퀴즈 검증) 배포 ✅, Task 1.7 (gate) 배포 ✅, advisor 처리 결정 ✅, Task 1.5a (reasoning 선전환) 관찰 완료
 - [ ] `core/config.py` 기본값 + `.env.example` 갱신 (위 "역할별 목표 모델" 표 기준)
-- [ ] **Railway env `OPENAI_MODEL_*` 4개 갱신** (Amy, 대시보드)
+- [x] **Railway env 정리 (Amy, 2026-10-14 ~09:00 UTC):** `OPENAI_MODEL_MAIN`, `OPENAI_MODEL_LIGHT` 삭제 + 재배포 → 모델 설정을 `core/config.py`로 일원화 (안 A). Railway 값과 config 기본값이 같았으므로 (gpt-5 / gpt-5-mini) 운영 동작 불변. 재배포 후 `/health`, `/api/cron/health` 200 확인
+- [ ] 10/15 07:00 KST 실행 로그 `model_used`가 gpt-5 / gpt-5-mini인지 확인 (health 응답에 모델 정보 없음 → 실행 로그로 확정)
+- 이후 모든 모델·threshold 전환은 `core/config.py` 커밋만으로 진행 (Railway 작업 없음)
 - [ ] 첫 daily run 후 `pipeline_logs` 에서 model/tokens/cost/empty-response 확인
 - [ ] 3일 관찰 후 gpt-5 가격 엔트리 및 gpt-5 전용 분기 정리
 - 마감: 2026-11-15 (하드 마감 2026-12-11)
