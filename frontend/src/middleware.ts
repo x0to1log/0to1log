@@ -2,6 +2,7 @@ import { defineMiddleware } from 'astro:middleware';
 import { createClient } from '@supabase/supabase-js';
 import type { APIContext } from 'astro';
 import { applyPublicCachePolicy, getPublicContentCacheKind } from './lib/server/publicCachePolicy';
+import { clearSessionHint, ensureSessionHint, setSessionHint } from './lib/sessionHint';
 
 const isSecure = import.meta.env.PROD;
 
@@ -109,6 +110,7 @@ async function validateToken(
       cookies.set('sb-refresh-token', refreshData.session.refresh_token, {
         path: '/', httpOnly: true, secure: isSecure, sameSite: 'lax', maxAge: REFRESH_COOKIE_MAX_AGE,
       });
+      setSessionHint(cookies, isSecure);
       return {
         user: refreshData.session.user,
         accessToken: refreshData.session.access_token,
@@ -119,6 +121,7 @@ async function validateToken(
   // Token invalid, clear cookies
   cookies.delete('sb-access-token', { path: '/' });
   cookies.delete('sb-refresh-token', { path: '/' });
+  clearSessionHint(cookies);
   return null;
 }
 
@@ -286,6 +289,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.profile = extras.profile;
     setCachedExtras(context.cookies, extras, isSecure);
     touchLastSeen(supabaseUrl, supabaseAnonKey, result.accessToken, result.user.id);
+    ensureSessionHint(context.cookies, isSecure);
     return nextWithCsp(next, nonce);
   }
 
@@ -311,6 +315,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.isAdmin = extras.isAdmin || undefined;
     context.locals.profile = extras.profile;
     touchLastSeen(supabaseUrl, supabaseAnonKey, result.accessToken, result.user.id);
+    ensureSessionHint(context.cookies, isSecure);
     return nextWithCsp(next, nonce);
   }
 
@@ -348,6 +353,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       context.locals.isAdmin = extras.isAdmin || undefined;
       context.locals.profile = extras.profile;
       touchLastSeen(supabaseUrl, supabaseAnonKey, result.accessToken, result.user.id);
+      ensureSessionHint(context.cookies, isSecure);
     }
   }
 

@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { setSessionHint } from '../../../lib/sessionHint';
 import { createClient } from '@supabase/supabase-js';
 
 export const prerender = false;
@@ -55,6 +56,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     sameSite: 'lax',
     maxAge: 604800, // 7 days
   });
+  setSessionHint(cookies, isSecure);
   // Clear stale user extras cache from previous session
   cookies.delete('user-extras-cache', { path: '/' });
 
@@ -97,6 +99,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       sameSite: 'lax',
       maxAge: 604800, // 7 days
     });
+    setSessionHint(cookies, isSecure);
     // Clear stale user extras cache from previous session
     cookies.delete('user-extras-cache', { path: '/' });
 

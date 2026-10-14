@@ -1,4 +1,5 @@
-import { openAuthPrompt } from './auth-prompt';
+import { isAuthenticatedUser, openAuthPrompt } from './auth-prompt';
+import { onSessionReady } from './session';
 
 /* ── Types & Reason config ────────────────────────────── */
 
@@ -194,7 +195,7 @@ function initContentFeedback(): void {
     const sourceType = root.dataset.sourceType as SourceType | undefined;
     const sourceId = root.dataset.sourceId;
     const locale = root.dataset.locale;
-    const isAuthenticated = root.dataset.authenticated === 'true';
+    const isAuthenticated = isAuthenticatedUser();
     const previewMode = root.dataset.previewMode === 'true';
     const thanksMessage = root.dataset.thanks || 'Thanks for the feedback.';
     const errorMessage = root.dataset.error || 'Failed to save feedback.';
@@ -332,4 +333,4 @@ function initContentFeedback(): void {
   });
 }
 
-document.addEventListener('astro:page-load', initContentFeedback);
+document.addEventListener('astro:page-load', () => onSessionReady(initContentFeedback));

@@ -1,4 +1,5 @@
 import { isAuthenticatedUser, openAuthPrompt } from './auth-prompt';
+import { onSessionReady } from './session';
 
 function resolveRedirect(button: HTMLButtonElement): string {
   return button.dataset.authRedirect || `${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -177,4 +178,4 @@ function init(): void {
   loadCardLikeStates();
 }
 
-document.addEventListener('astro:page-load', init);
+document.addEventListener('astro:page-load', () => onSessionReady(init));

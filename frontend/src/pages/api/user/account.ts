@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { clearSessionHint } from '../../../lib/sessionHint';
 import { createClient } from '@supabase/supabase-js';
 
 export const prerender = false;
@@ -30,6 +31,7 @@ export const DELETE: APIRoute = async ({ locals, cookies }) => {
   // Clear auth cookies
   cookies.delete('sb-access-token', { path: '/' });
   cookies.delete('sb-refresh-token', { path: '/' });
+  clearSessionHint(cookies);
 
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,

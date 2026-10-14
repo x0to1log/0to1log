@@ -55,6 +55,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
 
   <body
     data-authenticated={Astro.locals.user ? 'true' : 'false'}
+    data-ssr-session={Astro.locals.user ? 'true' : undefined}
     data-preview-mode={previewMode ? 'true' : 'false'}
     style={`min-height: ${previewMode ? 'auto' : '100vh'}; display: flex; flex-direction: column; background-color: var(--color-bg-primary); color: var(--color-text-primary); margin: 0;`}
   >
@@ -103,6 +104,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
     {!isAdmin && <AuthPromptSheet locale={locale} />}
   <script>
     import '../scripts/codeBlocks';
+    import '../scripts/session';
   </script>
   </body>
 </html>

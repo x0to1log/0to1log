@@ -14191,3 +14191,10 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
     grid-template-columns: 1fr;
   }
 }
+
+/* Session hydration toggles (src/scripts/session.ts). Beat component display rules. */
+[data-auth-only][hidden],
+[data-guest-only][hidden],
+[data-admin-only][hidden] {
+  display: none !important;
+}

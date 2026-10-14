@@ -1,4 +1,5 @@
-﻿import { openAuthPrompt } from './auth-prompt';
+﻿import { isAuthenticatedUser, openAuthPrompt } from './auth-prompt';
+import { onSessionReady } from './session';
 
 function initComments(): void {
   const section = document.querySelector<HTMLElement>('.newsprint-comments');
@@ -7,7 +8,7 @@ function initComments(): void {
 
   const postId = section.dataset.postId;
   const locale = section.dataset.locale || 'en';
-  const isAuthenticated = section.dataset.authenticated === 'true';
+  const isAuthenticated = isAuthenticatedUser();
   const contentType = section.dataset.contentType || 'news';
   const previewMode = section.dataset.previewMode === 'true';
   const commentRedirect = section.dataset.commentRedirect || `${window.location.pathname}${window.location.search}#comments`;
@@ -176,4 +177,4 @@ function initComments(): void {
   loadComments();
 }
 
-document.addEventListener('astro:page-load', initComments);
+document.addEventListener('astro:page-load', () => onSessionReady(initComments));

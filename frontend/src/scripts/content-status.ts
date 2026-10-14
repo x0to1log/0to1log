@@ -1,3 +1,4 @@
+import { onSessionReady } from './session';
 import { isAuthenticatedUser } from './auth-prompt';
 
 interface ContentStatusTarget {
@@ -80,5 +81,5 @@ function resetAndHydrate(): void {
   void hydrateContentStatus();
 }
 
-document.addEventListener('astro:page-load', resetAndHydrate);
+document.addEventListener('astro:page-load', () => onSessionReady(resetAndHydrate));
 window.addEventListener('content-status:refresh', () => void hydrateContentStatus());

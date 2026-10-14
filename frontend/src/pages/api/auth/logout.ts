@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { clearSessionHint } from '../../../lib/sessionHint';
 
 export const prerender = false;
 
@@ -11,6 +12,7 @@ function logout(cookies: Parameters<APIRoute>[0]['cookies'], url: URL) {
   cookies.delete('sb-access-token', { path: '/' });
   cookies.delete('sb-refresh-token', { path: '/' });
   cookies.delete('user-extras-cache', { path: '/' });
+  clearSessionHint(cookies);
 
   const redirectTo = sanitizeRedirect(url.searchParams.get('redirectTo'));
   return new Response(null, {

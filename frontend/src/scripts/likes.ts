@@ -1,3 +1,4 @@
+import { onSessionReady } from './session';
 import { isAuthenticatedUser, openAuthPrompt } from './auth-prompt';
 
 function resolveRedirect(button: HTMLButtonElement): string {
@@ -90,5 +91,8 @@ async function hydrateLikes(): Promise<void> {
 
 document.addEventListener('astro:page-load', () => {
   initLikes();
-  hydrateLikes();
+  // Anonymous viewers would only get a 401; the SSR count is already shown.
+  onSessionReady((session) => {
+    if (session.authenticated) void hydrateLikes();
+  });
 });
