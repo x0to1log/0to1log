@@ -559,6 +559,93 @@ async def run_rescore_production(dates: list[str], judges: list[str], types: lis
     print(f"\nDetails: {out}")
 
 
+def weekly_slugs(week_id: str) -> tuple[str, str]:
+    """"2026-W38" -> EN and KO weekly digest slugs."""
+    base = f"{week_id.lower()}-weekly-digest"
+    return base, f"{base}-ko"
+
+
+async def run_rescore_weeks(week_ids: list[str], judges: list[str]) -> None:
+    """Re-judge published weekly digests with each QC model; read-only (Task 1.5a)."""
+    from services.pipeline_persistence import _fetch_week_digests
+    from services.pipeline_quality import _check_weekly_quality, passes_auto_publish_gate
+
+    sb = get_supabase()
+    if sb is None:
+        raise SystemExit("Supabase unavailable")
+    runs: list[dict[str, Any]] = []
+    total_cost: dict[str, float] = {}
+    original_judge = settings.openai_model_reasoning
+    try:
+        for week_id in week_ids:
+            en_slug, ko_slug = weekly_slugs(week_id)
+            rows = {
+                r["locale"]: r for r in sb.table("news_posts")
+                .select("slug,locale,status,quality_score,content_expert,content_learner")
+                .in_("slug", [en_slug, ko_slug]).execute().data or []
+            }
+            if "en" not in rows or "ko" not in rows:
+                print(f"{week_id}: weekly rows missing, skipped")
+                continue
+            digests = await _fetch_week_digests(sb, week_id, "en") + await _fetch_week_digests(sb, week_id, "ko")
+            source_urls = list(dict.fromkeys(
+                card["url"] for d in digests for card in (d.get("source_cards") or []) if card.get("url")
+            ))
+            for judge in judges:
+                settings.openai_model_reasoning = judge
+                with CallMeter() as meter:
+                    result = await _check_weekly_quality(
+                        content_expert_en=rows["en"].get("content_expert") or "",
+                        content_learner_en=rows["en"].get("content_learner") or "",
+                        content_expert_ko=rows["ko"].get("content_expert") or "",
+                        content_learner_ko=rows["ko"].get("content_learner") or "",
+                        source_urls=source_urls,
+                        supabase=RecorderClient(),
+                        run_id=str(uuid.uuid4()),
+                        cumulative_usage={},
+                    )
+                cost = sum(c.get("cost_usd") or 0.0 for c in meter.calls)
+                total_cost[judge] = round(total_cost.get(judge, 0.0) + cost, 4)
+                breakdown = result.get("quality_breakdown") or {}
+                runs.append({
+                    "date": week_id, "type": "weekly", "judge": judge,
+                    "stored": rows["en"].get("quality_score"), "status": rows["en"].get("status"),
+                    "score": result.get("quality_score"),
+                    "caps": result.get("quality_caps_applied") or [],
+                    "llm": breakdown.get("llm"),
+                    "major_issues": [
+                        i.get("message", "")[:200] for i in result.get("quality_issues") or []
+                        if i.get("severity") == "major"
+                    ],
+                    "url_validation_failed": "url_validation_failed" in (result.get("quality_flags") or []),
+                })
+    finally:
+        settings.openai_model_reasoning = original_judge
+
+    print(f"\n{'Week':<10} {'Judge':<13} {'stored':>6} {'score':>6}  gate@85 gate@70  caps")
+    original_threshold = settings.auto_publish_threshold
+    try:
+        for r in runs:
+            gates = []
+            for threshold in (85, 70):
+                settings.auto_publish_threshold = threshold
+                ok = passes_auto_publish_gate(r["score"], r["caps"]) and not r["url_validation_failed"]
+                gates.append("pass" if ok else "draft")
+            print(f"{r['date']:<10} {r['judge']:<13} {str(r['stored']):>6} {str(r['score']):>6}  "
+                  f"{gates[0]:<7} {gates[1]:<7} {r['caps'] or '-'}")
+            for issue in r["major_issues"]:
+                print(f"      MAJOR: {issue}")
+    finally:
+        settings.auto_publish_threshold = original_threshold
+    print(f"\ncost: {total_cost}")
+
+    OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+    out = OUTPUT_ROOT / f"weekly-rescore-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+    out.write_text(json.dumps({"judges": judges, "costs": total_cost, "runs": runs},
+                              ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Details: {out}")
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--date", help="batch date with saved checkpoints, e.g. 2026-09-27")
@@ -572,8 +659,13 @@ async def main() -> None:
         "--rescore-dates",
         help="re-judge published production digests, e.g. 2026-09-15:2026-10-14 (first judge = baseline)",
     )
+    parser.add_argument("--rescore-weeks", help="re-judge published weekly digests, e.g. 2026-W37,2026-W38")
     args = parser.parse_args()
 
+    if args.rescore_weeks:
+        judges = [j.strip() for j in args.judges.split(",") if j.strip()]
+        await run_rescore_weeks([w.strip() for w in args.rescore_weeks.split(",") if w.strip()], judges)
+        return
     if args.rescore_dates:
         judges = [j.strip() for j in args.judges.split(",") if j.strip()]
         types = [t.strip() for t in args.types.split(",") if t.strip()]

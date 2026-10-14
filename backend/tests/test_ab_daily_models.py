@@ -81,3 +81,9 @@ def test_threshold_summary_counts_passes_cap_blocks_and_judge_only_blocks():
          "caps": ["major_source_cap_84"], "major_issues": ["63x unsupported"]},
         {"date": "d1", "type": "business", "baseline": 88, "score": 82, "caps": [], "major_issues": []},
     ]
+
+
+def test_weekly_slugs_match_weekly_digest_naming():
+    from scripts.ab_daily_models import weekly_slugs
+
+    assert weekly_slugs("2026-W38") == ("2026-w38-weekly-digest", "2026-w38-weekly-digest-ko")
