@@ -48,12 +48,19 @@ status: approved
 - News, Handbook, Blog, Products 상세 일부는 `.select('*')`를 사용했다.
 - News와 Blog 상세는 인라인 용어 연결을 위해 최대 200개 용어의 양쪽 언어 본문을 가져왔다.
 
+## 2026-10-14 Incident: `Vary: Cookie` disabled the CDN
+
+- 2026-09-29~10-13 Supabase 일시정지. 운영 `/ko/`, `/ko/news/`, `/en/handbook/` 를 쿠키 없이 연속 요청해도 `X-Vercel-Cache: MISS`, `Age: 0`.
+- Vercel 은 `Vary` 에 `Cookie` 가 있는 응답을 **아예 저장하지 않는다** (high-cardinality header, [CDN Cache 문서](https://vercel.com/docs/caching/cdn-cache)). 아래 Approved Direction 4 의 "초기 안정화" 조치가 캐시를 0% 로 만들었다.
+- DB 크기는 248/500 MB 로 원인 아님 → egress 초과가 가장 유력 (대시보드 미확인 가설).
+- 해결: [[2026-10-14-supabase-load-optimization]] — 공개 HTML 은 user-neutral 로 렌더, 개인 상태는 client hydration (`src/scripts/session.ts`, `/api/user/me`, `sb-session-hint` 쿠키), section 별 `Vercel-Cache-Tag` + `invalidateByTag`.
+
 ## Approved Direction
 
 1. `viewport` prefetch를 제거하고 Astro의 기본 `hover` 전략만 사용한다.
 2. locale 쿠키는 명시적 언어 전환에서만 설정하고, 쿠키 설정 후 query 없는 URL로 redirect한다.
 3. 익명 공개 HTML만 CDN에 저장한다. 인증·preview·admin 응답은 `private, no-store`로 유지한다.
-4. 초기 안정화에서는 `Vary: Cookie`로 익명과 인증 요청을 분리하고, 사용자별 북마크·읽음 조회는 가능한 범위부터 client hydration으로 옮긴다.
+4. ~~초기 안정화에서는 `Vary: Cookie`로 익명과 인증 요청을 분리~~ (2026-10-14 폐기: Vercel 이 Vary: Cookie 응답을 캐시하지 않음). 모든 공개 HTML 은 user-neutral, 사용자 상태는 전부 client hydration.
 5. 공개 쿼리는 필요한 locale과 화면 필드만 select한다. `.select('*')`를 공개 data loader에서 제거한다.
 6. 긴 Handbook 본문을 매 상세 요청마다 가져오지 않고 locale별 compact term index를 재사용한다.
 7. 1차 배포 후 7일 사용량을 측정하고, 기준을 넘을 때 public editorial route의 SSG/ISR 전환을 시작한다.
@@ -64,12 +71,15 @@ status: approved
 |---|---|---|---|
 | 익명 목록/Home | `max-age=0` | `s-maxage=300`, SWR 1시간 | 모든 방문자에게 같은 HTML |
 | 익명 상세 | `max-age=0` | `s-maxage=3600`, SWR 24시간 | 게시된 글만 대상 |
-| 인증 사용자 | `private, no-store` | 저장 금지 | persona/admin 상태 포함 가능 |
+| 인증 사용자 (`/en\|ko`) | 익명과 동일 | 익명과 동일 캐시 | middleware 가 인증 생략. nav/admin/persona/북마크는 `session.ts` 가 hydrate |
 | Preview/Admin/API user | `private, no-store` | 저장 금지 | 민감 데이터 경계 |
 | upstream 오류 | `no-store` | 저장 금지 | 오류 화면 cache poisoning 방지 |
 
 > [!important] 캐시 안전 조건
-> 사용자별 HTML에 `public, s-maxage`를 적용하지 않는다. 공용 캐시를 확대하려면 Navigation, persona 초기 상태, bookmark/read 상태까지 user-neutral HTML + client hydration 구조로 바꿔야 한다.
+> `/en|ko` 페이지 SSR 에서 `Astro.locals.user/profile/isAdmin` 으로 출력이 달라지면 안 된다 (middleware 가 해당 경로에서 인증을 하지 않으므로 항상 비어 있음). 사용자별 UI 는 `data-auth-only` / `data-guest-only` / `data-admin-only` + `hidden` 으로 렌더하고 `session.ts` 가 토글한다. `Vary: Cookie` 와 `Set-Cookie` 금지.
+
+> [!note] 무효화
+> 응답에 `Vercel-Cache-Tag: public,<section>`. `/api/admin/*` 쓰기 성공 시 middleware 가 section 태그를 invalidate, 백엔드 auto-publish 는 `/api/internal/notify-publish` 가 `news` 를 invalidate. 수동: `POST /api/revalidate` (`Bearer REVALIDATE_SECRET`, body `{"tags":["news"]}`, 생략 시 전체).
 
 ## Egress Budget
 

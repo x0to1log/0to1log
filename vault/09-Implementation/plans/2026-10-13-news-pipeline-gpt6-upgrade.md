@@ -78,6 +78,7 @@
 - [x] Supabase 복구 + 수동 실행 `news-2026-10-12` success
 - [x] 2026-10-14 07~08시 KST 자동 실행에서 새 run row + `success` 확인 — `news-2026-10-14` 22:12~22:20 UTC success, 4 posts 자동 발행 (quality 96~97)
 - [ ] Supabase 일시정지 사유 확인 (대시보드 Usage/알림). 사유별 재발 방지책 결정
+  - 2026-10-14: DB 크기 248/500 MB 로 기각, CDN 캐시 0% (`Vary: Cookie`) 확인 → egress 초과 유력 (대시보드 확인 전 가설). 대응: [[2026-10-14-supabase-load-optimization]]
 
 ### Task 0.2: Dead-man alert
 - [ ] "마지막 news run이 26시간 이상 없음" 감지 → 알림. 이번처럼 DB가 죽으면 run row 기반 감지도 DB에 의존하므로, **감지 주체는 DB 밖**(예: Railway 측 트리거 실패 시 외부 알림)이어야 함. 채널은 기존 webhook/admin 인프라 재사용 우선, grep 후 결정
