@@ -46,7 +46,7 @@ const [dailyRes, weeklyRes, sc] = await Promise.all([
         .limit(20)
     : Promise.resolve({ data: null, error: null }),
   getSiteContents(
-    ['editorial_note', 'news_masthead', 'news_edition_label', 'news_subkicker', 'start_here_sections', 'volume_issue'],
+    ['editorial_note', 'news_masthead', 'news_edition_label', 'news_subkicker', 'start_here_sections'],
     'ko',
   ),
 ]);
@@ -108,7 +108,6 @@ const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
     masthead={sc.news_masthead || '최신 AI 뉴스 모음집'}
     editionLabel={sc.news_edition_label || '빌더스 데일리'}
     subkicker={subkicker}
-    volumeLabel={sc.volume_issue || undefined}
   >
     <div class="handbook-search-sticky">
       <input

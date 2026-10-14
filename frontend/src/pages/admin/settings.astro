@@ -33,13 +33,12 @@ const scTabs = [
     id: 'news',
     label: 'Paper',
     description: 'Masthead, edition line, rail copy, and onboarding sections for AI News.',
-    keys: ['news_masthead', 'news_edition_label', 'news_subkicker', 'editorial_note', 'volume_issue', 'start_here_sections'],
+    keys: ['news_masthead', 'news_edition_label', 'news_subkicker', 'editorial_note', 'start_here_sections'],
     fields: [
       { key: 'news_masthead', label: 'Masthead', type: 'text', hint: 'Main masthead shown above the AI News list.' },
       { key: 'news_edition_label', label: 'Edition Label', type: 'text', hint: 'Short edition label below the masthead.' },
       { key: 'news_subkicker', label: 'Subkicker', type: 'textarea', hint: 'Comma-separated phrases. Stored as a JSON array.' },
       { key: 'editorial_note', label: 'Editorial Note', type: 'textarea', hint: 'Right-rail note shown on AI News list pages.' },
-      { key: 'volume_issue', label: 'Volume / Issue', type: 'text', hint: 'Displayed in the shell header.' },
     ],
   },
   {
@@ -732,7 +731,6 @@ const startHereDefaults = [
     news_edition_label: { ko: '로그 데일리', en: 'Log Daily' },
     news_subkicker: { ko: 'AI · 논문, 데일리 큐레이션, 공개 열람', en: 'AI · Papers, Daily Curation, Open Access' },
     editorial_note: { ko: '', en: '' },
-    volume_issue: { ko: '', en: '' },
     handbook_masthead: { ko: 'AI 용어집', en: 'AI Glossary' },
     handbook_edition_label: { ko: 'CS · AI · Infra', en: 'CS · AI · Infra' },
     handbook_subkicker: { ko: '용어 사전, 레퍼런스, 학습', en: 'Glossary, Reference, Learn' },
@@ -750,7 +748,7 @@ const startHereDefaults = [
   };
 
   const SC_GROUP_KEYS = {
-    news: ['news_masthead', 'news_edition_label', 'news_subkicker', 'editorial_note', 'volume_issue', 'start_here_sections'],
+    news: ['news_masthead', 'news_edition_label', 'news_subkicker', 'editorial_note', 'start_here_sections'],
     handbook: ['handbook_masthead', 'handbook_edition_label', 'handbook_subkicker', 'handbook_intro'],
     home: ['home_title', 'home_subtitle', 'home_intro'],
     about: ['about_tagline', 'about_publication_intro', 'about_publication_detail', 'about_editor_intro'],

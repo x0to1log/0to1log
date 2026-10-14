@@ -46,7 +46,7 @@ const [dailyRes, weeklyRes, sc] = await Promise.all([
         .limit(20)
     : Promise.resolve({ data: null, error: null }),
   getSiteContents(
-    ['editorial_note', 'news_masthead', 'news_edition_label', 'news_subkicker', 'start_here_sections', 'volume_issue'],
+    ['editorial_note', 'news_masthead', 'news_edition_label', 'news_subkicker', 'start_here_sections'],
     'en',
   ),
 ]);
@@ -108,7 +108,6 @@ const searchEmptyMessage = 'No AI news matches that search.';
     masthead={sc.news_masthead || 'Latest AI News'}
     editionLabel={sc.news_edition_label || 'Log Daily'}
     subkicker={subkicker}
-    volumeLabel={sc.volume_issue || undefined}
   >
     <div class="handbook-search-sticky">
       <input

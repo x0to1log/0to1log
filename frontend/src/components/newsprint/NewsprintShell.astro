@@ -1,14 +1,15 @@
 ﻿---
+import { issueLabel, issueNumber } from '../../lib/issue.js';
+
 interface Props {
   locale: 'en' | 'ko';
   masthead: string;
   editionLabel?: string;
-  volumeLabel?: string;
   subkicker?: string[];
   publishedAt?: string;
 }
 
-const { locale, masthead, editionLabel, volumeLabel, subkicker, publishedAt } = Astro.props;
+const { locale, masthead, editionLabel, subkicker, publishedAt } = Astro.props;
 const isKo = locale === 'ko';
 const nonce = Astro.locals.cspNonce || '';
 const displayDate = publishedAt ? new Date(publishedAt) : new Date();
@@ -22,7 +23,7 @@ const dateLabel = isKo
 <section class="newsprint-page">
   <header class="newsprint-header">
     <div class="newsprint-kicker">
-      <span>{volumeLabel ?? (isKo ? '제01권 · 제10호' : 'Vol.01 · No.10')}</span>
+      <span>{issueLabel(locale, issueNumber(displayDate))}</span>
       <span>{editionLabel ?? (isKo ? 'AI 뉴스 데일리' : 'AI Daily Dispatch')}</span>
       <span data-local-date data-date-iso={browserDateIso} data-date-locale={browserLocale}>
         {dateLabel}

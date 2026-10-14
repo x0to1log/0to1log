@@ -59,7 +59,7 @@ const categories = getHandbookCategories();
 
 // Site content from DB (fallback to hardcoded values)
 const sc = await getSiteContents(
-  ['handbook_intro', 'handbook_masthead', 'handbook_edition_label', 'handbook_subkicker', 'volume_issue'],
+  ['handbook_intro', 'handbook_masthead', 'handbook_edition_label', 'handbook_subkicker'],
   'en',
 );
 const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', 'Reference', 'Learn']);
@@ -71,7 +71,6 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
     masthead={sc.handbook_masthead || 'AI Glossary'}
     editionLabel={sc.handbook_edition_label || 'CS · AI · Infra'}
     subkicker={hbSubkicker}
-    volumeLabel={sc.volume_issue || undefined}
   >
     <p class="handbook-hero-stats">
       <span><strong>{totalTerms}+</strong> terms</span>

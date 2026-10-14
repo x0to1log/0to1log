@@ -59,7 +59,7 @@ const categories = getHandbookCategories();
 
 // Site content from DB (fallback to hardcoded values)
 const sc = await getSiteContents(
-  ['handbook_intro', 'handbook_masthead', 'handbook_edition_label', 'handbook_subkicker', 'volume_issue'],
+  ['handbook_intro', 'handbook_masthead', 'handbook_edition_label', 'handbook_subkicker'],
   'ko',
 );
 const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사전', '레퍼런스', '학습']);
@@ -71,7 +71,6 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['용어 사�
     masthead={sc.handbook_masthead || 'AI 용어집'}
     editionLabel={sc.handbook_edition_label || 'CS · AI · Infra'}
     subkicker={hbSubkicker}
-    volumeLabel={sc.volume_issue || undefined}
   >
     <p class="handbook-hero-stats">
       <span><strong>{totalTerms}+</strong> 용어</span>
