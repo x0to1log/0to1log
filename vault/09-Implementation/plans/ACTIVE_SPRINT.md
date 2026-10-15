@@ -92,6 +92,9 @@
   - **증거:** 커밋 dbf7e0c4..c65244d3, 전체 테스트 66 PASS / 23 FAIL(신규 실패 0), `npm run build` 성공, 브라우저 /ko/news/ 다크 — 탭 필터(비즈니스 49/리서치 51/주간 19)와 머리기사 라벨, 검색(Gemini 21건), 레일 번호, 블로그 목록 영향 없음
   - **같은 날 성능 수정(Supabase 세션 요청):** Pretendard dynamic subset(c65abc36, 운영 기사 첫 방문 3,260KB→625KB), Hahmlet 400 제거(b309a9cc), hreflang 짝 slug(f655c620)
   - **해결된 후속:** 투명한 고정 검색창(P2), research/business 구분(P4). **남은 후속:** `list-rail-copy` 테스트 낡은 문구, `--tab-cat-color` 미사용 변수
+- [x] **REDESIGN-P6** — 핸드북: 사전 항목(카드 제거·함렛 용어·정의 2줄·점선), 분야 필터 점 탭(한 줄 가로 스크롤), 많이 찾는 용어 번호 목록(중복 CSS 블록 제거), 분야별 점선 목록(`#handbook-showcase` 범위), 상세 머리·한 줄 정의 박스·수준 선택 점·관련 용어 점선·대문자 라벨 제거 — [[2026-10-15-site-redesign-phase6-handbook]]
+  - **증거:** 커밋 41b988d8..9f98062c, 전체 테스트 67 PASS / 23 FAIL(신규 실패 0), 빌드 성공, 브라우저 /ko/handbook/ 필터(LLM·생성AI)·사전 항목, BM25 상세 수준 전환(기초→심화)·게스트 학습 버튼·관리자 블록 숨김·관련 용어 6개
+  - **참고:** 관리자 핸드북 목록도 `.handbook-card`를 공유해 점선 구분선이 생김(무해)
 
 ### News Pipeline v11 — Rubric v2 + Quality Gates + URL Plumbing — 2026-04-18 ~ 2026-04-21
 

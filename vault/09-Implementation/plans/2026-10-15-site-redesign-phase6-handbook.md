@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** done (2026-10-15) — 실행 결과는 문서 끝 참조.
+
 **Goal:** 핸드북 목록·상세·카테고리 페이지를 Soft Newsprint V2로 다듬는다.
 - 용어 항목: 카드를 없애고 사전 항목처럼 보이게 한다.
 - 분야 필터: 점 탭으로 바꾼다.
@@ -411,3 +413,12 @@ git commit -m "feat: soft newsprint handbook detail head, level dots and related
 - [ ] `ACTIVE_SPRINT.md`에 REDESIGN-P6과 증거를 추가한다.
 - [ ] 이 계획에 Status와 실행 결과를 적는다.
 - [ ] 커밋: `docs: record redesign phase 6 handbook`
+
+
+---
+
+## 실행 결과 (2026-10-15)
+
+- 커밋: `41b988d8` 목록, `85fc571d` 상세, `9f98062c` 필터 한 줄 고정·중복 선언·hover 정리. 품질 리뷰 승인.
+- 검증: 전체 테스트 67 PASS / 23 FAIL(신규 실패 0), 빌드 성공, 브라우저 확인(필터·사전 항목·수준 전환·숨김 요소·관련 용어). 용어 목록은 기존처럼 분야 선택/검색 후에 나타남.
+- 브라우저에서 발견: 분야 탭이 두 줄로 줄바꿈 → `flex-wrap: nowrap`으로 수정. `/ko/products/`는 현재 분야 카드를 쓰지 않아 영향 없음.
