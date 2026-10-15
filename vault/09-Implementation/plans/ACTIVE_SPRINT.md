@@ -98,6 +98,11 @@
 - [x] **REDESIGN-P7** — 블로그: 카테고리 색은 점에만(B안), 평평한 사이드바 + 점선 트리(모바일 드로어 불투명 배경 유지), 폴더 카드 줄 → 카테고리 탭 + 문구, 추천·목록 칼럼 항목, 글 머리(📘 제거·카테고리 점 라벨), 목차 제목 정리 — [[2026-10-15-site-redesign-phase7-blog]]
   - **증거:** 커밋 6e3bad16..84ec9daf, 전체 테스트 68 PASS / 23 FAIL(신규 실패 0), 빌드 성공, 브라우저 /ko/blog/·글 상세·모바일 드로어, 댓글·좋아요·읽기 기록·관리자 숨김 훅 확인
   - **브라우저에서 발견·수정:** 추천 카드 태그 "##" 중복, 글 메타가 코드 글꼴(JetBrains Mono)이라 한글 자간이 벌어짐 → Pretendard
+- [x] **REDESIGN-P8a** — 제품: 가격·난이도 등급 색은 점에만(B안, `--tier-*` 토큰·다크 재정의), 카테고리 타일·카드 평평하게(그라디언트 대체 썸네일 → 은은한 면 + 로고), 장단점 ＋/−, 번호 원 제거, 사이트 방문 버튼 먹색, 미사용 Spotlight CSS 삭제 — [[2026-10-15-site-redesign-phase8a-products]]
+  - **증거:** 커밋 1be1ef86, products-v2 테스트, 기존 product 테스트(찜하기·관리자·검색 sticky) 통과, 빌드 성공, 브라우저 /ko/products/·/ko/products/dify/ 종이·다크
+- [x] **REDESIGN-P8b** — 기타 페이지: about(대문자 overline·원 번호·태그 칩 정리), 404 버튼, 서재 탭 → 점 탭·진행 막대 단색, 포트폴리오 800/대문자/inset 그림자 정리, 설정 대문자 라벨 정리 — [[2026-10-15-site-redesign-phase8b-misc-pages]]
+  - **증거:** 커밋 27e00b48, 67463620, 전체 테스트 70 PASS / 23 FAIL(신규 실패 0, 실패 목록 동일), 빌드 성공, 브라우저 /ko/about/·/library/·/portfolio/·404
+
 
 ### News Pipeline v11 — Rubric v2 + Quality Gates + URL Plumbing — 2026-04-18 ~ 2026-04-21
 

@@ -165,6 +165,8 @@ tags: [design, frontend, redesign, theme]
 
 ### 뉴스 목록 · 핸드북 · 블로그 · 제품 · 기타
 > **블로그 카테고리 색 (2026-10-15 결정 B):** DB `blog_categories.color`는 작은 점에만 쓴다(`--cat-color`/`--folder-color` → `::before` 점). 배지·글자·테두리·아이콘에는 쓰지 않는다. 마스트헤드 아래 문구 "만들고, 배우고, 기록하는 칼럼". [[2026-10-15-site-redesign-phase7-blog]]
+
+> **제품 등급 색 (2026-10-15 결정 B):** 가격(free/freemium/paid/enterprise)·난이도(beginner/intermediate/advanced)는 6px 점에만 등급 색을 쓴다(`--tier-*`, 다크 테마는 밝은 톤). 글자는 기본색. [[2026-10-15-site-redesign-phase8a-products]]
 위 공통 규칙을 적용한다. 각 단계 시작 시 **해당 페이지의 시안을 1장 확인한 뒤** 구현한다.
 - 핸드북: 용어 = 사전
 - 블로그: 칼럼 성격

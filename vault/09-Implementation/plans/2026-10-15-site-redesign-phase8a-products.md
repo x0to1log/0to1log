@@ -1,6 +1,6 @@
 # 사이트 리디자인 8a단계(제품 페이지) Implementation Plan
 
-**Status:** in progress
+**Status:** done (2026-10-15) — 실행 결과는 문서 끝 참조.
 
 **Goal:** 제품 목록·상세 페이지를 Soft Newsprint V2로 정리한다. 가격·난이도는 **결정 B**에 따라 등급 색을 점(6px)에만 쓰고, 글자는 기본색으로 둔다.
 
@@ -94,3 +94,11 @@
 
 ## 커밋
 - `feat: soft newsprint products list and detail with tier dot labels`
+
+---
+
+## 실행 결과 (2026-10-15)
+
+- 커밋: `1be1ef86`.
+- 검증: products-v2 및 기존 product 테스트 통과, 빌드 성공, 브라우저(종이·다크) 목록·Dify 상세 확인.
+- 계획 대비: 목록 첫 화면은 카드 그리드가 아니라 카테고리 타일이라 타일도 같은 규칙(위 선 + 점선 행)으로 정리. 찜하기 버튼은 배경 없이 1px 테두리·4px radius. "Freemium" 문구는 변경하지 않음.
