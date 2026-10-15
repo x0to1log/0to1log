@@ -48,4 +48,12 @@ assert(/linear-gradient\(transparent 60%/.test(term), 'term highlight is a highl
 assert(css.includes('.newsprint-guide-quiz,\n.newsprint-guide-weekly-quiz {') || /\.newsprint-guide-quiz,\s*\.newsprint-guide-weekly-quiz\s*\{/.test(css), 'quiz blocks get a soft surface');
 assert(/border-bottom:\s*1px dotted var\(--color-border\)/.test(rule('.source-card')), 'sources separated by dotted lines');
 
+// Preserved hooks (session hydration, persona data, admin/comment/like/bookmark)
+for (const hook of ['data-persona={p}', 'id="persona-data"', 'data-admin-only', 'data-comment-form']) {
+  assert(layout.includes(hook), `layout keeps ${hook}`);
+}
+const sticky = read('components/common/StickyReadingActions.astro');
+assert(sticky.includes('data-like-btn'), 'sticky actions keep data-like-btn');
+assert(sticky.includes('newsprint-bookmark-icon'), 'sticky actions keep newsprint-bookmark-icon');
+
 console.log('article-v2.test.cjs passed');

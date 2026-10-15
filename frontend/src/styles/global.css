@@ -2202,10 +2202,6 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
     grid-template-columns: 1fr;
   }
 
-  .persona-switcher-btn {
-    padding: 0.4rem 0.1rem 0.55rem;
-  }
-
   .handbook-level-btn {
     padding: 0.25rem 1rem;
   }
@@ -8798,7 +8794,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
   padding: 0 0.05em;
   border-radius: 1px;
   background: linear-gradient(transparent 60%, color-mix(in srgb, var(--color-accent) 22%, transparent) 60%);
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: color 0.15s ease;
 }
 
 .handbook-term:hover {
