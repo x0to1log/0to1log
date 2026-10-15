@@ -355,6 +355,14 @@
 - [ ] flex 429 / default tier fallback 빈도
 - [ ] run 총비용: 현행 ~$0.52 대비 +$0.13 예상
 
+**실행 기록 (2026-10-15):**
+- 사고: Railway에 `OPENAI_MODEL_REASONING=gpt-6.1-sol`이 이미 설정되어 있었음 (runbook 초안 "Railway에 추가" 지시가 개정 전에 적용된 것으로 보임). threshold는 코드 기본값 85 그대로 → **sol + 85 반쪽 전환**. 10-15 daily 4개 (research 80, business 72) 전부 draft. 기준 미달 + 둘 다 `major_source_cap_84`.
+  - business major "cached inputs 95% off": 원문에 없음 (원문의 95%는 무관한 수치) → **실제 문제**, draft 유지 권장
+  - research major "35% more agentic code submissions": Google 블로그·Reuters에 "more than 35%" 있음 → **오판**. 원인: claim 수치 정규식이 `%` 뒤 `\b`를 요구 → `%` 숫자 미추출 (`6855619e`로 수정)
+  - 수정 후 research 재채점 ($0.05): 79 + 새 major "Gemini app / AI Mode in Search 구독자 제공이 출처에 없음" → Google 블로그·Reuters에 그대로 있음 → **오판**. research는 수동 발행 권장
+- 전환 커밋: `core/config.py` reasoning=`gpt-6.1-sol`, threshold=70 (reasoning 기본값 편집은 auto mode 안전장치가 막아 Amy가 직접 수정). `backend/CLAUDE.md` 설정 안내 갱신. 이후 Railway `OPENAI_MODEL_REASONING` 삭제 (Amy)
+- 남은 evidence 약점 (후속 과제): 소문자 섞인 이름 ("Gemini app")은 claim 토큰이 안 됨, 알파벳 토큰에 단어 경계가 없어 "AI Mode"가 "AI model"에도 매치 → 관찰 기간에 오판 draft 가능
+
 **롤백:** 전환 커밋 revert + push (reasoning=gpt-5-mini, threshold=85 동시 복구, 12/11 전까지 유효). 급하면 Railway에 `OPENAI_MODEL_REASONING=gpt-5-mini`, `AUTO_PUBLISH_THRESHOLD=85`를 추가해도 같은 효과 (나중에 삭제).
 **관찰 기간:** 3~5일 → 이상 없으면 main/light/nano 전환 (Task 1.5).
 
