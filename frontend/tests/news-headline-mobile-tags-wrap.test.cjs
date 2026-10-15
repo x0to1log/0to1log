@@ -30,12 +30,6 @@ function extractBlock(source, selector) {
   throw new Error(`Unclosed CSS block for ${selector}`);
 }
 
-const headline = read('src/components/newsprint/NewsprintHeadline.astro');
-assert(
-  headline.includes('<span class="newsprint-tags-inline">'),
-  'NewsprintHeadline should keep rendering headline tags through the shared inline tag row',
-);
-
 const globalCss = read('src/styles/global.css');
 const cardBottomBlock = extractBlock(globalCss, '.newsprint-card-bottom');
 assert(

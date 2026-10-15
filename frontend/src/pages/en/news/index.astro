@@ -4,7 +4,7 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
-import { normalizeCategorySlug, getPostTypeLabel } from '../../../lib/categories';
+import { getPostTypeLabel } from '../../../lib/categories';
 import { resolveDisplayTitleExcerpt, getEffectivePersona } from '../../../lib/personaTitle';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsDeskList from '../../../components/newsprint/NewsDeskList.astro';
@@ -45,7 +45,7 @@ const [dailyRes, weeklyRes, sc] = await Promise.all([
         .limit(20)
     : Promise.resolve({ data: null, error: null }),
   getSiteContents(
-    ['editorial_note', 'news_masthead', 'news_edition_label', 'news_subkicker', 'start_here_sections'],
+    ['editorial_note', 'news_masthead', 'news_edition_label', 'news_subkicker'],
     'en',
   ),
 ]);

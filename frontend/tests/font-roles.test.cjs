@@ -45,7 +45,7 @@ assert.deepStrictEqual(legacy, [], `legacy fonts still referenced:\n${legacy.joi
 
 assert(/font-variant-numeric:\s*lining-nums/.test(css), 'masthead brand marks need lining numerals ("0to1" must not read "oto1")');
 // Pretendard/Hahmlet have no italic faces: decks must stay upright (no faux-oblique Hangul).
-for (const sel of ['.newsprint-deck', '.newsprint-headline-deck', '.handbook-definition']) {
+for (const sel of ['.newsprint-deck', '.news-desk-excerpt', '.handbook-definition']) {
   const escaped = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const m = css.match(new RegExp('(?:^|\\n)' + escaped + '\\s*\\{([^}]*)\\}'));
   assert(m, `${sel} rule must exist`);

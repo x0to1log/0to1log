@@ -34,16 +34,16 @@ function assertListPage(relativePath) {
 assertListPage('frontend/src/pages/en/news/index.astro');
 assertListPage('frontend/src/pages/ko/news/index.astro');
 
-const headline = read('frontend/src/components/newsprint/NewsprintHeadline.astro');
+const deskCell = read('frontend/src/components/newsprint/NewsDeskCell.astro');
 assert.ok(
-  headline.includes('data-search-text='),
-  'NewsprintHeadline.astro must expose search text for list filtering',
+  deskCell.includes('data-search-text='),
+  'NewsDeskCell.astro must expose search text for list filtering',
 );
 
-const listCard = read('frontend/src/components/newsprint/NewsprintListCard.astro');
+const searchScript = read('frontend/src/scripts/newsListSearch.ts');
 assert.ok(
-  listCard.includes('data-search-text='),
-  'NewsprintListCard.astro must expose search text for list filtering',
+  searchScript.includes("new CustomEvent('news:list-updated')"),
+  'newsListSearch must announce updates so the desk layout can follow',
 );
 
 const filter = read('frontend/src/components/newsprint/NewsprintCategoryFilter.astro');
