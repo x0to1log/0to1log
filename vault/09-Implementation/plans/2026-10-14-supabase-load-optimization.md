@@ -91,3 +91,9 @@ retention 테스트 작업 중 `routers.cron` 테스트가 patch 없이 실행�
 - [x] 같은 URL 2회 요청 → 2번째 `X-Vercel-Cache: HIT` (2026-10-14 배포 후 /ko/, /ko/news/, /en/handbook/ 확인)
 - [ ] 로그인 상태로 nav/북마크/좋아요/persona 확인
 - [ ] Supabase Usage 에서 9월 egress 확인 (가설 검증) + 7일 일별 egress 기록
+
+## 후속: 페이지 무게 (2026-10-15)
+
+- 운영 상세 페이지 838 KB (gzip 268 KB) 중 ~700 KB 가 `handbook-terms-data` (용어 114개 임베드, 본문 참조 8개). `ae1ae91d` 로 본문이 링크한 용어만 임베드 → 로컬 측정 gzip 78 KB.
+- `ca04b5ae`: products 카드 대체 로고 `loading="lazy"`, 20 KB 초과 로고 7개를 같은 이름·포맷으로 256px 리사이즈 (363→54 KB).
+- 보류: news 목록 페이지네이션. 검색·필터가 렌더된 카드 전체를 클라이언트에서 거르므로 서버 검색 API 가 먼저 필요하고, gzip 50 KB 라 이득이 작다.
