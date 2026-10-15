@@ -104,7 +104,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
         <header style="margin-bottom: 1.5rem;">
           <div class="handbook-detail-meta">
             {(term.categories || []).map((cat: string) => (
-              <span style="font-size: 0.8rem; color: var(--color-text-muted);">
+              <span>
                 {getHandbookCategoryLabel(locale, cat)}
               </span>
             ))}

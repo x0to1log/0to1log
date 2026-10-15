@@ -1001,38 +1001,48 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
 /* Handbook level switcher (basic / advanced) */
 .handbook-level-switcher {
   display: flex;
-  gap: 0;
+  gap: 1.1rem;
   margin: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
   width: fit-content;
 }
 
 .handbook-level-btn {
+  position: relative;
   font-family: var(--font-ui);
   font-size: 0.85rem;
-  padding: 0.5rem 1.1rem;
+  padding: 0.4rem 0.1rem 0.55rem;
   background: transparent;
   border: none;
-  border-right: 1px solid var(--color-border);
   cursor: pointer;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
+  font-weight: 500;
   transition: background 150ms ease, color 150ms ease;
 }
 
-.handbook-level-btn:last-child {
-  border-right: none;
-}
-
 .handbook-level-btn--active {
-  background: var(--color-accent-subtle, rgba(0, 0, 0, 0.06));
+  background: none;
   color: var(--color-text-primary);
   font-weight: 600;
 }
 
+.handbook-level-btn--active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  transform: translateX(-50%);
+}
+
 .handbook-level-btn:hover:not(.handbook-level-btn--active) {
-  background: var(--color-accent-subtle, rgba(0, 0, 0, 0.03));
+  color: var(--color-text-primary);
+  background: none;
 }
 
 .newsprint-prose {
@@ -1594,7 +1604,7 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   position: relative;
   padding: 0.875rem 2.25rem 0.875rem 1rem;
   margin: 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px dotted var(--color-border);
   color: var(--color-text-secondary);
   font-size: 0.9rem;
   line-height: 1.55;
@@ -1619,10 +1629,12 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1;
-  color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 11%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 26%, transparent);
-  border-radius: 999px;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font-size: 0.75rem;
   white-space: nowrap;
 }
 
@@ -1722,8 +1734,7 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   padding: 0;
   font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--color-text-muted);
 }
 
@@ -2204,9 +2215,6 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
     grid-template-columns: 1fr;
   }
 
-  .handbook-level-btn {
-    padding: 0.25rem 1rem;
-  }
 }
 
 /* ===========================
@@ -7082,7 +7090,8 @@ body.auth-prompt-open {
   color: var(--color-text-secondary);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 4px;
+  box-shadow: none;
   cursor: pointer;
   transition: all 200ms ease;
 }
@@ -7123,16 +7132,19 @@ body.auth-prompt-open {
 /* Handbook detail page */
 .handbook-detail-title {
   font-family: var(--font-heading);
-  font-weight: 800;
+  font-weight: 700;
+  letter-spacing: -0.04em;
   font-size: clamp(1.75rem, 2.6vw, 2.3rem);
-  line-height: 1.16;
+  line-height: 1.25;
   margin: 0;
   flex: 1;
 }
 
 .handbook-detail-korean {
+  font-family: var(--font-ui);
   font-size: 0.5em;
   font-weight: 400;
+  letter-spacing: 0;
   color: var(--color-text-muted);
   margin-left: 0.5rem;
   vertical-align: baseline;
@@ -7150,6 +7162,20 @@ body.auth-prompt-open {
   margin-top: 0.75rem;
   align-items: center;
   flex-wrap: wrap;
+  color: var(--color-accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.handbook-detail-meta span:first-child::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 0.4rem;
+  vertical-align: middle;
 }
 
 .handbook-definition {
@@ -7169,9 +7195,8 @@ body.auth-prompt-open {
   font-family: var(--font-ui);
   font-size: 0.78rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-text-muted);
+  letter-spacing: 0;
+  color: var(--color-accent);
   margin-bottom: 0.4rem;
 }
 
