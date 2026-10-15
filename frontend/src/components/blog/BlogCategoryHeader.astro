@@ -13,7 +13,7 @@ const label = category[`label_${locale}` as keyof BlogCategory] as string;
 const countLabel = locale === 'ko' ? `${postCount}개의 글` : `${postCount} posts`;
 ---
 
-<header class="blog-category-header" style={`--category-color: ${category.color}`}>
+<header class="blog-category-header">
   {category.banner_url && (
     <img class="blog-category-banner" src={category.banner_url} alt="" loading="lazy" />
   )}

@@ -61,4 +61,13 @@ for (const p of ['pages/ko/blog/[slug].astro', 'pages/en/blog/[slug].astro']) {
   assert(f.includes('onSessionReady') && f.includes('recordReadingHistory') && f.includes('handbook-terms-data'), `${p} keeps session/reading-history/terms hooks`);
 }
 
+// Follow-up fixes
+assert(rule('.blog-article-meta').includes('var(--font-blog-ui)'), 'article meta uses the blog UI font');
+for (const d of ['components/blog', 'pages/ko/blog', 'pages/en/blog']) {
+  for (const f of fs.readdirSync(path.join(src, d))) {
+    if (!f.endsWith('.astro')) continue;
+    assert(!read(`${d}/${f}`).includes('#{tag}'), `${d}/${f} must not render #{tag} (CSS adds the #)`);
+  }
+}
+
 console.log('blog-v2.test.cjs passed');
