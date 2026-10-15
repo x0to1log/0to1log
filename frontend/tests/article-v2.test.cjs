@@ -24,4 +24,19 @@ assert(!rule('.switcher-bar-label').includes('uppercase'), 'switcher label not u
 assert(/border:\s*none/.test(rule('.persona-switcher')), 'switcher has no box border');
 assert(/width:\s*4px/.test(rule('.persona-switcher-btn--active::after')) && rule('.persona-switcher-btn--active::after').includes('var(--color-accent)'), 'active edition marked by an accent dot');
 
+// Task 2: 머리 / 섹션 제목 / 핵심 팩트
+assert(!/newsprint-article-kicker"\s+style=/.test(layout), 'kicker uses the accent from CSS, no inline category color');
+const deckIdx = layout.indexOf('<p class="newsprint-deck">');
+const tagsIdx = layout.indexOf('<div class="newsprint-article-tags">');
+assert(deckIdx > 0 && tagsIdx > deckIdx, 'tags render below the deck');
+assert(!rule('.newsprint-card-kicker').includes('uppercase'), 'kicker not uppercase');
+assert(/clip-path:\s*none/.test(rule('.newsprint-card-kicker-type')), 'type badge drops the arrow shape');
+assert(!/\n\.newsprint-card-kicker-type::before/.test(css) && css.includes('.newsprint-card-kicker .newsprint-card-kicker-type::before'), 'middle dot only inside a kicker (rails use kicker-type standalone)');
+assert(/font-weight:\s*700/.test(rule('.newsprint-lead-title')), 'lead title uses a loaded Hahmlet weight');
+assert(/height:\s*1px/.test(rule('.newsprint-divider')), 'divider is a hairline');
+assert(!rule('.newsprint-section-title').includes('uppercase'), 'section titles not uppercase');
+assert(!rule('.newsprint-guide-label').includes('uppercase'), 'guide labels not uppercase');
+assert(/border-bottom:\s*1px dotted/.test(rule('.newsprint-fact-pack-item')), 'fact pack items separated by dotted lines');
+assert(/box-shadow:\s*none/.test(rule('.newsprint-fact-pack-item')), 'fact pack items are not cards');
+
 console.log('article-v2.test.cjs passed');
