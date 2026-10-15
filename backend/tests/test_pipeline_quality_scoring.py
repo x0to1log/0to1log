@@ -194,6 +194,21 @@ def test_frontload_claim_tokens_cover_bare_decimals_units_and_separators():
     assert "63" not in tokens  # bare short integers match too much unrelated text
 
 
+def test_frontload_claim_tokens_cover_percentages():
+    # Real failure (2026-10-15): "35% more agentic code submissions" produced no
+    # token because the unit group required a word boundary after "%".
+    import services.pipeline  # noqa: F401 - load re-exports before direct quality import
+    from services.pipeline_quality import _frontload_claim_tokens
+
+    tokens = _frontload_claim_tokens({
+        "excerpt": "Teams cite 35% more agentic code submissions and cached inputs 95% off.",
+        "excerpt_ko": "코드 제출 35% 증가",
+    })
+
+    for expected in ("35%", "35 percent", "95%"):
+        assert expected in tokens, expected
+
+
 def test_frontload_claim_tokens_cover_entities_versions_and_lowercase_units():
     # Second measurement (2026-10-14): 8 of 9 remaining "unsupported" majors were
     # names present in the full source but cut from the QC excerpt.

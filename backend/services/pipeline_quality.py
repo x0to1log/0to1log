@@ -129,7 +129,8 @@ def _split_evidence_sentences(text: str) -> list[str]:
 # Numbers the frontload asserts, so evidence can include the exact source
 # sentence even when it lacks $/%/billion markers (e.g. "AUROC 0.886", "4.64x").
 _CLAIM_NUMBER_RE = re.compile(
-    r"(?<![\w.,])(\d+(?:[.,]\d+)*)(?:\s?(x|×|%|b|m|k|bn|billion|million|trillion)\b|(x|×)(?=\W|$))?",
+    # "%" is matched outside the \b group: "35% more" has no word boundary after "%".
+    r"(?<![\w.,])(\d+(?:[.,]\d+)*)(?:\s?(%)|\s?(x|×|b|m|k|bn|billion|million|trillion)\b|(x|×)(?=\W|$))?",
     re.IGNORECASE,
 )
 _CLAIM_VERSION_RE = re.compile(r"(?<![\w.])v?(\d+\.\d+\.\d+(?:\.\d+)*)\b", re.IGNORECASE)
@@ -189,7 +190,7 @@ def _frontload_claim_tokens(frontload: dict[str, Any] | None) -> tuple[str, ...]
         numbers[f"v{match.group(1)}"] = None
     for match in _CLAIM_NUMBER_RE.finditer(text):
         core = match.group(1)
-        unit = (match.group(2) or match.group(3) or "").lower()
+        unit = (match.group(2) or match.group(3) or match.group(4) or "").lower()
         digits = core.replace(",", "").replace(".", "")
         if "." in core or "," in core or len(digits) >= 3:
             numbers[core] = None
