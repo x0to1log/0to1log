@@ -80,7 +80,22 @@
 - [ ] Supabase 일시정지 사유 확인 (대시보드 Usage/알림). 사유별 재발 방지책 결정
   - 2026-10-14: DB 크기 248/500 MB 로 기각, CDN 캐시 0% (`Vary: Cookie`) 확인 → egress 초과 유력 (대시보드 확인 전 가설). 대응: [[2026-10-14-supabase-load-optimization]]
 
-### Task 0.2: Dead-man alert
+### Task 0.2: Dead-man alert — 재설계 (2026-10-15)
+
+**Decision (Amy):** 외부 알림 없이 admin 페이지에만 표시.
+- 근거 지표 (09-01~10-15): daily 38회 중 실패 3 (전부 OpenAI 크레딧 소진 09-16~18), digest 단계 실패 18건 전부 크레딧, **09-29~10-11 13일 실행 0건 (Supabase 정지)**. 두 사건 모두 아무도 몰랐음 → 품질보다 "조용한 정지"가 실제 손실 원인.
+- **한계:** admin 로그인이 Supabase Auth라 DB 정지 시 admin 자체에 접근 불가 → 그 경우는 "admin 로그인 실패"가 신호. 감지 지연 = 다음 admin 방문까지.
+- 기존 구현 확인: NQ-17 health check는 **한 run 내부** 단계 경고 (`debug_meta.warnings`)만. 대시보드는 마지막 run 1건 + stuck 판정. `admin_notifications`는 읽기만 있고 쓰는 곳 없음 → 사용 안 함.
+
+**설계:**
+- `frontend/src/lib/admin/pipelineHealth.js` (순수 함수, `node:test`): 최근 14일 `pipeline_runs` + now → `{ level, issues[], missingDates, ... }`
+  - critical: 최신 예정 daily batch(07:12 KST + 30분 유예)의 run 없음 / 최신 daily run 실패 / 연속 2회 이상 실패
+  - warning: 14일 내 누락 날짜 (목록), 최신 예정 weekly(월 10:00 KST + 30분) run 없음
+  - 실패 원인 분류 (`last_error`): OpenAI 크레딧 소진 / Flex 용량 / DB 연결 / 기타
+  - batch id 규칙: daily `news-{cron 시각의 KST 날짜}`, weekly `weekly-{월요일 KST 날짜 - 7일의 ISO 주차}`
+- `frontend/src/pages/admin/index.astro` 상단 "Pipeline health" 카드 (admin UI 영어 유지)
+
+### Task 0.2 (구 설계): Dead-man alert
 - [ ] "마지막 news run이 26시간 이상 없음" 감지 → 알림. 이번처럼 DB가 죽으면 run row 기반 감지도 DB에 의존하므로, **감지 주체는 DB 밖**(예: Railway 측 트리거 실패 시 외부 알림)이어야 함. 채널은 기존 webhook/admin 인프라 재사용 우선, grep 후 결정
 - 완료 기준: DB 연결 실패 상황을 가정한 테스트로 alert 경로 1회 검증
 
