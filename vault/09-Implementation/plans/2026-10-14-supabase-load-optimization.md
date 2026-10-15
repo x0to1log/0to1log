@@ -72,7 +72,7 @@ tags:
 |---|---|
 | `4a6344be` | backend 테스트 운영 Supabase 격리 (아래 사고) |
 | `b254f1b7` | checkpoint 14일 / debug_meta 60일 retention (promote cron) |
-| `97704614` | migration `00059_query_path_indexes.sql` (**미적용**) |
+| `97704614` | migration `00059_query_path_indexes.sql` (2026-10-15 적용) |
 | `74c9c164` | `/api/user/me` + `session.ts` + nav dual-state |
 | `7775aed2` | `/en\|ko` 인증 생략·Vary 제거·cache tag 무효화·상세 페이지 hydration |
 | `1f798591` | EN RSS 캐시, blog sidebar 병렬화 |
@@ -86,8 +86,8 @@ retention 테스트 작업 중 `routers.cron` 테스트가 patch 없이 실행�
 
 ## 배포 후 할 일
 
-- [ ] Supabase SQL Editor: `00059_query_path_indexes.sql` 적용
-- [ ] Supabase SQL Editor: `VACUUM FULL pipeline_checkpoints;` (삭제분 디스크 반환)
-- [ ] 같은 URL 2회 요청 → 2번째 `X-Vercel-Cache: HIT`
+- [x] Supabase SQL Editor: `00059_query_path_indexes.sql` 적용 (2026-10-15 Amy, 4개 valid 확인)
+- [x] Supabase SQL Editor: `VACUUM FULL pipeline_checkpoints;` (2026-10-15: checkpoints 181 MB→2.4 MB, DB 249→70 MB)
+- [x] 같은 URL 2회 요청 → 2번째 `X-Vercel-Cache: HIT` (2026-10-14 배포 후 /ko/, /ko/news/, /en/handbook/ 확인)
 - [ ] 로그인 상태로 nav/북마크/좋아요/persona 확인
 - [ ] Supabase Usage 에서 9월 egress 확인 (가설 검증) + 7일 일별 egress 기록
