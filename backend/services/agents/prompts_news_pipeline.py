@@ -489,8 +489,8 @@ Your job: write a **{digest_type} daily digest** in BOTH English AND Korean simu
   "excerpt": "(English) 1-2 sentences that make readers click. MUST differ from both headline and the body's One-Line Summary",
   "excerpt_ko": "(Korean) 제목·한 줄 요약과 모두 다른 1-2문장의 클릭 유도형 요약",
   "tags": ["4-6 English keyword tags: company names, key tech, industry terms, notable tools"],
-  "focus_items": ["REQUIRED — exactly 3 bullets, EN 5-12 words each. P1=what changed (factual event or announcement). P2=why it matters (objective consequence or mechanism — prefer 'enables X', 'reduces Y', 'shifts Z' over evaluative/press-release phrasing like 'raises bar', 'transforms', 'redefines', 'sets new standard'). P3=what to watch (forward indicator, not prediction)."],
-  "focus_items_ko": ["REQUIRED — 정확히 3개, 각 15-40자. 1=무엇이 바뀌었나 (사실 기반). 2=왜 중요한가 (객관적 영향이나 메커니즘 — '표준 상향', '판도 바꿈' 같은 평가형 대신 '~를 가능케 함', '~비용 절감', '~축 이동' 같은 구체 표현). 3=무엇을 지켜볼지 (전망 아닌 관찰 지표). focus_items의 자연스러운 한국어 번역 (순서·개수 동일). 절대 생략 금지 — EN만 있고 KO 없는 응답은 결함"],
+  "focus_items": ["REQUIRED — exactly 3 bullets, EN 5-12 words each. P1=what changed (factual event or announcement). P2=why it matters (objective consequence, not evaluation — a consequence the sources state or directly describe; do not infer market, budget, or adoption shifts the sources do not report; avoid evaluative/press-release phrasing like 'raises bar', 'transforms', 'redefines', 'sets new standard'). P3=what to watch (forward indicator, not prediction)."],
+  "focus_items_ko": ["REQUIRED — 정확히 3개, 각 15-40자. 1=무엇이 바뀌었나 (사실 기반). 2=왜 중요한가 (출처가 밝힌 영향만 — 출처에 없는 시장·예산·도입 변화를 추론하지 말 것, '표준 상향'·'판도 바꿈' 같은 평가형 금지). 3=무엇을 지켜볼지 (전망 아닌 관찰 지표). focus_items의 자연스러운 한국어 번역 (순서·개수 동일). 절대 생략 금지 — EN만 있고 KO 없는 응답은 결함"],
   "en": "<SEE SKELETON BELOW>",
   "ko": "<SEE SKELETON BELOW>",
   "sources": [
@@ -523,7 +523,7 @@ IMPORTANT: The above is an EXAMPLE of the structure. Your actual content must be
 2. **Sub-item count match**: {subitem_count_checklist}
 3. {depth_checklist}
 4. Does headline_ko follow Title Strategy (one of the listed archetypes, no forbidden words, no English acronyms in learner mode)?
-5. Does every number/company/product in headline_ko + excerpt_ko appear in the source articles (no hallucination)?
+5. Does every number, percentage, money amount, company, and product in `headline`, `excerpt`, `focus_items` and their `_ko` versions appear in the source articles? Remove any figure or name the sources do not state — do not round, convert, or add figures on your own.
 6. **Frontload locale parity**: Does `headline_ko` contain any specific number, ranking, allegation, or claim that is NOT in `headline`? Does `excerpt_ko` add any new fact not in `excerpt`? If yes, fix the mismatch before responding — KO is a translation, not a rewrite.
 7. **Community Pulse**: if "Community Pulse Data:" appears in input, is `## Community Pulse` (ko: `## 커뮤니티 반응`) present in BOTH en AND ko? This section is MANDATORY when CP data is provided — never skip it.
 8. Does every `###` line contain ONLY the news item title (no body/citation on same line) with one blank line before the first paragraph? **EN heading transformation check**: for each EN `###`, scan for these 3 failure modes and fix:
@@ -1567,8 +1567,19 @@ TITLE_STRATEGY_MAP = {
 }
 
 
+def _date_context_block(batch_date: str) -> str:
+    # Without a date the writer fell back on its training-time world and wrote
+    # "former President" for a sitting president (2026-09-28).
+    return f"""
+
+## DATE CONTEXT
+Today is {batch_date} (KST). Use this date for "as of" anchors.
+Describe people, titles, products, and timelines as the source articles state them as of this date.
+Do not add "former", "ex-", or "late", and do not change anyone's role, title, or status from your own background knowledge. If the sources do not state a role, use the name alone."""
+
+
 def get_digest_prompt(
-    digest_type: str, persona: str, handbook_slugs: list[str],
+    digest_type: str, persona: str, handbook_slugs: list[str], batch_date: str | None = None,
 ) -> str:
     """Get the system prompt for a digest persona.
 
@@ -1576,6 +1587,7 @@ def get_digest_prompt(
         digest_type: "research" or "business"
         persona: "expert", "learner", or "beginner"
         handbook_slugs: list of handbook term slugs for linking
+        batch_date: KST date of the digest (YYYY-MM-DD); adds the DATE CONTEXT block
     """
     sections, guide = DIGEST_PROMPT_MAP.get(
         (digest_type, persona),
@@ -1586,9 +1598,10 @@ def get_digest_prompt(
         RESEARCH_LEARNER_SKELETON,
     )
     title_strategy = TITLE_STRATEGY_MAP.get(persona, LEARNER_TITLE_STRATEGY)
-    return _build_digest_prompt(
+    prompt = _build_digest_prompt(
         persona, guide, digest_type, sections, handbook_slugs, skeleton, title_strategy,
     )
+    return prompt + _date_context_block(batch_date) if batch_date else prompt
 
 
 # ──────────────────────────────────────────────
@@ -2242,6 +2255,7 @@ Style rules:
 - Avoid English-Korean mixing except product/company names and unavoidable acronyms.
 - Expand unavoidable acronyms briefly when first mentioned.
 - Convert currency units correctly: $4B = 40억 달러, $2.1B = 21억 달러, $30M = 3,000만 달러.
+- Preserve quantity qualifiers exactly: over / at least → 이상 / 최소, up to / at most → 최대, about → 약. Never turn "over $500B" into "최대".
 - Keep the beginner tone: explain why the story matters before using specialized terms.
 - Do not use raw URL labels like `[https://...](https://...)`; keep numeric citation labels.
 - Do not include selection labels like "(research digest)" or "(adoption)" in reader-facing headings; selection labels must only appear in `story_selection_notes_ko`.
@@ -2292,6 +2306,9 @@ Write as a Korean editor naturally would — same stories, same depth, same numb
 - Place each citation at the end of the Korean sentence or bullet that carries the same fact as the English original. If one English sentence had two citations, the corresponding Korean sentence keeps both.
 - Raw URLs (e.g., `https://github.com/...` in Open Source Spotlight, `https://...` in Watch Points) also copy verbatim to their Korean counterpart.
 - If you are tempted to "write naturally" by removing citations — do not. Readers verify claims by clicking those links. Missing URL = broken trust.
+
+## Quantity Qualifiers
+- Preserve quantity qualifiers exactly: over / at least → 이상 / 최소, up to / at most → 최대, about → 약. Never turn "over $500B" into "최대 5,000억 달러" (W33 bug: the same figure read as a cap in one section and a floor in another).
 
 ## Currency Unit Conversion (CRITICAL — 100× translation bug is the single most common weekly KO error)
 

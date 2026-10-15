@@ -1297,7 +1297,7 @@ async def _generate_digest(
 
     for persona_name in target_personas:
         t_p = time.monotonic()
-        system_prompt = get_digest_prompt(digest_type, persona_name, handbook_slugs)
+        system_prompt = get_digest_prompt(digest_type, persona_name, handbook_slugs, batch_date=batch_id)
         persona_prompts[persona_name] = system_prompt
 
         writer_messages = [
@@ -1714,7 +1714,7 @@ async def _generate_digest(
     if recoverable_en_personas:
         for persona_name in recoverable_en_personas:
             system_prompt = persona_prompts.get(persona_name) or get_digest_prompt(
-                digest_type, persona_name, handbook_slugs,
+                digest_type, persona_name, handbook_slugs, batch_date=batch_id,
             )
             try:
                 en_system = (

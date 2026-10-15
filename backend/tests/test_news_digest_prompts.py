@@ -980,7 +980,46 @@ def test_focus_items_p2_bullet_forbids_evaluative_phrasing():
     # Explicit forbidden verbs + preferred alternatives
     assert "raises bar" in prompt.lower()
     assert "transforms" in prompt.lower()
-    # Preferred alternatives shown
-    assert "enables X" in prompt or "enables " in prompt
     # P2 role must be clarified as objective consequence, not evaluation
     assert "objective consequence" in prompt or "not evaluation" in prompt.lower() or "not prediction" in prompt.lower()
+
+
+# ---------------------------------------------------------------------------
+# 2026-10-15 prompt revision (vault plan 2026-10-15-news-prompt-revision)
+# ---------------------------------------------------------------------------
+
+def test_focus_items_p2_does_not_seed_unsourced_mechanism_claims():
+    """W3: the 'enables X / reduces Y / shifts Z' examples pushed the writer to
+    invent consequences ("efficiency metrics are shifting budgets", 10-12).
+    P2 must stick to consequences the sources state."""
+    prompt = get_digest_prompt("business", "expert", [])
+
+    assert "shifts Z" not in prompt
+    assert "~축 이동" not in prompt
+    assert "consequence the sources state" in prompt
+
+
+def test_digest_prompt_anchors_today_and_source_stated_roles():
+    """W1: without a date the writer called the sitting president 'former' (09-28)."""
+    prompt = get_digest_prompt("business", "expert", [], batch_date="2026-10-15")
+
+    assert "Today is 2026-10-15" in prompt
+    assert '"former"' in prompt  # the explicit don't-add-'former' rule
+    assert "as the source articles state" in prompt
+
+
+def test_final_checklist_grounds_english_frontload_figures():
+    """W2: the checklist only checked headline_ko/excerpt_ko, so an English
+    excerpt figure ("cached inputs 95% off", 10-15) was never self-checked."""
+    prompt = get_digest_prompt("business", "expert", [])
+
+    checklist = prompt.split("## FINAL CHECKLIST", 1)[1]
+    assert "`headline`, `excerpt`, `focus_items`" in checklist
+    assert "Remove any figure or name the sources do not state" in checklist
+
+
+def test_weekly_ko_adapt_preserves_quantity_qualifiers():
+    """WK1: W33 KO wrote '최대 5,000억 달러' for 'over $500B'."""
+    for prompt in (get_weekly_ko_prompt("expert"), get_weekly_ko_prompt("beginner")):
+        assert "over / at least" in prompt
+        assert "이상" in prompt and "최대" in prompt
