@@ -36,7 +36,7 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
 
 <!doctype html>
 <html lang={locale} data-theme="light">
-  <Head title={title} description={description} locale={locale} slug={slug} article={article} needsKatex={needsKatex} />
+  <Head title={title} description={description} locale={locale} slug={slug} altSlug={altSlug} article={article} needsKatex={needsKatex} />
 
   <!-- Theme boot: before paint + after every ViewTransitions swap (source: lib/theme.js) -->
   <script is:inline nonce={nonce} set:html={THEME_BOOT_SCRIPT}></script>

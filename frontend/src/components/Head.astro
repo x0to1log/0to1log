@@ -11,16 +11,20 @@ interface Props {
   description?: string;
   locale?: 'en' | 'ko';
   slug?: string;
+  /** Slug of the paired post in the other locale (same section), when it differs. */
+  altSlug?: string;
   article?: ArticleData;
   needsKatex?: boolean;
 }
 
-const { title, description = '0to1log — AI News & Insights', locale = 'en', slug = '', article, needsKatex = false } = Astro.props;
+const { title, description = '0to1log — AI News & Insights', locale = 'en', slug = '', altSlug, article, needsKatex = false } = Astro.props;
 const isBlogPage = Astro.url.pathname.includes('/blog/');
 const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com';
 const canonicalUrl = `${siteUrl}/${locale}/${slug}`.replace(/\/+$/, '/');
 const altLocale = locale === 'en' ? 'ko' : 'en';
-const altUrl = `${siteUrl}/${altLocale}/${slug}`.replace(/\/+$/, '/');
+const altUrl = altSlug
+  ? `${siteUrl}/${altLocale}/${slug.split('/')[0]}/${altSlug}/`
+  : `${siteUrl}/${altLocale}/${slug}`.replace(/\/+$/, '/');
 
 const jsonLd = article ? JSON.stringify({
   "@context": "https://schema.org",
