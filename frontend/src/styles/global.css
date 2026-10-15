@@ -823,8 +823,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
   font-size: 0.7rem;
   font-weight: 600;
   color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -832,38 +831,47 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-rail {
 /* Persona switcher (business post detail page) */
 .persona-switcher {
   display: flex;
-  gap: 0;
+  gap: 1.1rem;
   margin: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  border: none;
+  border-radius: 0;
   width: fit-content;
 }
 
 .persona-switcher-btn {
+  position: relative;
   font-family: var(--font-ui);
   font-size: 0.85rem;
-  padding: 0.5rem 1.1rem;
+  font-weight: 500;
+  padding: 0.4rem 0.1rem 0.55rem;
   background: transparent;
   border: none;
-  border-right: 1px solid var(--color-border);
   cursor: pointer;
-  color: var(--color-text-secondary);
-  transition: background 150ms ease, color 150ms ease;
-}
-
-.persona-switcher-btn:last-child {
-  border-right: none;
+  color: var(--color-text-muted);
+  transition: color 150ms ease;
 }
 
 .persona-switcher-btn--active {
-  background: var(--color-accent-subtle, rgba(0, 0, 0, 0.06));
+  background: none;
   color: var(--color-text-primary);
   font-weight: 600;
 }
 
+.persona-switcher-btn--active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  transform: translateX(-50%);
+}
+
 .persona-switcher-btn:hover:not(.persona-switcher-btn--active) {
-  background: var(--color-accent-subtle, rgba(0, 0, 0, 0.03));
+  color: var(--color-text-primary);
+  background: none;
 }
 
 .blog-shell .persona-switcher-btn {
@@ -2174,7 +2182,7 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   }
 
   .persona-switcher-btn {
-    padding: 0.25rem 1rem;
+    padding: 0.4rem 0.1rem 0.55rem;
   }
 
   .handbook-level-btn {

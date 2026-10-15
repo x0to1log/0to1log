@@ -153,7 +153,7 @@ const resolveQuizAnswer = (quiz: QuizPoll): string => {
 
 const personaLabels: Record<string, Record<string, string>> = {
   en: { beginner: 'Beginner', learner: 'Learner', expert: 'Expert' },
-  ko: { beginner: '입문자', learner: '학습자', expert: '현직자' },
+  ko: { beginner: '입문판', learner: '학습판', expert: '전문판' },
 };
 const showPersonaSwitcher = personaHtmlMap && Object.keys(personaHtmlMap).length > 1;
 
@@ -311,7 +311,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     <>
       <div class="switcher-bar">
         <div class="switcher-bar-line"></div>
-        <span class="switcher-bar-label">{locale === 'ko' ? '읽기 모드' : 'Reading Mode'}</span>
+        <span class="switcher-bar-label">{locale === 'ko' ? '판 선택' : 'Edition'}</span>
         <div class="persona-switcher">
         {(['beginner', 'learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
           <button
