@@ -48,7 +48,7 @@ const formatViews = (n: number) => {
     ) : (
       <div class="product-card-thumb-fallback" data-category={categoryId}>
         {logoUrl ? (
-          <img src={logoUrl} alt="" class="product-card-thumb-fallback-logo" />
+          <img src={logoUrl} alt="" class="product-card-thumb-fallback-logo" loading="lazy" decoding="async" />
         ) : (
           <span class="product-card-thumb-fallback-initial">{name.charAt(0)}</span>
         )}
