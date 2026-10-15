@@ -101,6 +101,7 @@
 - [x] **REDESIGN-P8a** — 제품: 가격·난이도 등급 색은 점에만(B안, `--tier-*` 토큰·다크 재정의), 카테고리 타일·카드 평평하게(그라디언트 대체 썸네일 → 은은한 면 + 로고), 장단점 ＋/−, 번호 원 제거, 사이트 방문 버튼 먹색, 미사용 Spotlight CSS 삭제 — [[2026-10-15-site-redesign-phase8a-products]]
   - **증거:** 커밋 1be1ef86, products-v2 테스트, 기존 product 테스트(찜하기·관리자·검색 sticky) 통과, 빌드 성공, 브라우저 /ko/products/·/ko/products/dify/ 종이·다크
 - [x] **REDESIGN-P8b** — 기타 페이지: about(대문자 overline·원 번호·태그 칩 정리), 404 버튼, 서재 탭 → 점 탭·진행 막대 단색, 포트폴리오 800/대문자/inset 그림자 정리, 설정 대문자 라벨 정리 — [[2026-10-15-site-redesign-phase8b-misc-pages]]
+  - **모바일 보정:** 영문 메뉴 줄바꿈, 제품 타일 이중 스크롤(→ 4개 + 전체 보기), 검색창 아래 이중 선 — [[2026-10-15-site-redesign-mobile-polish]]
   - **증거:** 커밋 27e00b48, 67463620, 전체 테스트 70 PASS / 23 FAIL(신규 실패 0, 실패 목록 동일), 빌드 성공, 브라우저 /ko/about/·/library/·/portfolio/·404
 
 

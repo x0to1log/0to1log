@@ -2754,7 +2754,9 @@ button {
 
   .site-primary-nav--mobile {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    /* Columns follow label width so long labels ("My Library") stay on one line. */
+    grid-template-columns: repeat(5, auto);
+    justify-content: space-between;
     gap: 0.35rem;
     width: 100%;
   }
@@ -2763,6 +2765,7 @@ button {
     width: 100%;
     padding: 0.5rem 0.15rem;
     font-size: 0.82rem;
+    white-space: nowrap;
     min-height: 2.75rem;
     /* 44px 탭 타깃 확보 */
   }
@@ -11636,7 +11639,6 @@ pre:hover .blog-code-copy {
   top: var(--toolbar-top, 0px);
   z-index: 20;
   background: var(--color-bg-primary);
-  border-bottom: 1px solid var(--color-border);
   transition: top 300ms ease;
   display: flex;
   flex-direction: column;
@@ -12270,6 +12272,20 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
   flex-shrink: 0;
 }
 
+.product-cat-tile-more {
+  display: none;
+  width: 100%;
+  padding: 0.75rem 0.1rem;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
 @media (max-width: 1024px) {
   .product-category-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -12280,8 +12296,24 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
   .product-category-grid {
     grid-template-columns: 1fr;
   }
+  /* Phones: no scroll-inside-scroll — show the first four rows and a "see all" link. */
   .product-cat-tile {
-    height: 380px;
+    height: auto;
+  }
+  .product-cat-tile-body {
+    overflow: visible;
+  }
+  .product-cat-tile-body > .product-cat-row:nth-child(n + 5) {
+    display: none;
+  }
+  .product-cat-tile-more {
+    display: block;
+  }
+}
+
+@media (max-width: 360px) {
+  .site-nav-pill {
+    font-size: 0.78rem;
   }
 }
 

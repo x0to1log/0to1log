@@ -67,4 +67,10 @@ const emptyText = locale === 'ko' ? '준비 중입니다' : 'Coming soon';
       ))
     )}
   </div>
+
+  {products.length > 4 && (
+    <button class="product-cat-tile-more" data-category={categoryId} type="button">
+      {locale === 'ko' ? `전체 보기 (${products.length}) →` : `See all ${products.length} →`}
+    </button>
+  )}
 </section>

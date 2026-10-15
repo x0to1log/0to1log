@@ -205,8 +205,8 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
     // "← All categories" — return to the category grid
     backBtn?.addEventListener('click', () => switchToPreview());
 
-    // Category tile header → open that category's filtered view
-    document.querySelectorAll<HTMLButtonElement>('.product-cat-tile-header').forEach((btn) => {
+    // Category tile header / mobile "see all" → open that category's filtered view
+    document.querySelectorAll<HTMLButtonElement>('.product-cat-tile-header, .product-cat-tile-more').forEach((btn) => {
       btn.addEventListener('click', () => {
         const cat = btn.dataset.category ?? '';
         const url = new URL(window.location.href);
