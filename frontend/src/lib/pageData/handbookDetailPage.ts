@@ -2,6 +2,7 @@ import { localField } from '../handbookUtils';
 import { renderMarkdown, renderMarkdownWithTerms, renderHandbookMarkdown, type TermsMap } from '../markdown';
 import { fetchPublicTermIndex } from './publicTermIndex';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
+import { pickReferencedTerms } from './termReferences';
 
 interface HandbookDetailPageContext extends DetailPageContext {
   previewLevel?: string | null;
@@ -192,7 +193,7 @@ export async function getHandbookDetailPageData({
     activeLevel,
     htmlContent,
     showLevelSwitcher,
-    handbookTermsJson,
+    handbookTermsJson: pickReferencedTerms(handbookTermsJson, Object.values(levelHtmlMap)),
     relatedArticles,
     relatedTerms,
     sameCategoryTerms,

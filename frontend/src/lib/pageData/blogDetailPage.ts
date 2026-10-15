@@ -2,6 +2,7 @@ import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markd
 import { buildBlogSidebarDataset, toSidebarPost } from './blogSidebar';
 import { fetchPublicTermIndex } from './publicTermIndex';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
+import { pickReferencedTerms } from './termReferences';
 
 export const BLOG_DETAIL_PUBLIC_COLUMNS = [
   'id', 'slug', 'locale', 'status', 'title', 'excerpt', 'category', 'content',
@@ -170,7 +171,7 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
     isLiked: previewMode ? false : isLiked,
     likeCount,
     commentCount,
-    handbookTermsJson,
+    handbookTermsJson: pickReferencedTerms(handbookTermsJson, [htmlContent]),
     hasTerms,
     htmlContent,
     sidebarPosts,

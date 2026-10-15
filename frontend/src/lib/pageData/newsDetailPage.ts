@@ -3,6 +3,7 @@ import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markd
 import { resolveDisplayTitleExcerpt } from '../personaTitle';
 import { fetchPublicTermIndex } from './publicTermIndex';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
+import { pickReferencedTerms } from './termReferences';
 
 interface NewsDetailPageContext extends DetailPageContext {
   previewPersona?: string | null;
@@ -340,7 +341,8 @@ export async function getNewsDetailPageData({
     isLiked: previewMode ? false : isLiked,
     likeCount,
     commentCount,
-    handbookTermsJson,
+    // Popup data only for terms this article links to (was the whole index, ~700 KB).
+    handbookTermsJson: pickReferencedTerms(handbookTermsJson, [allRenderedHtml]),
     hasTerms,
     relatedTerms,
     htmlContent,
