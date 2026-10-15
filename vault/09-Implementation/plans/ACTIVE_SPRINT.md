@@ -88,6 +88,10 @@
 - [x] **REDESIGN-P4** — 뉴스 기사: 판 선택(입문판·학습판·전문판, 점 표시), 기사 머리(카테고리 점·태그 위치·제목), 섹션 제목, 핵심 팩트 점선 목록, 기존 용어 하이라이트 형광펜 재스타일, 레일 "이 기사의 용어", 퀴즈·출처 — [[2026-10-15-site-redesign-phase4-article]]
   - **증거:** 커밋 4957ce17..a6df5abb, 전체 테스트 63 PASS / 23 FAIL(신규 실패 0), `npm run build` 성공, 브라우저 기사 페이지 종이·다크 × 데스크톱·모바일, 판 전환(제목·본문·플로팅 버튼), 용어 팝업, 게스트 관리자 블록 숨김, 댓글·좋아요·북마크 훅 확인
   - **결정:** 2단 유지, 번호 사이드노트 미적용(사용자 선택). 블로그 판 스위처도 같은 스타일 공유(의도). **후속:** 목록 카드의 research/business 라벨 색 구분 → 5단계
+- [x] **REDESIGN-P5** — 뉴스 목록: 점선 카드, 유형 라벨 단일화(`lib/postType.js`, 주간 정리→"Business" 버그 수정), 카테고리 inline 색 제거, 탭 점 표시, `#태그`(뉴스 범위), 머리기사, 레일 "최신 기사"+번호, 고정 검색창 배경 — [[2026-10-15-site-redesign-phase5-news-list]]
+  - **증거:** 커밋 dbf7e0c4..c65244d3, 전체 테스트 66 PASS / 23 FAIL(신규 실패 0), `npm run build` 성공, 브라우저 /ko/news/ 다크 — 탭 필터(비즈니스 49/리서치 51/주간 19)와 머리기사 라벨, 검색(Gemini 21건), 레일 번호, 블로그 목록 영향 없음
+  - **같은 날 성능 수정(Supabase 세션 요청):** Pretendard dynamic subset(c65abc36, 운영 기사 첫 방문 3,260KB→625KB), Hahmlet 400 제거(b309a9cc), hreflang 짝 slug(f655c620)
+  - **해결된 후속:** 투명한 고정 검색창(P2), research/business 구분(P4). **남은 후속:** `list-rail-copy` 테스트 낡은 문구, `--tab-cat-color` 미사용 변수
 
 ### News Pipeline v11 — Rubric v2 + Quality Gates + URL Plumbing — 2026-04-18 ~ 2026-04-21
 

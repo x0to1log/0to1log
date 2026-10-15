@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** done (2026-10-15) — 실행 결과는 문서 끝 참조.
+
 **Goal:** 뉴스 목록 페이지를 Soft Newsprint V2로 다듬는다. 바꾸는 범위는 다음과 같다.
 - 카드: 테두리 대신 점선
 - 라벨: 색 하나 + 글자로 유형 구분
@@ -375,3 +377,13 @@ git commit -m "feat: soft newsprint news list cards, tabs, tags, rail and sticky
   - 투명한 고정 검색창
   - research/business 색 구분
 - [ ] 커밋: `docs: record redesign phase 5 news list`
+
+
+---
+
+## 실행 결과 (2026-10-15)
+
+- 커밋: `dbf7e0c4` 유형 라벨 단일화, `c65244d3` 목록 스타일·레일·검색창. 품질 리뷰 승인.
+- 검증: 전체 테스트 66 PASS / 23 FAIL(신규 실패 0), 빌드 성공, 브라우저에서 탭 필터·머리기사 라벨(주간 정리)·검색·레일 번호 확인. 블로그 목록은 자체 스타일이라 영향 없음.
+- 계획 리뷰 반영: 홈 1면 weekly 라벨이 '위클리'→'주간 정리'로 통일, `#태그`는 뉴스·기사 범위로 한정(portfolio 칩 보호).
+- 제품 상세의 고정 검색창은 헤더 아래 0.75rem 간격이 남지만, 이전(완전 투명)보다 나아서 유지.
