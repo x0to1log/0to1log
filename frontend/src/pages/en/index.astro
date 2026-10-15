@@ -4,7 +4,7 @@ export const prerender = false;
 import MainLayout from '../../layouts/MainLayout.astro';
 import { t } from '../../i18n/index';
 import { getSiteContentsResult } from '../../lib/siteContent';
-import HomeSplitHero from '../../components/home/HomeSplitHero.astro';
+import HomeIntro from '../../components/home/HomeIntro.astro';
 import HomeFrontPage from '../../components/home/HomeFrontPage.astro';
 import { getHomeFrontPageData } from '../../lib/pageData/homeFrontPage';
 
@@ -20,7 +20,7 @@ const homeIntro = siteContent.home_intro ||
 
 <MainLayout title={homeTitle} description="Daily AI news in Korean & English, an IT glossary with real-world examples, quizzes, and curated AI tools — built for developers and product thinkers keeping up with AI." locale={locale} headerAlwaysVisible={true}>
   <div class="home-page">
-    <HomeSplitHero locale={locale} homeIntro={homeIntro} todayCount={front.todayCount} />
     <HomeFrontPage locale={locale} {...front} />
+    <HomeIntro locale={locale} homeIntro={homeIntro} />
   </div>
 </MainLayout>

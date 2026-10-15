@@ -1,0 +1,20 @@
+---
+// frontend/src/components/home/HomeIntro.astro
+// Quiet "what this is" block under the front page. Copy comes from site content (home_intro).
+interface Props {
+  locale: 'en' | 'ko';
+  homeIntro: string;
+}
+
+const { locale, homeIntro } = Astro.props;
+const isKo = locale === 'ko';
+---
+
+<section class="home-intro" aria-labelledby="home-intro-title">
+  <h3 id="home-intro-title" class="home-intro-title">{isKo ? '0to1log는 이런 곳이에요' : 'What 0to1log is'}</h3>
+  <p class="home-intro-body">{homeIntro}</p>
+  <div class="home-intro-cta">
+    <a href={`/${locale}/news/`} class="home-intro-cta-primary">{isKo ? 'AI 뉴스 읽기 →' : 'Read AI News →'}</a>
+    <a href={`/${locale}/handbook/`} class="home-intro-cta-secondary">{isKo ? '용어집 보기' : 'Browse Glossary'}</a>
+  </div>
+</section>
