@@ -102,6 +102,8 @@
   - **증거:** 커밋 1be1ef86, products-v2 테스트, 기존 product 테스트(찜하기·관리자·검색 sticky) 통과, 빌드 성공, 브라우저 /ko/products/·/ko/products/dify/ 종이·다크
 - [x] **REDESIGN-P8b** — 기타 페이지: about(대문자 overline·원 번호·태그 칩 정리), 404 버튼, 서재 탭 → 점 탭·진행 막대 단색, 포트폴리오 800/대문자/inset 그림자 정리, 설정 대문자 라벨 정리 — [[2026-10-15-site-redesign-phase8b-misc-pages]]
   - **모바일 보정:** 영문 메뉴 줄바꿈, 제품 타일 이중 스크롤(→ 4개 + 전체 보기), 검색창 아래 이중 선 — [[2026-10-15-site-redesign-mobile-polish]]
+- [x] **REDESIGN-HOME** — 홈을 신문 1면(A안)으로 재설계: 마스트헤드 h1 + 날짜줄 + 3단 지면(지난 지면 / 1면 + 키워드 판 / 오늘의 용어), 소개 문구는 맨 아래 안내로 — [[2026-10-15-home-front-page-redesign-design]], [[2026-10-15-home-front-page-redesign]]
+  - **증거:** 커밋 0634c4d4, efaf2385, c4b3658e, 전체 테스트 70 PASS / 23 FAIL(신규 실패 0), 빌드 성공, 브라우저 3테마 × 데스크톱·모바일 × ko/en (가로 넘침 0, 대비 미달 0)
   - **증거:** 커밋 27e00b48, 67463620, 전체 테스트 70 PASS / 23 FAIL(신규 실패 0, 실패 목록 동일), 빌드 성공, 브라우저 /ko/about/·/library/·/portfolio/·404
 
 

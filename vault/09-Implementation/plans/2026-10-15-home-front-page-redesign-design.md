@@ -1,6 +1,6 @@
 # 홈 1면 재설계 (A안) — Design Spec
 
-**Status:** approved (2026-10-15)
+**Status:** implemented (2026-10-15) — [[2026-10-15-home-front-page-redesign]]
 **Mockup:** `.superpowers/brainstorm/home/home-v3.html` (A안)
 **관련:** [[2026-10-14-site-redesign-soft-newsprint-design]], [[2026-10-14-homepage-front-strip]]
 

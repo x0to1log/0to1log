@@ -1,5 +1,7 @@
 # 홈 1면 재설계 (A안) Implementation Plan
 
+**Status:** done (2026-10-15) — 실행 결과는 문서 끝 참조.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 홈 첫 화면을 진짜 신문 1면으로 바꾼다. 구성은 마스트헤드, 날짜줄, 3단 지면(지난 지면 / 1면 + 키워드 판 / 오늘의 용어), 맨 아래 안내다.
@@ -996,3 +998,12 @@ git commit -m "feat: newspaper front page home with masthead, dateline, three co
 - [ ] `ACTIVE_SPRINT.md`에 REDESIGN-HOME 항목과 증거(커밋, 테스트 수, 브라우저 매트릭스)를 추가한다.
 - [ ] `vault/12-Journal-&-Decisions/2026-10-14-homepage-front-strip.md`에 후속 결정을 한 단락 덧붙인다. 1면 띠가 전면 1면(A안)으로 바뀌었다는 내용이다.
 - [ ] 커밋: `docs: record home front page redesign`
+
+---
+
+## 실행 결과 (2026-10-15)
+
+- 커밋: `0634c4d4` 선택 로직·데이터, `efaf2385` HomeIntro 교체(HomeSplitHero 삭제), `c4b3658e` 1면 마크업·CSS(홈 CSS 342줄 → 381줄 교체).
+- 테스트: 전체 70 PASS / 23 FAIL(실패 목록 기준선과 동일, 신규 0). 빌드 성공.
+- 브라우저: 종이·순백·다크 × 1085px·360/375px × /ko/·/en/ — 페이지 가로 넘침 0, 홈 영역 대비 미달 0. 모바일 순서 1면 → 키워드 판 → 짝 기사 → 오늘의 용어 → 지난 지면 → 안내 확인.
+- 계획 대비: 없음. 다크 테마 키워드 판은 먹색 대신 `--color-bg-tertiary` 면(계획 CSS에 명시).
