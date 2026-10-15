@@ -110,16 +110,17 @@ const quickLinks = isKo
     display: inline-block;
     font-family: var(--font-ui);
     font-size: 0.9rem;
-    color: var(--color-accent);
+    color: var(--color-bg-primary);
+    background: var(--color-text-primary);
     text-decoration: none;
     padding: 0.5rem 1.25rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    transition: border-color 0.15s ease, color 0.15s ease;
+    border: none;
+    border-radius: 4px;
+    transition: opacity 0.15s ease;
   }
 
   .error-404-home-link:hover {
-    border-color: var(--color-accent);
+    opacity: 0.85;
     text-decoration: none;
   }
 
