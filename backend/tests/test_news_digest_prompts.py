@@ -1018,6 +1018,12 @@ def test_final_checklist_grounds_english_frontload_figures():
     assert "Remove any figure or name the sources do not state" in checklist
 
 
+def test_frontload_qc_counts_source_rounded_figures_as_grounded():
+    """QC1: the judge marked "50% lower pricing" major although OpenAI itself
+    announced "50% cheaper" (09-23)."""
+    assert "the source's own rounding" in QUALITY_CHECK_FRONTLOAD
+
+
 def test_weekly_ko_adapt_preserves_quantity_qualifiers():
     """WK1: W33 KO wrote '최대 5,000억 달러' for 'over $500B'."""
     for prompt in (get_weekly_ko_prompt("expert"), get_weekly_ko_prompt("beginner")):
