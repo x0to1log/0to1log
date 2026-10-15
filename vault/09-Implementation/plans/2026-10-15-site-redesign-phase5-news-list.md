@@ -57,7 +57,9 @@
 검증 때 함께 확인한다.
 
 ### 테스트 기준선
-4단계 종료 시점은 PASS 63 / FAIL 23이다. 비교는 개수가 아니라 이름으로 한다.
+4단계 종료 시점은 PASS 63 / FAIL 23이다(이후 hreflang 테스트 1개 추가). 비교는 개수가 아니라 이름으로 한다.
+- `list-rail-copy`는 이미 실패 중이다('Start Here' 단언). 이번에 'Most Read'를 '최신 기사'로 바꾸면 이 테스트가 낡은 문구를 더 많이 단언하게 되지만, 실패 목록 이름은 그대로다. 이 테스트는 고치지 않고 후속으로 남긴다.
+- 탭 점은 accent 하나로 통일한다. `NewsprintCategoryFilter`의 `--tab-cat-color` inline 변수는 더 이상 쓰이지 않지만 이번 범위에서는 남겨둔다.
 
 ---
 
@@ -173,6 +175,8 @@ export function postTypeLabel(locale, type) {
     - `{post.post_type === 'research' ? 'RESEARCH' : 'BUSINESS'}`를 `{postTypeLabel(locale, post.post_type)}`로 바꾼다.
   - **HomeFrontPage**
     - `const typeLabel = ...` 함수를 지우고, 사용처 `typeLabel(x.post_type)`을 `postTypeLabel(locale, x.post_type) || (isKo ? 'AI 뉴스' : 'AI News')`로 바꾼다. 알 수 없는 유형이면 기존처럼 "AI 뉴스"로 표시하기 위해서다.
+    - 이로써 홈 1면의 weekly 라벨이 '위클리'에서 사이트 공통 '주간 정리'로 바뀐다(의도).
+    - `frontend/tests/home-front-page.test.cjs`의 weekly 단언(`comp.includes("type === 'weekly'") && comp.includes('위클리')`)도 바꾼다. 새 단언은 `comp.includes('postTypeLabel(locale, ')`이고, 메시지는 `'weekly recaps get their label from lib/postType.js'`로 한다. 이 테스트 파일도 Step 6 커밋에 포함한다.
   - **NewsprintArticleLayout**
     - 키커의 `{postType === 'research' ? 'Research' : 'Business'}`를 `{postTypeLabel(locale, postType)}`로 바꾼다.
 
@@ -187,7 +191,7 @@ Expected: 모두 exit 0
 - [ ] **Step 6: 커밋**
 
 ```bash
-git add frontend/src/lib/postType.js frontend/tests/post-type-label.test.mjs frontend/tests/list-v2.test.cjs frontend/src/components/newsprint/NewsprintListCard.astro frontend/src/components/newsprint/NewsprintHeadline.astro frontend/src/components/newsprint/NewsprintListRail.astro frontend/src/components/home/HomeFrontPage.astro frontend/src/components/newsprint/NewsprintArticleLayout.astro
+git add frontend/src/lib/postType.js frontend/tests/post-type-label.test.mjs frontend/tests/list-v2.test.cjs frontend/tests/home-front-page.test.cjs frontend/src/components/newsprint/NewsprintListCard.astro frontend/src/components/newsprint/NewsprintHeadline.astro frontend/src/components/newsprint/NewsprintListRail.astro frontend/src/components/home/HomeFrontPage.astro frontend/src/components/newsprint/NewsprintArticleLayout.astro
 git commit -m "feat: single post type label source and accent-only list kickers"
 ```
 
@@ -214,7 +218,7 @@ assert(/background(-color)?:\s*transparent|background(-color)?:\s*none/.test(rul
 assert(/font-weight:\s*600/.test(rule('.newsprint-card-title')), 'card title uses Hahmlet 600');
 assert(!rule('.newsprint-filter-tab').includes('uppercase'), 'tabs not uppercase');
 assert(rule('.newsprint-filter-tab[aria-selected="true"]::after').includes('var(--color-accent)'), 'active tab marked by an accent dot');
-assert(/background:\s*none/.test(rule('.newsprint-tag')) && css.includes(".newsprint-tag::before {\n  content: '#';"), 'tags render as #text');
+assert(css.includes(".newsprint-tags-inline .newsprint-tag,\n.newsprint-article-tags .newsprint-tag {") && css.includes(".newsprint-tags-inline .newsprint-tag::before,\n.newsprint-article-tags .newsprint-tag::before {\n  content: '#';"), 'news/article tags render as #text (scoped: portfolio chips keep their pill)');
 assert(/font-weight:\s*700/.test(rule('.newsprint-headline-title')), 'headline title 700');
 assert(!rule('.newsprint-headline-kicker').includes('uppercase'), 'headline kicker not uppercase');
 assert(rule('.handbook-search-sticky').includes('var(--color-bg-primary)'), 'sticky search has a solid background');
@@ -239,22 +243,29 @@ Run: `node frontend/tests/list-v2.test.cjs` → FAIL(`rail section is honestly n
   - `.newsprint-card-title`: `font-family: var(--font-display);` → `var(--font-heading);`, `font-weight: 700;` → `600;`, `font-size: 1.3rem;` → `1.15rem;`, `line-height: 1.25;` → `1.4;`. `letter-spacing: -0.03em;`을 추가한다.
   - `.newsprint-excerpt`: `font-size: 0.95rem;` → `0.9rem;`, `line-height: 1.6;` → `1.65;`
   - `.newsprint-card-bottom`: `font-size: 0.82rem;` → `0.75rem;`, `color` → `var(--color-text-muted)`. `min-width: 0;`은 유지한다.
-  - `.newsprint-tag`를 아래로 교체하고, `.newsprint-tag:hover`의 본문은 `color: var(--color-text-secondary); background: none;`로 바꾼다.
+  - `.newsprint-tag`와 `.newsprint-tag:hover` 기본 규칙은 **그대로 둔다**. portfolio 페이지가 기술 칩으로 쓰고 있어서 알약 모양을 유지해야 한다.
+  - 기본 규칙 뒤에 뉴스 범위 규칙을 추가한다.
     ```css
-    .newsprint-tag {
+    .newsprint-tags-inline .newsprint-tag,
+    .newsprint-article-tags .newsprint-tag {
       font-size: 0.72rem;
-      font-weight: 500;
       color: var(--color-text-muted);
       letter-spacing: 0;
       background: none;
       padding: 0;
       border-radius: 0;
-      transition: color 0.15s ease;
     }
 
-    .newsprint-tag::before {
+    .newsprint-tags-inline .newsprint-tag::before,
+    .newsprint-article-tags .newsprint-tag::before {
       content: '#';
       opacity: 0.6;
+    }
+
+    .newsprint-tags-inline .newsprint-tag:hover,
+    .newsprint-article-tags .newsprint-tag:hover {
+      color: var(--color-text-secondary);
+      background: none;
     }
     ```
   - `.newsprint-tags-inline`: `gap: 0.3rem;` → `gap: 0.15rem 0.55rem;` (`flex-wrap`과 `max-width`는 유지)
@@ -306,6 +317,10 @@ Run: `node frontend/tests/list-v2.test.cjs` → FAIL(`rail section is honestly n
         grid-template-columns: 1.4rem minmax(0, 1fr);
         gap: 0.25rem;
         border-bottom: 1px dotted var(--color-border);
+      }
+
+      .newsprint-stack > a.newsprint-card:has(.newsprint-rail-rank):last-child {
+        border-bottom: none;
       }
 
       .newsprint-rail-rank {
