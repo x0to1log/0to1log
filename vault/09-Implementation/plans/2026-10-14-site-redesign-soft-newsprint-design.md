@@ -164,6 +164,7 @@ tags: [design, frontend, redesign, theme]
 - 기존 기능(댓글, 기사 내 검색, ReadingActionsRail, 관리자 액션)은 유지하고 스타일만 맞춘다.
 
 ### 뉴스 목록 · 핸드북 · 블로그 · 제품 · 기타
+> **블로그 카테고리 색 (2026-10-15 결정 B):** DB `blog_categories.color`는 작은 점에만 쓴다(`--cat-color`/`--folder-color` → `::before` 점). 배지·글자·테두리·아이콘에는 쓰지 않는다. 마스트헤드 아래 문구 "만들고, 배우고, 기록하는 칼럼". [[2026-10-15-site-redesign-phase7-blog]]
 위 공통 규칙을 적용한다. 각 단계 시작 시 **해당 페이지의 시안을 1장 확인한 뒤** 구현한다.
 - 핸드북: 용어 = 사전
 - 블로그: 칼럼 성격

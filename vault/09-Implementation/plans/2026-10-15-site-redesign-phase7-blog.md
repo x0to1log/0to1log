@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** done (2026-10-15) — 실행 결과는 문서 끝 참조.
+
 **Goal:** 블로그를 Soft Newsprint V2로 다듬는다. 바꾸는 범위는 다섯 가지다.
 - 사이드바: 둥근 패널과 그림자를 걷어내고 점선 트리로 만든다.
 - 카테고리 폴더 카드 줄: 텍스트 탭 + 개수로 바꾼다.
@@ -448,3 +450,12 @@ Breadcrumb와 CategoryHeader의 경로가 다르면 실제 경로로 바꿔 add�
 - [ ] 이 계획에 Status와 실행 결과를 적는다.
 - [ ] 스펙 §6에 블로그 카테고리 색 결정(B안)을 적는다.
 - [ ] 커밋: `docs: record redesign phase 7 blog`
+
+
+---
+
+## 실행 결과 (2026-10-15)
+
+- 커밋: `6e3bad16` 목록, `9d213539` 상세, `84ec9daf` 태그 중복·메타 글꼴·사이드바 hover/활성·불필요 변수·모바일 탭 페이드. 품질 리뷰 반영.
+- 검증: 전체 테스트 68 PASS / 23 FAIL(신규 실패 0), 빌드 성공, 브라우저 확인.
+- 계획 대비: `BlogCategoryHeader`는 CSS만으로 충분해 마크업은 미사용 `--category-color`만 제거. 글 태그 마크업은 `#{tag}`→`{tag}`(CSS가 `#`를 붙임).
