@@ -48,4 +48,17 @@ const sidebar = rule('.blog-sidebar');
 assert(/box-shadow:\s*none/.test(sidebar) && /border-radius:\s*0/.test(sidebar), 'sidebar is not a floating rounded panel');
 assert(!rule('.blog-folder-btn--group').includes('uppercase'), 'sidebar group labels not uppercase');
 
+// Task 2: 상세
+const layout = read('components/blog/BlogArticleLayout.astro');
+assert(!layout.includes('📘') && !layout.includes('blog-article-icon'), 'hardcoded 📘 article icon removed');
+assert(layout.includes('data-admin-only') && layout.includes('newsprint-comments') && layout.includes('data-comment-form') && layout.includes('ContentFeedback') && layout.includes('id="persona-data"'), 'blog article keeps admin/comments/feedback/persona hooks');
+assert(/class="blog-article-category"[^>]*--cat-color/.test(layout), 'article meta shows the category as a color dot label');
+assert(!/style=\{`background:/.test(layout), 'article tags have no inline colors');
+assert(/font-weight:\s*700/.test(rule('.blog-article-title')), 'article title 700');
+assert(!rule('.blog-toc-header').includes('uppercase'), 'toc header not uppercase');
+for (const p of ['pages/ko/blog/[slug].astro', 'pages/en/blog/[slug].astro']) {
+  const f = read(p);
+  assert(f.includes('onSessionReady') && f.includes('recordReadingHistory') && f.includes('handbook-terms-data'), `${p} keeps session/reading-history/terms hooks`);
+}
+
 console.log('blog-v2.test.cjs passed');

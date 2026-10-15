@@ -80,7 +80,7 @@ const readingLabel = readingTimeMin
 const normalizedCat = normalizeCategorySlug(category);
 const catMatch = normalizedCat ? categories.find(c => c.slug === normalizedCat) : null;
 const categoryLabel = catMatch ? (locale === 'ko' ? catMatch.label_ko : catMatch.label_en) : normalizedCat;
-const catColor = catMatch?.color ?? 'var(--color-border)';
+const catColor = catMatch?.color ?? 'var(--color-accent)';
 const nextNormCat = normalizeCategorySlug(nextPost?.category);
 const nextCategoryLabel = nextNormCat
   ? ((locale === 'ko' ? categories.find(c => c.slug === nextNormCat)?.label_ko : categories.find(c => c.slug === nextNormCat)?.label_en) ?? nextNormCat)
@@ -115,13 +115,12 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
   )}
 
   <header class="blog-article-header">
-    <div class="blog-article-icon">📘</div>
     <h1 class="blog-article-title">{title}</h1>
     <div class="blog-article-meta">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       {dateLabel && <span>{dateLabel}</span>}
       {readingLabel && <><span>&middot;</span><span>{readingLabel}</span></>}
-      {categoryLabel && <><span>&middot;</span><span>{categoryLabel}</span></>}
+      {categoryLabel && <><span>&middot;</span><span class="blog-article-category" style={`--cat-color: ${catColor}`}>{categoryLabel}</span></>}
     </div>
   </header>
 
@@ -174,7 +173,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
   {tags && tags.length > 0 && (
     <div class="blog-tags-footer">
       {tags.map(tag => (
-        <span class="blog-mono-tag" style={`background: color-mix(in srgb, ${catColor} 15%, transparent); color: ${catColor}`}>#{tag}</span>
+        <span class="blog-mono-tag">{tag}</span>
       ))}
     </div>
   )}
