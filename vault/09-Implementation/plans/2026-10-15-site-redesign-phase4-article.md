@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** done (2026-10-15) — 실행 결과는 문서 끝 참조.
+
 **Goal:** 뉴스 기사 페이지를 Soft Newsprint V2로 다듬는다.
 
 **범위:** 기존 2단(본문 + 오른쪽 레일) 구조를 유지하고 다음을 바꾼다.
@@ -447,3 +449,16 @@ git commit -m "feat: highlighter term marks, rail terms, softer quiz and sources
 - [ ] `ACTIVE_SPRINT.md`에 REDESIGN-P4 항목과 증거를 추가한다.
 - [ ] 이 계획에 Status와 실행 결과를 추가한다.
 - [ ] 커밋: `docs: record redesign phase 4 article page`
+
+
+---
+
+## 실행 결과 (2026-10-15)
+
+- 커밋: `4957ce17` 판 선택, `24a22e3e` 머리·섹션 제목·핵심 팩트, `8fb0ece7` 용어·레일·퀴즈·출처, `a6df5abb` 정리·테스트 보강. 품질 리뷰 승인.
+- 검증: 전체 테스트 63 PASS / 23 FAIL(신규 실패 0), `npm run build` 성공(중간 EPERM은 dev 서버의 파일 잠금), 브라우저 확인(판 전환, 용어 팝업, 레일, 게스트 관리자 블록 숨김, 댓글·좋아요·북마크 훅).
+- 계획 대비: 퀴즈 위 보더 제거 규칙은 해당 마크업 구조가 없어 생략. 블로그 판 스위처가 같은 스타일을 공유함(의도로 수용).
+
+### 후속 작업
+- [ ] 목록 카드의 research/business 라벨이 같은 회색이 됨 → 5단계에서 구분 방식 결정
+- [ ] 레일 "이 기사의 용어" 최대 3개 제한(newsDetailPage.ts) — 필요 시 조정
