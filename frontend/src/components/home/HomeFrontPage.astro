@@ -1,6 +1,7 @@
 ---
 // frontend/src/components/home/HomeFrontPage.astro
 import type { HomeFrontNews, HomeFrontTerm } from '../../lib/pageData/homeFrontPage';
+import { postTypeLabel } from '../../lib/postType.js';
 
 interface Props {
   locale: 'en' | 'ko';
@@ -12,12 +13,6 @@ interface Props {
 
 const { locale, lead, also, term } = Astro.props;
 const isKo = locale === 'ko';
-const typeLabel = (type: string | null) => {
-  if (type === 'business') return isKo ? '비즈니스' : 'Business';
-  if (type === 'research') return isKo ? '리서치' : 'Research';
-  if (type === 'weekly') return isKo ? '위클리' : 'Weekly';
-  return isKo ? 'AI 뉴스' : 'AI News';
-};
 const termTitle = term ? (isKo ? term.korean_name || term.term : term.term) : '';
 const termSub = term && isKo && term.korean_name ? term.term : '';
 ---
@@ -31,7 +26,7 @@ const termSub = term && isKo && term.korean_name ? term.term : '';
     <div class="home-front-grid">
       {lead && (
         <article class="home-front-lead">
-          <span class="home-front-kicker">{typeLabel(lead.post_type)}</span>
+          <span class="home-front-kicker">{postTypeLabel(locale, lead.post_type) || (isKo ? 'AI 뉴스' : 'AI News')}</span>
           <h3 class="home-front-lead-title"><a href={`/${locale}/news/${lead.slug}/`}>{lead.title}</a></h3>
           {lead.excerpt && <p class="home-front-lead-excerpt">{lead.excerpt}</p>}
           {lead.reading_time_min ? (
@@ -39,7 +34,7 @@ const termSub = term && isKo && term.korean_name ? term.term : '';
           ) : null}
           {also && (
             <p class="home-front-also">
-              <span>{typeLabel(also.post_type)}</span>
+              <span>{postTypeLabel(locale, also.post_type) || (isKo ? 'AI 뉴스' : 'AI News')}</span>
               <a href={`/${locale}/news/${also.slug}/`}>{also.title}</a>
             </p>
           )}

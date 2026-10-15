@@ -1,5 +1,6 @@
 ---
 import { getCategoryLabel } from '../../lib/categories';
+import { postTypeLabel } from '../../lib/postType.js';
 
 interface StarterSection {
   slug: string;
@@ -86,7 +87,7 @@ const starterSections = (startHereProp && startHereProp.length > 0) ? startHereP
             <span class="newsprint-rail-meta">
               {post.post_type && (
                 <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${post.post_type}`}>
-                  {post.post_type === 'research' ? 'RESEARCH' : 'BUSINESS'}
+                  {postTypeLabel(locale, post.post_type)}
                 </span>
               )}
               {dateLabel && <span class="newsprint-rail-date">{dateLabel}</span>}
