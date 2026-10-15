@@ -41,6 +41,11 @@ for (const [theme, values] of Object.entries(expected)) {
       assert(r >= 4.5, `${theme}: ${fg} on ${bg} is ${r.toFixed(2)}:1 (< 4.5)`);
     }
   }
+  // Grey buttons/cards (cookie banner, login features) put body text on bg-tertiary
+  for (const fg of ['--color-text-secondary', '--color-text-muted']) {
+    const r = ratio(token(b, fg), token(b, '--color-bg-tertiary'));
+    assert(r >= 4.5, `${theme}: ${fg} on --color-bg-tertiary is ${r.toFixed(2)}:1 (< 4.5)`);
+  }
   // Code tokens (except punctuation) on the code background
   for (const t of ['keyword', 'string', 'function', 'comment', 'constant']) {
     const r = ratio(token(b, `--shiki-token-${t}`), token(b, '--color-bg-tertiary'));
