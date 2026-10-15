@@ -27,9 +27,10 @@ for (const [token, value] of Object.entries(expected)) {
   assert(css.includes(`  ${token}: ${value};`), `${token} must be ${value}`);
 }
 
-for (const w of ['Regular', 'Medium', 'SemiBold', 'Bold']) {
-  assert(css.includes(`Pretendard-${w}.woff2`), `Pretendard ${w} must be loaded`);
-}
+// Pretendard: unicode-range dynamic subset (only the slices a page uses download).
+// Full-Hangul woff2 faces were ~750 KB each (93% of an article's transfer, 2026-10-15).
+assert(!/Pretendard-\w+\.woff2/.test(css), 'no full-Hangul Pretendard @font-face in global.css');
+assert(head.includes('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css'), 'Head loads the Pretendard dynamic-subset stylesheet');
 assert(head.includes('family=Hahmlet:wght@400;600;700'), 'Head must load Hahmlet');
 assert(head.includes('family=Newsreader:opsz,wght@6..72,500'), 'Head must load Newsreader');
 
