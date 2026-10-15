@@ -19,4 +19,21 @@ for (const p of ['pages/ko/privacy/index.astro', 'pages/en/privacy/index.astro',
   assert(!/font-weight:\s*(800|900)/.test(s), `${p}: no 800/900 weights (Hahmlet loads 600/700)`);
 }
 
+// Task 2
+const css = read('styles/global.css');
+function rule(selector) {
+  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const all = [...css.matchAll(new RegExp(`(?:^|\\n)${esc}\\s*\\{([^}]*)\\}`, 'g'))].map((m) => m[1]);
+  assert(all.length > 0, `missing CSS rule ${selector}`);
+  return all[all.length - 1];
+}
+const tab = rule('.library-tab');
+assert(!/text-transform:\s*uppercase/.test(tab) && !/font-weight:\s*800/.test(tab), 'library tabs: no uppercase / 800');
+assert(css.includes('.library-tab--active::after') || css.includes('.library-tab[aria-selected="true"]::after'), 'active library tab marked by a dot');
+assert(!/font-weight:\s*800/.test(rule('.pf-name')), 'portfolio name uses a loaded weight');
+assert(!/text-transform:\s*uppercase/.test(rule('.pf-overline')), 'portfolio overline not uppercase');
+for (const p of ['pages/settings/index.astro', 'pages/settings/webhooks.astro']) {
+  assert(!/text-transform:\s*uppercase/.test(style(read(p))), `${p}: no uppercase labels`);
+}
+
 console.log('misc-pages-v2.test.cjs passed');
