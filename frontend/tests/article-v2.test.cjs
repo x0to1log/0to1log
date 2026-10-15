@@ -39,4 +39,13 @@ assert(!rule('.newsprint-guide-label').includes('uppercase'), 'guide labels not 
 assert(/border-bottom:\s*1px dotted/.test(rule('.newsprint-fact-pack-item')), 'fact pack items separated by dotted lines');
 assert(/box-shadow:\s*none/.test(rule('.newsprint-fact-pack-item')), 'fact pack items are not cards');
 
+// Task 3: 용어 / 레일 / 퀴즈·출처
+const rail = read('components/newsprint/NewsprintSideRail.astro');
+assert(rail.includes("{isKo ? '이 기사의 용어' : 'Terms in This Article'}"), 'rail term section title');
+const term = rule('.handbook-term');
+assert(/text-decoration:\s*none/.test(term), 'term highlight drops the dotted underline');
+assert(/linear-gradient\(transparent 60%/.test(term), 'term highlight is a highlighter stroke');
+assert(css.includes('.newsprint-guide-quiz,\n.newsprint-guide-weekly-quiz {') || /\.newsprint-guide-quiz,\s*\.newsprint-guide-weekly-quiz\s*\{/.test(css), 'quiz blocks get a soft surface');
+assert(/border-bottom:\s*1px dotted var\(--color-border\)/.test(rule('.source-card')), 'sources separated by dotted lines');
+
 console.log('article-v2.test.cjs passed');

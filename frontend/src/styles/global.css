@@ -7320,6 +7320,15 @@ body.auth-prompt-open {
   border-bottom: none;
 }
 
+.newsprint-guide-quiz,
+.newsprint-guide-weekly-quiz {
+  background: var(--color-bg-secondary);
+  border-radius: 4px;
+  border-bottom: none;
+  padding: 1rem 1.15rem;
+  margin-top: 0.75rem;
+}
+
 .newsprint-guide-label {
   display: block;
   font-family: var(--font-ui);
@@ -7439,7 +7448,7 @@ body.auth-prompt-open {
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+  border-bottom: 1px dotted var(--color-border);
   text-decoration: none;
   color: inherit;
   transition: color 150ms ease;
@@ -8784,22 +8793,17 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
 }
 
 .handbook-term {
-  text-decoration: underline;
-  text-decoration-style: dotted;
-  text-decoration-color: var(--color-accent);
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 3px;
+  text-decoration: none;
   cursor: pointer;
-  border-radius: 2px;
-  padding: 0.05em 0.15em;
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  transition: background 0.15s ease, text-decoration-color 0.15s ease, color 0.15s ease;
+  padding: 0 0.05em;
+  border-radius: 1px;
+  background: linear-gradient(transparent 60%, color-mix(in srgb, var(--color-accent) 22%, transparent) 60%);
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .handbook-term:hover {
-  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
-  text-decoration-style: solid;
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-text-primary);
 }
 
 @keyframes handbook-popup-in {
