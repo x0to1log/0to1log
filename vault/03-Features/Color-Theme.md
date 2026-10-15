@@ -26,7 +26,7 @@
 | input-surface | #FBF9F5 | #FFFFFF | #1F1D1B |
 | text-primary | #24211D | #16181B | #ECE7DD |
 | text-secondary | #5A544B | #4D5057 | #B3ACA0 |
-| text-muted | #6B6459 | #6B6F76 | #948D82 |
+| text-muted | #675F55 | #646870 | #948D82 |
 | border | #D9D2C5 | #E3E4E7 | #35322D |
 | accent | #B4472A | #2448A8 | #E3774F |
 | accent-hover | #9C3C22 | #1C3A8A | #EC8A65 |
