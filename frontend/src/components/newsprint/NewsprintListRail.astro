@@ -32,7 +32,8 @@ const editorialNote = editorialNoteProp || (isKo
   ? '오늘의 변화와 작업 기록을 AI 뉴스, 서재, 커리어, 프로젝트의 흐름으로 엮어 둡니다.'
   : 'A daily record of shifts, working notes, and build logs across AI, study, career, and projects.');
 
-const getStarterHref = (slug: string) => {
+// TODO(redesign-p5): starter sections are not rendered; remove with the page prop in a follow-up
+const getStarterHref =(slug: string) => {
   switch (slug) {
     case 'ai-news':
       return `/${locale}/news/`;
@@ -72,25 +73,28 @@ const starterSections = (startHereProp && startHereProp.length > 0) ? startHereP
 <hr class="newsprint-rail-divider" />
 
 <section>
-  <h3 class="newsprint-section-title">{isKo ? '지금 많이 읽는 글' : 'Most Read'}</h3>
+  <h3 class="newsprint-section-title">{isKo ? '최신 기사' : 'Latest'}</h3>
   {posts.length === 0 ? (
     <p class="newsprint-empty">{isKo ? '아직 표시할 글이 없습니다.' : 'No items yet.'}</p>
   ) : (
     <div class="newsprint-stack">
-      {posts.map((post) => {
+      {posts.map((post, index) => {
         const dateLabel = post.published_at
           ? (() => { const d = new Date(post.published_at!); return `${d.getMonth() + 1}/${d.getDate()}`; })()
           : null;
         return (
           <a class="newsprint-card" href={`${resolvedBasePath}/${post.slug}/`}>
-            <strong class="newsprint-rail-link">{post.title}</strong>
-            <span class="newsprint-rail-meta">
-              {post.post_type && (
-                <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${post.post_type}`}>
-                  {postTypeLabel(locale, post.post_type)}
-                </span>
-              )}
-              {dateLabel && <span class="newsprint-rail-date">{dateLabel}</span>}
+            <span class="newsprint-rail-rank" aria-hidden="true">{index + 1}</span>
+            <span class="newsprint-rail-body">
+              <strong class="newsprint-rail-link">{post.title}</strong>
+              <span class="newsprint-rail-meta">
+                {post.post_type && (
+                  <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${post.post_type}`}>
+                    {postTypeLabel(locale, post.post_type)}
+                  </span>
+                )}
+                {dateLabel && <span class="newsprint-rail-date">{dateLabel}</span>}
+              </span>
             </span>
           </a>
         );
