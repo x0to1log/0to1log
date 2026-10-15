@@ -5,6 +5,7 @@ import MainLayout from '../../layouts/MainLayout.astro';
 import AdminSidebar from '../../components/admin/AdminSidebar.astro';
 import { createClient } from '@supabase/supabase-js';
 import { formatPipelineError } from '../../lib/admin/pipelineError.js';
+import { summarizePipelineHealth } from '../../lib/admin/pipelineHealth.js';
 
 const accessToken = Astro.locals.accessToken;
 const sb = createClient(
@@ -34,6 +35,8 @@ type PipelineRun = {
   last_error: string | null;
 };
 let lastRun: PipelineRun | null = null;
+// null = the runs query failed, which is itself a signal (e.g. Supabase paused).
+let pipelineHealth: ReturnType<typeof summarizePipelineHealth> | null = null;
 let lastRunError = '';
 let pipelineCost = 0;
 let pipelineTokens = 0;
@@ -81,7 +84,7 @@ try {
   const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes,
          blogTotalRes, blogDraftRes, monthlyLogsRes, handbookRunRes,
          pipelineLogsRes, candidatesRes, settingsRes, weeklySettingsRes, productsRes,
-         newsQualityRes, hbQualityRes, dauRes, mauRes] = await Promise.all([
+         newsQualityRes, hbQualityRes, dauRes, mauRes, healthRunsRes] = await Promise.all([
     sb.from('news_posts').select('title, slug, status, updated_at, quality_score, locale').order('updated_at', { ascending: false }),
     sb.from('handbook_terms').select('term, slug, status, updated_at, source').order('updated_at', { ascending: false }),
     sb.from('profiles').select('id', { count: 'exact', head: true }),
@@ -122,7 +125,15 @@ try {
       .gte('last_seen_at', new Date(new Date().setUTCHours(0,0,0,0)).toISOString()),
     sb.from('profiles').select('id', { count: 'exact', head: true })
       .gte('last_seen_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+    // Run-level health: compare existing runs against the cron schedule
+    sb.from('pipeline_runs')
+      .select('run_key, status, started_at, last_error')
+      .gte('started_at', new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()),
   ]);
+
+  if (!healthRunsRes.error) {
+    pipelineHealth = summarizePipelineHealth(healthRunsRes.data ?? [], new Date());
+  }
 
   const posts = postsRes.data ?? [];
   const terms = termsRes.data ?? [];
@@ -373,6 +384,26 @@ function relativeTime(dateStr: string): string {
       <!-- Pipeline Status (most actionable — check daily) -->
       <section class="dashboard-section">
         <h2 class="dashboard-section-title">Pipeline Status</h2>
+        {pipelineHealth === null ? (
+          <div class="dashboard-health dashboard-health--critical" data-testid="pipeline-health">
+            <strong>Pipeline health unavailable</strong> — the runs query failed. Check Supabase status.
+          </div>
+        ) : pipelineHealth.level === 'ok' ? (
+          <div class="dashboard-health dashboard-health--ok" data-testid="pipeline-health">
+            <strong>Schedule healthy</strong> — daily {pipelineHealth.expectedBatch} and {pipelineHealth.expectedWeekly} ran.
+          </div>
+        ) : (
+          <div class={`dashboard-health dashboard-health--${pipelineHealth.level}`} data-testid="pipeline-health">
+            <ul class="dashboard-health-issues">
+              {pipelineHealth.issues.map((issue) => (
+                <li class={`dashboard-health-issue dashboard-health-issue--${issue.level}`}>{issue.message}</li>
+              ))}
+            </ul>
+            {pipelineHealth.missingDates.length > 0 && (
+              <div class="dashboard-health-dates">Missing: {pipelineHealth.missingDates.join(', ')}</div>
+            )}
+          </div>
+        )}
         {lastRun ? (
           <div class={`dashboard-pipeline dashboard-pipeline--${lastRun.status}`}>
             <div class="dashboard-pipeline-header">
@@ -814,6 +845,36 @@ function relativeTime(dateStr: string): string {
 
   .admin-btn-text:hover {
     color: var(--color-text);
+  }
+
+  .dashboard-health {
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-border);
+    border-radius: var(--radius-md, 0.5rem);
+    background: var(--color-bg-secondary);
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .dashboard-health--ok { border-left-color: var(--color-success); }
+  .dashboard-health--warning { border-left-color: var(--color-accent, #e90); }
+  .dashboard-health--critical { border-left-color: var(--color-error, #c44); }
+
+  .dashboard-health-issues {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .dashboard-health-issue--critical { color: var(--color-error, #c44); font-weight: 600; }
+
+  .dashboard-health-dates {
+    margin-top: 0.5rem;
+    color: var(--color-text-muted, inherit);
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
   }
 
   .dashboard-pipeline {
