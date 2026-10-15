@@ -7,9 +7,10 @@ interface Props {
   editionLabel?: string;
   subkicker?: string[];
   publishedAt?: string;
+  rail?: boolean;
 }
 
-const { locale, masthead, editionLabel, subkicker, publishedAt } = Astro.props;
+const { locale, masthead, editionLabel, subkicker, publishedAt, rail = true } = Astro.props;
 const isKo = locale === 'ko';
 const nonce = Astro.locals.cspNonce || '';
 const displayDate = publishedAt ? new Date(publishedAt) : new Date();
@@ -57,12 +58,14 @@ const dateLabel = isKo
     });
   </script>
 
-  <div class="newsprint-grid">
+  <div class={`newsprint-grid${rail ? '' : ' newsprint-grid--full'}`}>
     <div class="newsprint-main">
       <slot />
     </div>
-    <aside class="newsprint-rail">
-      <slot name="rail" />
-    </aside>
+    {rail && (
+      <aside class="newsprint-rail">
+        <slot name="rail" />
+      </aside>
+    )}
   </div>
 </section>

@@ -72,6 +72,7 @@ function initNewsListSearch(): void {
     if (updateUrl) {
       syncQuery(query);
     }
+    window.dispatchEvent(new CustomEvent('news:list-updated'));
   }
 
   let debounceTimer: ReturnType<typeof setTimeout>;

@@ -7,9 +7,8 @@ import { supabase } from '../../../lib/supabase';
 import { normalizeCategorySlug, getPostTypeLabel } from '../../../lib/categories';
 import { resolveDisplayTitleExcerpt, getEffectivePersona } from '../../../lib/personaTitle';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
-import NewsprintHeadline from '../../../components/newsprint/NewsprintHeadline.astro';
-import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.astro';
-import NewsprintListRail from '../../../components/newsprint/NewsprintListRail.astro';
+import NewsDeskList from '../../../components/newsprint/NewsDeskList.astro';
+import { buildDeskRows } from '../../../lib/newsDesks.js';
 import NewsprintCategoryFilter from '../../../components/newsprint/NewsprintCategoryFilter.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import { getSiteContents, parseJsonArray } from '../../../lib/siteContent';
@@ -68,35 +67,13 @@ for (const p of posts) {
   p.display_excerpt = resolved.excerpt;
 }
 
-// Group by publication date, with in-day priority: weekly → business → research
-const TYPE_ORDER: Record<string, number> = { weekly: 0, business: 1, research: 2 };
-const dateKey = (p: any): string => (p?.published_at ?? '').slice(0, 10);
-posts.sort((a, b) => {
-  const d = dateKey(b).localeCompare(dateKey(a));
-  if (d !== 0) return d;
-  return (TYPE_ORDER[a.post_type] ?? 99) - (TYPE_ORDER[b.post_type] ?? 99);
-});
-
-const businessHeadline = posts.find(p => p.post_type === 'business') ?? null;
-const researchHeadline = posts.find(p => p.post_type === 'research') ?? null;
-const weeklyHeadline = posts.find(p => p.post_type === 'weekly') ?? null;
-
-// Promote weekly to 'All' headline on days when a weekly was published
-const latestDate = dateKey(posts[0]);
-const latestDayHasWeekly = !!latestDate && posts.some(p => p.post_type === 'weekly' && dateKey(p) === latestDate);
-const allHeadlineType: 'weekly' | 'business' = latestDayHasWeekly ? 'weekly' : 'business';
-const allHeadline = allHeadlineType === 'weekly' ? weeklyHeadline : businessHeadline;
-
-// Only exclude the "All" headline from grid. Other-type latest posts still appear as grid cards.
-const rest = allHeadline ? posts.filter(p => p !== allHeadline) : posts;
-const railPosts = rest.slice(0, 4);
+const deskEntries = buildDeskRows(posts);
 const postTypeItems = [
   { value: 'business', label: getPostTypeLabel('en', 'business') },
   { value: 'research', label: getPostTypeLabel('en', 'research') },
   { value: 'weekly', label: 'Weekly' },
 ];
 const subkicker = parseJsonArray<string>(sc.news_subkicker, ['AI · Papers', 'Daily Curation', 'Open Access']);
-const startHereSections = parseJsonArray<{slug: string; label: string; description: string}>(sc.start_here_sections, []);
 const searchPlaceholder = 'Search AI news';
 const searchHints = [searchPlaceholder, 'OpenAI', 'Gemini', 'MCP'];
 const searchEmptyMessage = 'No AI news matches that search.';
@@ -108,7 +85,9 @@ const searchEmptyMessage = 'No AI news matches that search.';
     masthead={sc.news_masthead || 'Latest AI News'}
     editionLabel={sc.news_edition_label || 'Log Daily'}
     subkicker={subkicker}
+    rail={false}
   >
+    {sc.editorial_note && <p class="news-desks-note">{sc.editorial_note}</p>}
     <div class="handbook-search-sticky">
       <input
         type="search"
@@ -131,73 +110,7 @@ const searchEmptyMessage = 'No AI news matches that search.';
         linkLabel={t.en['error.retry']}
       />
     ) : posts.length > 0 ? (
-      <div id="news-list-results" data-multi-headline data-all-headline={allHeadlineType}>
-        {businessHeadline && (
-          <NewsprintHeadline
-            href={`/en/news/${businessHeadline.slug}/`}
-            title={businessHeadline.display_title || businessHeadline.title}
-            excerpt={businessHeadline.display_excerpt || businessHeadline.excerpt}
-            category={businessHeadline.category}
-            publishedAt={businessHeadline.published_at}
-            readingTimeMin={businessHeadline.reading_time_min}
-            tags={businessHeadline.tags}
-            locale="en"
-            itemId={businessHeadline.id}
-            itemType="news"
-            postType={businessHeadline.post_type}
-          />
-        )}
-        {researchHeadline && (
-          <NewsprintHeadline
-            href={`/en/news/${researchHeadline.slug}/`}
-            title={researchHeadline.display_title || researchHeadline.title}
-            excerpt={researchHeadline.display_excerpt || researchHeadline.excerpt}
-            category={researchHeadline.category}
-            publishedAt={researchHeadline.published_at}
-            readingTimeMin={researchHeadline.reading_time_min}
-            tags={researchHeadline.tags}
-            locale="en"
-            itemId={researchHeadline.id}
-            itemType="news"
-            postType={researchHeadline.post_type}
-          />
-        )}
-        {weeklyHeadline && (
-          <NewsprintHeadline
-            href={`/en/news/${weeklyHeadline.slug}/`}
-            title={weeklyHeadline.display_title || weeklyHeadline.title}
-            excerpt={weeklyHeadline.display_excerpt || weeklyHeadline.excerpt}
-            category={weeklyHeadline.category}
-            publishedAt={weeklyHeadline.published_at}
-            readingTimeMin={weeklyHeadline.reading_time_min}
-            tags={weeklyHeadline.tags}
-            locale="en"
-            itemId={weeklyHeadline.id}
-            itemType="news"
-            postType={weeklyHeadline.post_type}
-          />
-        )}
-
-        {rest.length > 0 && (
-          <section class="newsprint-grid-cards">
-            {rest.map((post) => (
-              <NewsprintListCard
-                href={`/en/news/${post.slug}/`}
-                title={post.display_title || post.title}
-                excerpt={post.display_excerpt || post.excerpt}
-                category={post.category}
-                publishedAt={post.published_at}
-                readingTimeMin={post.reading_time_min}
-                tags={post.tags}
-                locale="en"
-                itemId={post.id}
-                itemType="news"
-                postType={post.post_type}
-              />
-            ))}
-          </section>
-        )}
-      </div>
+      <NewsDeskList locale="en" entries={deskEntries} />
     ) : (
       <NewsprintNotice variant="empty" message={t.en['log.empty']} />
     )}
@@ -205,15 +118,6 @@ const searchEmptyMessage = 'No AI news matches that search.';
     <div id="news-no-results" style="display: none;">
       <NewsprintNotice variant="empty" message={searchEmptyMessage} />
     </div>
-
-    <Fragment slot="rail">
-      <NewsprintListRail
-        locale="en"
-        posts={railPosts}
-        editorialNote={sc.editorial_note || undefined}
-        startHereSections={startHereSections.length > 0 ? startHereSections : undefined}
-      />
-    </Fragment>
   </NewsprintShell>
 </MainLayout>
 
@@ -230,5 +134,5 @@ const searchEmptyMessage = 'No AI news matches that search.';
 </script>
 
 <script>
-  import '../../../scripts/newsListMultiHeadline';
+  import '../../../scripts/newsDeskMode';
 </script>

@@ -1,0 +1,62 @@
+---
+// frontend/src/components/newsprint/NewsDeskCell.astro
+// One story in the two-desk news list. Keeps the list-card contract
+// (.newsprint-card + data-category/post-type/post-id/search-text) so the
+// existing filter, search and bookmark scripts work unchanged.
+import { normalizeCategorySlug } from '../../lib/categories';
+import { postTypeLabel } from '../../lib/postType.js';
+
+interface DeskPost {
+  id: string;
+  slug: string;
+  title: string;
+  display_title?: string | null;
+  excerpt?: string | null;
+  display_excerpt?: string | null;
+  category?: string | null;
+  post_type?: string | null;
+  reading_time_min?: number | null;
+  tags?: string[] | null;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  post: DeskPost;
+  side: 'business' | 'research' | 'weekly';
+  isToday?: boolean;
+}
+
+const { locale, post, side, isToday = false } = Astro.props;
+const isKo = locale === 'ko';
+const title = post.display_title || post.title;
+const excerpt = post.display_excerpt || post.excerpt;
+const type = post.post_type || 'business';
+const searchText = [title, excerpt, post.tags?.join(' ')].filter(Boolean).join(' ');
+const readingLabel = post.reading_time_min ? (isKo ? `${post.reading_time_min}분` : `${post.reading_time_min} min`) : '';
+---
+
+<article
+  class={`newsprint-card news-desk-cell news-desk-cell--${side}${isToday ? ' news-desk-cell--today' : ''}`}
+  data-category={normalizeCategorySlug(post.category) || 'uncategorized'}
+  data-post-type={type}
+  data-post-id={post.id}
+  data-search-text={searchText}
+>
+  <span class="news-desk-label">{postTypeLabel(locale, type)}</span>
+  <div class="news-desk-head">
+    <h2 class="news-desk-title"><a href={`/${locale}/news/${post.slug}/`} class="newsprint-card-stretched-link">{title}</a></h2>
+    <button
+      class="newsprint-bookmark-icon"
+      data-item-id={post.id}
+      data-item-type="news"
+      data-bookmarked="false"
+      aria-label="Add bookmark"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+      </svg>
+    </button>
+  </div>
+  {excerpt && <p class="news-desk-excerpt">{excerpt}</p>}
+  {readingLabel && <p class="news-desk-meta">{readingLabel}</p>}
+</article>

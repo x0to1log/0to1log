@@ -1,0 +1,65 @@
+---
+// frontend/src/components/newsprint/NewsDeskList.astro
+// Two-desk news list: business | date spine | research, one row per KST day.
+// DOM order is date → business → research (reading order); desktop columns come from grid-template-areas.
+import NewsDeskCell from './NewsDeskCell.astro';
+import { deskDateParts } from '../../lib/newsDesks.js';
+
+interface Props {
+  locale: 'en' | 'ko';
+  entries: any[];
+}
+
+const { locale, entries } = Astro.props;
+const isKo = locale === 'ko';
+const copy = isKo
+  ? {
+      business: '비즈니스 데스크', businessSub: '돈과 시장',
+      research: '리서치 데스크', researchSub: '논문과 기술',
+      noBusiness: '이날은 비즈니스 기사가 없어요', noResearch: '이날은 리서치 기사가 없어요',
+      today: '오늘',
+    }
+  : {
+      business: 'Business desk', businessSub: 'Money and markets',
+      research: 'Research desk', researchSub: 'Papers and tech',
+      noBusiness: 'No business story this day', noResearch: 'No research story this day',
+      today: 'Today',
+    };
+---
+
+<div id="news-list-results" class="news-desks" data-mode="desks">
+  <div class="news-desks-heads" aria-hidden="true">
+    <p class="news-desks-head news-desks-head--business">{copy.business} <small>· {copy.businessSub}</small></p>
+    <span></span>
+    <p class="news-desks-head news-desks-head--research">{copy.research} <small>· {copy.researchSub}</small></p>
+  </div>
+  {entries.map((entry) => {
+    const date = deskDateParts(entry.day, locale);
+    if (entry.kind === 'weekly') {
+      return (
+        <div class="news-desk-weekly">
+          <p class="news-desk-weekly-when">{date.short} · {date.issue}</p>
+          <NewsDeskCell locale={locale} post={entry.post} side="weekly" />
+        </div>
+      );
+    }
+    return (
+      <div class={`news-desk-row${entry.isToday ? ' news-desk-row--today' : ''}${entry.showDate ? '' : ' news-desk-row--cont'}`}>
+        <p class="news-desk-date">
+          {entry.showDate && (
+            <>
+              <b>{date.short}</b>
+              <span>{date.weekday} · {date.issue}{entry.isToday ? ` · ${copy.today}` : ''}</span>
+            </>
+          )}
+        </p>
+        {entry.business
+          ? <NewsDeskCell locale={locale} post={entry.business} side="business" isToday={entry.isToday} />
+          : <p class="news-desk-empty news-desk-empty--business">{copy.noBusiness}</p>}
+        {entry.research
+          ? <NewsDeskCell locale={locale} post={entry.research} side="research" isToday={entry.isToday} />
+          : <p class="news-desk-empty news-desk-empty--research">{copy.noResearch}</p>}
+      </div>
+    );
+  })}
+</div>

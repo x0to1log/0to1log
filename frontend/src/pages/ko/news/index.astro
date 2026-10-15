@@ -7,9 +7,8 @@ import { supabase } from '../../../lib/supabase';
 import { normalizeCategorySlug, getPostTypeLabel } from '../../../lib/categories';
 import { resolveDisplayTitleExcerpt, getEffectivePersona } from '../../../lib/personaTitle';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
-import NewsprintHeadline from '../../../components/newsprint/NewsprintHeadline.astro';
-import NewsprintListCard from '../../../components/newsprint/NewsprintListCard.astro';
-import NewsprintListRail from '../../../components/newsprint/NewsprintListRail.astro';
+import NewsDeskList from '../../../components/newsprint/NewsDeskList.astro';
+import { buildDeskRows } from '../../../lib/newsDesks.js';
 import NewsprintCategoryFilter from '../../../components/newsprint/NewsprintCategoryFilter.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import { getSiteContents, parseJsonArray } from '../../../lib/siteContent';
@@ -68,35 +67,13 @@ for (const p of posts) {
   p.display_excerpt = resolved.excerpt;
 }
 
-// Group by publication date, with in-day priority: weekly → business → research
-const TYPE_ORDER: Record<string, number> = { weekly: 0, business: 1, research: 2 };
-const dateKey = (p: any): string => (p?.published_at ?? '').slice(0, 10);
-posts.sort((a, b) => {
-  const d = dateKey(b).localeCompare(dateKey(a));
-  if (d !== 0) return d;
-  return (TYPE_ORDER[a.post_type] ?? 99) - (TYPE_ORDER[b.post_type] ?? 99);
-});
-
-const businessHeadline = posts.find(p => p.post_type === 'business') ?? null;
-const researchHeadline = posts.find(p => p.post_type === 'research') ?? null;
-const weeklyHeadline = posts.find(p => p.post_type === 'weekly') ?? null;
-
-// Promote weekly to '전체' headline on days when a weekly was published
-const latestDate = dateKey(posts[0]);
-const latestDayHasWeekly = !!latestDate && posts.some(p => p.post_type === 'weekly' && dateKey(p) === latestDate);
-const allHeadlineType: 'weekly' | 'business' = latestDayHasWeekly ? 'weekly' : 'business';
-const allHeadline = allHeadlineType === 'weekly' ? weeklyHeadline : businessHeadline;
-
-// Only exclude the "전체" headline from grid. Other-type latest posts still appear as grid cards.
-const rest = allHeadline ? posts.filter(p => p !== allHeadline) : posts;
-const railPosts = rest.slice(0, 4);
+const deskEntries = buildDeskRows(posts);
 const postTypeItems = [
   { value: 'business', label: getPostTypeLabel('ko', 'business') },
   { value: 'research', label: getPostTypeLabel('ko', 'research') },
   { value: 'weekly', label: '주간 정리' },
 ];
 const subkicker = parseJsonArray<string>(sc.news_subkicker, ['AI · 논문', '데일리 큐레이션', '공개 열람']);
-const startHereSections = parseJsonArray<{slug: string; label: string; description: string}>(sc.start_here_sections, []);
 const searchPlaceholder = 'AI 뉴스 검색';
 const searchHints = [searchPlaceholder, 'OpenAI', 'Gemini', 'MCP'];
 const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
@@ -108,7 +85,9 @@ const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
     masthead={sc.news_masthead || '최신 AI 뉴스 모음집'}
     editionLabel={sc.news_edition_label || '빌더스 데일리'}
     subkicker={subkicker}
+    rail={false}
   >
+    {sc.editorial_note && <p class="news-desks-note">{sc.editorial_note}</p>}
     <div class="handbook-search-sticky">
       <input
         type="search"
@@ -131,73 +110,7 @@ const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
         linkLabel={t.ko['error.retry']}
       />
     ) : posts.length > 0 ? (
-      <div id="news-list-results" data-multi-headline data-all-headline={allHeadlineType}>
-        {businessHeadline && (
-          <NewsprintHeadline
-            href={`/ko/news/${businessHeadline.slug}/`}
-            title={businessHeadline.display_title || businessHeadline.title}
-            excerpt={businessHeadline.display_excerpt || businessHeadline.excerpt}
-            category={businessHeadline.category}
-            publishedAt={businessHeadline.published_at}
-            readingTimeMin={businessHeadline.reading_time_min}
-            tags={businessHeadline.tags}
-            locale="ko"
-            itemId={businessHeadline.id}
-            itemType="news"
-            postType={businessHeadline.post_type}
-          />
-        )}
-        {researchHeadline && (
-          <NewsprintHeadline
-            href={`/ko/news/${researchHeadline.slug}/`}
-            title={researchHeadline.display_title || researchHeadline.title}
-            excerpt={researchHeadline.display_excerpt || researchHeadline.excerpt}
-            category={researchHeadline.category}
-            publishedAt={researchHeadline.published_at}
-            readingTimeMin={researchHeadline.reading_time_min}
-            tags={researchHeadline.tags}
-            locale="ko"
-            itemId={researchHeadline.id}
-            itemType="news"
-            postType={researchHeadline.post_type}
-          />
-        )}
-        {weeklyHeadline && (
-          <NewsprintHeadline
-            href={`/ko/news/${weeklyHeadline.slug}/`}
-            title={weeklyHeadline.display_title || weeklyHeadline.title}
-            excerpt={weeklyHeadline.display_excerpt || weeklyHeadline.excerpt}
-            category={weeklyHeadline.category}
-            publishedAt={weeklyHeadline.published_at}
-            readingTimeMin={weeklyHeadline.reading_time_min}
-            tags={weeklyHeadline.tags}
-            locale="ko"
-            itemId={weeklyHeadline.id}
-            itemType="news"
-            postType={weeklyHeadline.post_type}
-          />
-        )}
-
-        {rest.length > 0 && (
-          <section class="newsprint-grid-cards">
-            {rest.map((post) => (
-              <NewsprintListCard
-                href={`/ko/news/${post.slug}/`}
-                title={post.display_title || post.title}
-                category={post.category}
-                publishedAt={post.published_at}
-                readingTimeMin={post.reading_time_min}
-                excerpt={post.display_excerpt || post.excerpt}
-                tags={post.tags}
-                locale="ko"
-                itemId={post.id}
-                itemType="news"
-                postType={post.post_type}
-              />
-            ))}
-          </section>
-        )}
-      </div>
+      <NewsDeskList locale="ko" entries={deskEntries} />
     ) : (
       <NewsprintNotice variant="empty" message={t.ko['log.empty']} />
     )}
@@ -205,15 +118,6 @@ const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
     <div id="news-no-results" style="display: none;">
       <NewsprintNotice variant="empty" message={searchEmptyMessage} />
     </div>
-
-    <Fragment slot="rail">
-      <NewsprintListRail
-        locale="ko"
-        posts={railPosts}
-        editorialNote={sc.editorial_note || undefined}
-        startHereSections={startHereSections.length > 0 ? startHereSections : undefined}
-      />
-    </Fragment>
   </NewsprintShell>
 </MainLayout>
 
@@ -230,5 +134,5 @@ const searchEmptyMessage = '검색 조건에 맞는 AI 뉴스가 없습니다.';
 </script>
 
 <script>
-  import '../../../scripts/newsListMultiHeadline';
+  import '../../../scripts/newsDeskMode';
 </script>
