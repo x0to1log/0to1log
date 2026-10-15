@@ -1,10 +1,11 @@
 // frontend/tests/home-hero-v2.test.cjs
+// Masthead/dateline moved from the old split hero into HomeFrontPage; typewriter + split hero styles are gone.
 const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 
 const src = path.join(__dirname, '..', 'src');
-const hero = fs.readFileSync(path.join(src, 'components/home/HomeSplitHero.astro'), 'utf8');
+const front = fs.readFileSync(path.join(src, 'components/home/HomeFrontPage.astro'), 'utf8');
 const css = fs.readFileSync(path.join(src, 'styles/global.css'), 'utf8');
 function rule(selector) {
   const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -13,16 +14,17 @@ function rule(selector) {
   return m[1];
 }
 
-assert(/class="home-split-hero-wordmark"[^>]*>0to1log<span class="site-brand-dot" aria-hidden="true">\.<\/span>/.test(hero), 'wordmark gets the accent period');
-assert(hero.includes('AI 뉴스와 용어를 기록하는 신문'), 'ko motto');
-assert(/import \{ issueLabel, issueNumber \} from '\.\.\/\.\.\/lib\/issue\.js'/.test(hero), 'issue line uses lib/issue.js');
-assert(/todayCount\?: number/.test(hero), 'hero accepts todayCount');
-assert(/todayCount > 0 &&/.test(hero), '"오늘 N건" only when there are stories today');
-assert(hero.includes('class="home-split-hero-issue"'), 'issue line element');
+assert(front.includes('AI 뉴스와 용어를 기록하는 신문'), 'ko motto in the dateline');
+assert(/import \{ issueLabel, issueNumber \} from '\.\.\/\.\.\/lib\/issue\.js'/.test(front), 'issue number uses lib/issue.js');
+assert(/todayCount\?: number/.test(front), 'front page accepts todayCount');
+assert(/todayCount > 0 \?/.test(front), '"오늘 N건" only when there are stories today');
 
-assert(rule('.home-split-hero-wordmark').includes('var(--color-text-primary)'), 'wordmark is ink');
-assert(!/min-height:\s*calc\(100svh/.test(rule('.home-split-hero')), 'hero no longer fills the viewport (front strip follows)');
-assert(/font-weight:\s*700/.test(rule('.home-split-hero-headline')), 'headline uses a loaded Hahmlet weight');
-assert(rule('.home-type-target').includes('var(--color-accent)'), 'typed word is accent');
-assert(/@media \(max-width: 639px\)\s*\{[^}]*\.home-split-hero-sub\s*\{\s*display:\s*none;/.test(css), 'sub copy hidden on small screens');
+assert(rule('.home-front-masthead').includes('var(--font-masthead)'), 'masthead uses Newsreader');
+assert(rule('.home-front-masthead').includes('lining-nums'), 'masthead digits are lining (0to1, not oto1)');
+assert(rule('.home-front-masthead').includes('var(--color-text-primary)'), 'masthead is ink');
+assert(/border-top:\s*2px solid var\(--color-text-primary\)/.test(rule('.home-front-dateline')), 'dateline double rule (top)');
+assert(/font-weight:\s*700/.test(rule('.home-front-lead-title')), 'lead title uses a loaded Hahmlet weight');
+
+assert(!/home-split-hero|home-type-|home-cursor-blink/.test(css), 'split hero + typewriter styles removed');
+assert(!/data-type-words/.test(front), 'no typewriter markup');
 console.log('home-hero-v2.test.cjs passed');

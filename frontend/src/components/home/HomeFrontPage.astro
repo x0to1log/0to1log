@@ -1,54 +1,113 @@
 ---
 // frontend/src/components/home/HomeFrontPage.astro
+// Newspaper front page: masthead, dateline, 3 columns (earlier | lead + keyword plate | term).
+// DOM order is the reading order (lead → term → earlier); desktop columns come from grid-template-areas.
 import type { HomeFrontNews, HomeFrontTerm } from '../../lib/pageData/homeFrontPage';
 import { postTypeLabel } from '../../lib/postType.js';
+import { issueLabel, issueNumber } from '../../lib/issue.js';
 
 interface Props {
   locale: 'en' | 'ko';
   lead: HomeFrontNews | null;
+  leadIsToday: boolean;
   sibling: HomeFrontNews | null;
+  earlier: HomeFrontNews[];
   term: HomeFrontTerm | null;
   todayCount?: number;
+  keyword: { small: string | null; big: string } | null;
 }
 
-const { locale, lead, sibling, term } = Astro.props;
+const { locale, lead, leadIsToday, sibling, earlier = [], term, todayCount = 0, keyword } = Astro.props;
 const isKo = locale === 'ko';
+const lang = isKo ? 'ko-KR' : 'en-US';
+const timeZone = 'Asia/Seoul';
+
+const now = new Date();
+const issueText = issueLabel(locale, issueNumber(now));
+const dateLong = now.toLocaleDateString(lang, { timeZone, year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+const dateShort = now.toLocaleDateString(lang, { timeZone, month: 'long', day: 'numeric', weekday: 'short' });
+const motto = isKo ? 'AI 뉴스와 용어를 기록하는 신문' : 'A newspaper that keeps a record of AI news and terms';
+
+const typeOf = (n: HomeFrontNews) => postTypeLabel(locale, n.post_type) || (isKo ? 'AI 뉴스' : 'AI News');
+const leadDate = lead?.published_at
+  ? new Date(lead.published_at).toLocaleDateString(lang, { timeZone, month: isKo ? 'long' : 'short', day: 'numeric' })
+  : '';
+const leadKicker = !lead
+  ? ''
+  : leadIsToday
+    ? (isKo ? `오늘의 1면 · ${typeOf(lead)}` : `Front page · ${typeOf(lead)}`)
+    : (isKo ? `최근 1면 · ${leadDate}` : `Latest front page · ${leadDate}`);
+const readTime = lead?.reading_time_min ? (isKo ? `${lead.reading_time_min}분` : `${lead.reading_time_min} min`) : '';
+const siblingLead = sibling ? (isKo ? `같은 날 ${typeOf(sibling)}판:` : `Same day, ${typeOf(sibling)}:`) : '';
+
 const termTitle = term ? (isKo ? term.korean_name || term.term : term.term) : '';
 const termSub = term && isKo && term.korean_name ? term.term : '';
 ---
 
-{(lead || term) && (
-  <section class="home-front" aria-labelledby="home-front-title">
-    <div class="home-front-head">
-      <h2 id="home-front-title" class="home-front-title">{isKo ? '오늘의 1면' : "Today's front page"}</h2>
-      <a class="home-front-more" href={`/${locale}/news/`}>{isKo ? '뉴스 전체 보기 →' : 'All news →'}</a>
-    </div>
-    <div class="home-front-grid">
-      {lead && (
-        <article class="home-front-lead">
-          <span class="home-front-kicker">{postTypeLabel(locale, lead.post_type) || (isKo ? 'AI 뉴스' : 'AI News')}</span>
-          <h3 class="home-front-lead-title"><a href={`/${locale}/news/${lead.slug}/`}>{lead.title}</a></h3>
-          {lead.excerpt && <p class="home-front-lead-excerpt">{lead.excerpt}</p>}
-          {lead.reading_time_min ? (
-            <p class="home-front-meta">{isKo ? `${lead.reading_time_min}분 읽기` : `${lead.reading_time_min} min read`}</p>
-          ) : null}
-          {sibling && (
-            <p class="home-front-also">
-              <span>{postTypeLabel(locale, sibling.post_type) || (isKo ? 'AI 뉴스' : 'AI News')}</span>
-              <a href={`/${locale}/news/${sibling.slug}/`}>{sibling.title}</a>
-            </p>
-          )}
-        </article>
-      )}
+<section class="home-front" aria-label={isKo ? '오늘의 지면' : "Today's paper"}>
+  <h1 class="home-front-masthead">0to1log<span class="site-brand-dot" aria-hidden="true">.</span></h1>
+  <p class="home-front-dateline">
+    <span>{issueText}</span>
+    <span class="home-front-date">
+      <span class="home-front-date-long">{dateLong} · {motto}</span>
+      <span class="home-front-date-short">{dateShort}</span>
+    </span>
+    {todayCount > 0 ? <b>{isKo ? `오늘 ${todayCount}건` : `${todayCount} today`}</b> : <span></span>}
+  </p>
+
+  <div class="home-front-grid">
+    {lead ? (
+      <article class="home-front-lead">
+        <span class="home-front-kicker">{leadKicker}</span>
+        <h2 class="home-front-lead-title"><a href={`/${locale}/news/${lead.slug}/`}>{lead.title}</a></h2>
+        {lead.excerpt && <p class="home-front-lead-excerpt">{lead.excerpt}</p>}
+        {keyword && (
+          <div class="home-front-plate" aria-hidden="true">
+            <span class="home-front-plate-label">{isKo ? '오늘의 키워드' : "Today's keyword"}</span>
+            {keyword.small && <span class="home-front-plate-small">{keyword.small}</span>}
+            <span class="home-front-plate-big">{keyword.big}</span>
+          </div>
+        )}
+        {(readTime || sibling) && (
+          <p class="home-front-meta">
+            {readTime && <span>{readTime}</span>}
+            {readTime && sibling && <span aria-hidden="true"> · </span>}
+            {sibling && (
+              <span>{siblingLead} <a href={`/${locale}/news/${sibling.slug}/`}>{sibling.title}</a></span>
+            )}
+          </p>
+        )}
+      </article>
+    ) : (
+      <article class="home-front-lead">
+        <p class="home-front-empty">{isKo ? '아직 발행된 기사가 없어요' : 'No stories published yet'}</p>
+      </article>
+    )}
+
+    <section class="home-front-term" aria-label={isKo ? '오늘의 용어' : 'Term of the day'}>
+      <p class="home-front-label">{isKo ? '오늘의 용어' : 'Term of the day'}</p>
       {term && (
-        <aside class="home-front-term">
-          <p class="home-front-term-label">{isKo ? '오늘의 용어' : 'Term of the day'}</p>
+        <>
           <h3 class="home-front-term-name">{termTitle}</h3>
           {termSub && <p class="home-front-term-sub">{termSub}</p>}
           {term.definition && <p class="home-front-term-def">{term.definition}</p>}
-          <a class="home-front-term-link" href={`/${locale}/handbook/${term.slug}/`}>{isKo ? '핸드북에서 보기 →' : 'Open in Handbook →'}</a>
-        </aside>
+          <a class="home-front-term-link" href={`/${locale}/handbook/${term.slug}/`}>{isKo ? '풀이 읽기 →' : 'Read the explainer →'}</a>
+        </>
       )}
-    </div>
-  </section>
-)}
+      <a class="home-front-more" href={`/${locale}/news/`}>{isKo ? '뉴스 전체 보기 →' : 'All news →'}</a>
+    </section>
+
+    {earlier.length > 0 && (
+      <section class="home-front-earlier" aria-label={isKo ? '지난 지면' : 'Earlier pages'}>
+        <p class="home-front-label">{isKo ? '지난 지면' : 'Earlier pages'}</p>
+        {earlier.map((story) => (
+          <div class="home-front-story">
+            <span class="home-front-kicker">{typeOf(story)}</span>
+            <h3 class="home-front-story-title"><a href={`/${locale}/news/${story.slug}/`}>{story.title}</a></h3>
+            {story.excerpt && <p class="home-front-story-excerpt">{story.excerpt}</p>}
+          </div>
+        ))}
+      </section>
+    )}
+  </div>
+</section>
