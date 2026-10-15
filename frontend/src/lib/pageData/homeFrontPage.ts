@@ -1,5 +1,5 @@
 // frontend/src/lib/pageData/homeFrontPage.ts
-// Lean data for the home "오늘의 1면" strip: 1 news query + 1 term query.
+// Lean data for the home front page: 1 news query + term count + 1 term row.
 import { supabase } from '../supabase';
 import { selectFrontPage, termIndex } from '../homeFront.js';
 
@@ -10,6 +10,7 @@ export interface HomeFrontNews {
   published_at: string | null;
   excerpt: string | null;
   reading_time_min: number | null;
+  tags: string[] | null;
 }
 
 export interface HomeFrontTerm {
@@ -21,12 +22,15 @@ export interface HomeFrontTerm {
 
 export interface HomeFrontPageData {
   lead: HomeFrontNews | null;
-  also: HomeFrontNews | null;
+  leadIsToday: boolean;
+  sibling: HomeFrontNews | null;
+  earlier: HomeFrontNews[];
   todayCount: number;
   term: HomeFrontTerm | null;
+  keyword: { small: string | null; big: string } | null;
 }
 
-const EMPTY: HomeFrontPageData = { lead: null, also: null, todayCount: 0, term: null };
+const EMPTY: HomeFrontPageData = { lead: null, leadIsToday: false, sibling: null, earlier: [], todayCount: 0, term: null, keyword: null };
 
 export async function getHomeFrontPageData(locale: 'en' | 'ko', now = new Date()): Promise<HomeFrontPageData> {
   if (!supabase) return EMPTY;
@@ -35,7 +39,7 @@ export async function getHomeFrontPageData(locale: 'en' | 'ko', now = new Date()
   const [newsRes, countRes] = await Promise.all([
     supabase
       .from('news_posts')
-      .select('title, slug, post_type, published_at, excerpt, reading_time_min')
+      .select('title, slug, post_type, published_at, excerpt, reading_time_min, tags')
       .eq('status', 'published')
       .eq('locale', locale)
       .order('published_at', { ascending: false })
