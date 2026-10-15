@@ -1,5 +1,7 @@
 # 뉴스 목록 두 데스크(E안) Implementation Plan
 
+**Status:** done (2026-10-16) — 실행 결과는 문서 끝 참조.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** `/ko/news/`, `/en/news/` 목록을 "비즈니스 데스크 | 날짜 축 | 리서치 데스크" 지면으로 바꾼다. 탭이나 검색을 쓰면 한 단 목록으로 전환된다.
@@ -1046,3 +1048,14 @@ git commit -m "chore: remove news headline, list card and list rail replaced by 
 - [ ] 이 계획에 Status와 실행 결과를 적는다.
 - [ ] `ACTIVE_SPRINT.md`에 REDESIGN-NEWS-LIST 항목과 증거를 추가한다.
 - [ ] 커밋: `docs: record two-desk news list redesign`
+
+---
+
+## 실행 결과 (2026-10-16)
+
+- 커밋: `0c1998c6` 날짜별 묶기, `d1da3176` 두 데스크 지면(컴포넌트·스크립트·페이지·CSS), `98073b31` 옛 헤드라인·카드·레일과 stale 테스트 2개 삭제(-532줄).
+- 테스트: 실패 목록이 기준선과 이름 기준으로 동일(삭제한 list-rail-copy·list-meta-order 제외), 신규 FAIL 0. 빌드 성공.
+- 브라우저 클릭 검증(/ko/news/): 전체=데스크 모드 74줄·119칸 → 비즈니스 49 / 리서치 51 / 주간 정리 19칸(목록 모드, 유형 단일) → 전체 복귀. 검색 "Gemini" 20/119, 지우면 데스크 모드 복귀. `?post_type=research` 직접 진입 시 처음부터 목록 모드. 북마크 119개.
+- 매트릭스: 종이·순백·다크 × 1100px·375px × ko/en — 가로 넘침 0, 목록 영역 대비 미달 0. 모바일 데스크 모드 칸 겹침 없음(날짜→비즈니스→리서치).
+- 계획 대비: 컨트롤러 승인으로 페이지의 미사용 `normalizeCategorySlug` import와 `start_here_sections` 조회 키 제거(Task 3 커밋).
+- 후속: 사용처가 없어진 `.newsprint-card-bottom`·`.newsprint-tags-inline` CSS 정리(스펙상 이번 범위 밖). 마스트헤드 문구 "최신 AI 뉴스 모음집"은 관리자 설정에서 변경 가능.

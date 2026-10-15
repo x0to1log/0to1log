@@ -1,6 +1,6 @@
 # 뉴스 목록 재설계 (E안 · 두 데스크) — Design Spec
 
-**Status:** approved (2026-10-16)
+**Status:** implemented (2026-10-16) — [[2026-10-16-news-list-desks]]
 **Mockup:** `.superpowers/brainstorm/news/news-list-v4.html` (E안)
 **관련:** [[2026-10-15-home-front-page-redesign-design]], [[2026-10-14-site-redesign-soft-newsprint-design]]
 
