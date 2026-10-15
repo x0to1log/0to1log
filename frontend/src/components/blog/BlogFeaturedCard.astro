@@ -45,7 +45,7 @@ const readingLabel = readingTimeMin
         {catLabel && (
           <span
             class="blog-category-badge"
-            style={`background: color-mix(in srgb, ${catColor} 15%, transparent); color: ${catColor};`}
+            style={`--cat-color: ${catColor}`}
           >
             {catLabel}
           </span>
@@ -80,10 +80,7 @@ const readingLabel = readingTimeMin
   {tags && tags.length > 0 && (
     <div class="blog-featured-card-tags">
       {tags.map(tag => (
-        <span
-          class="blog-mono-tag"
-          style={`background: color-mix(in srgb, ${catColor} 15%, transparent); color: ${catColor}`}
-        >
+        <span class="blog-mono-tag">
           #{tag}
         </span>
       ))}
