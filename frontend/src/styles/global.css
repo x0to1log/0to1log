@@ -1624,8 +1624,6 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
 .newsprint-prose .hb-related-terms__tag {
   display: inline-block;
   justify-self: start;
-  padding: 0.1875rem 0.5rem;
-  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1;
@@ -2214,7 +2212,6 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   .newsprint-featured--has-img {
     grid-template-columns: 1fr;
   }
-
 }
 
 /* ===========================
@@ -8599,7 +8596,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
 .handbook-filter-row {
   display: flex;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: none;
@@ -8623,6 +8620,7 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  flex-shrink: 0;
   position: relative;
   padding: 0.45rem 0.1rem 0.7rem;
   border: none;
@@ -8700,7 +8698,6 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-controls {
   box-shadow: none;
   text-decoration: none;
   color: inherit;
-  transition: background-color 0.15s;
 }
 
 .handbook-card:hover {
@@ -11917,7 +11914,8 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
 }
 
 .handbook-trending-link:hover {
-  background: var(--color-bg-hover);
+  background: none;
+  color: var(--color-accent);
 }
 
 .handbook-trending-rank {

@@ -48,4 +48,6 @@ assert(rule('.handbook-level-btn--active::after').includes('var(--color-accent)'
 assert(!rule('.handbook-toc__title').includes('uppercase'), 'toc title not uppercase');
 assert(!rule('.handbook-section-label').includes('uppercase'), 'section label not uppercase');
 
+assert(/flex-wrap:\s*nowrap/.test(rule('.handbook-filter-row')), 'filter row stays on one scrolling line');
+
 console.log('handbook-v2.test.cjs passed');
