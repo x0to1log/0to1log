@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     openai_model_main: str = "gpt-5"
     openai_model_light: str = "gpt-5-mini"
     openai_model_nano: str = "gpt-5-nano"
-    openai_model_reasoning: str = "gpt-5-mini"
+    openai_model_reasoning: str = "gpt-6.1-sol"
     pinecone_api_key: str = ""
     pinecone_index_name: str = "news-posts"
     embedding_model: str = "text-embedding-3-small"
@@ -22,7 +22,9 @@ class Settings(BaseSettings):
     brave_api_key: str = ""
     admin_email: str = "x0to1log@gmail.com"
     resend_api_key: str = ""
-    auto_publish_threshold: int = 85
+    # gpt-6.1-sol QC scale; major issues are blocked by AUTO_PUBLISH_BLOCKING_CAPS.
+    # Change together with openai_model_reasoning (plan 2026-10-13 Task 1.5a).
+    auto_publish_threshold: int = 70
     cron_secret: str = ""
     revalidate_secret: str = ""
     fastapi_url: str = ""
