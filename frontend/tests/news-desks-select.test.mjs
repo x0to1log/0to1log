@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const { buildDeskRows, deskDateParts } = await import(pathToFileURL(path.join(here, '../src/lib/newsDesks.js')).href);
+const { buildDeskRows, deskDateParts, deskDayRange } = await import(pathToFileURL(path.join(here, '../src/lib/newsDesks.js')).href);
 
 const NOW = new Date('2026-10-15T12:00:00+09:00');
 const p = (slug, post_type, published_at) => ({ slug, post_type, published_at });
@@ -72,5 +72,11 @@ const en = deskDateParts('2026-09-20', 'en');
 assert.equal(en.short, '09.20');
 assert.equal(en.issue, 'No. 187');
 assert.equal(en.weekday, 'Sun');
+
+// KST 하루 범위 (짝 기사 쿼리용)
+assert.deepEqual(deskDayRange('2026-10-15'), { start: '2026-10-14T15:00:00.000Z', end: '2026-10-15T15:00:00.000Z' });
+assert.equal(deskDayRange(null), null);
+assert.equal(deskDayRange('bad'), null);
+assert.equal(deskDayRange('2026-13-40'), null);
 
 console.log('news-desks-select.test.mjs passed');

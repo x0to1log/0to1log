@@ -57,3 +57,12 @@ export function deskDateParts(day, locale) {
     issue: issueLabel(locale, issueNumber(noon)),
   };
 }
+
+/** KST calendar day (YYYY-MM-DD) → UTC ISO range [start, end). null for bad input. */
+export function deskDayRange(day) {
+  if (typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const start = new Date(`${day}T00:00:00+09:00`);
+  if (Number.isNaN(start.getTime()) || kstDay(start) !== day) return null;
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
