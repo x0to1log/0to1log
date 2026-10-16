@@ -1,6 +1,6 @@
 # 용어집 첫 화면 재설계 (B 분야별 서가 + A–Z 색인) — Design Spec
 
-**Status:** approved (2026-10-17)
+**Status:** implemented (2026-10-17) — [[2026-10-17-handbook-index-shelves]]
 **Mockup:** `.superpowers/brainstorm/handbook/handbook-v1.html` (B안 + A안의 색인)
 **관련:** [[2026-10-15-home-front-page-redesign-design]], [[2026-10-16-news-list-desks-design]], [[2026-10-15-site-redesign-phase6-handbook]]
 

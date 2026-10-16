@@ -1,5 +1,7 @@
 # 용어집 첫 화면 B+A(서가 + A–Z 색인) Implementation Plan
 
+**Status:** done (2026-10-17) — 실행 결과는 문서 끝 참조.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Status:** ready (2026-10-17)
@@ -1841,3 +1843,14 @@ git commit -m "chore: remove handbook trending, showcase, filter and rail catego
   git add vault/09-Implementation/plans/2026-10-17-handbook-index-shelves-design.md vault/09-Implementation/plans/2026-10-17-handbook-index-shelves.md vault/09-Implementation/plans/ACTIVE_SPRINT.md
   git commit -m "docs: record handbook index shelves redesign"
   ```
+
+---
+
+## 실행 결과 (2026-10-17)
+
+- 커밋: `9449bfef` 오늘의 용어 공유 쿼리(홈 리팩터), `b934d453` 서가·색인 순수 함수, `85b46b99` 용어집 첫 화면(오늘의 용어·서가·A–Z), `61183a8d` 미사용 CSS 정리(-370줄).
+- 테스트: 실패 목록이 기준선과 이름 기준 동일(삭제한 handbook-category-icons 제외), 신규 FAIL 0. 빌드 성공. 계획 단계에서 scratch 복사본으로 전체 적용·실데이터 렌더 사전 검증.
+- 브라우저 검증: 오늘의 용어가 홈과 동일(ko/en 모두 SWE-bench, 판 문장 표시). 검색 "MCP" 2/114 → 오늘·서가·색인 숨김, "zzzzqq" 결과 없음 안내, 지우면 기본 화면 복귀(안내·결과 수 숨김). `?category=llm-genai` 92/114 + 해제 링크, `?category=bogus` 무시, `/en/?q=RAG` 5/114, `/en/?category=safety-ethics` 7 + "Back to all". 서가 9개, 색인 20그룹·114링크, `#az-M` 이동 시 검색창 아래에 보임.
+- 매트릭스: 종이·순백·다크 × 1100px·375px × ko/en — 가로 넘침 0, 대비 미달 0.
+- 계획 대비: KO 페이지의 `\u2026` 이스케이프와 EN 파생은 노드 스크립트로 처리(결과는 계획 블록과 동일). `product-filter-bar-mobile-sticky` 테스트 마커 갱신(계획에 포함).
+- 남은 것: 모바일에서 "분야별 서가" 머리 아래 선과 첫 서가 위 2px 선이 가깝게 붙어 보임(시각 미세 조정 후보).
