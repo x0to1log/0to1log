@@ -378,6 +378,15 @@
 - 전환 커밋: `core/config.py` reasoning=`gpt-6.1-sol`, threshold=70 (reasoning 기본값 편집은 auto mode 안전장치가 막아 Amy가 직접 수정). `backend/CLAUDE.md` 설정 안내 갱신. 이후 Railway `OPENAI_MODEL_REASONING` 삭제 (Amy)
 - 남은 evidence 약점 (후속 과제): 소문자 섞인 이름 ("Gemini app")은 claim 토큰이 안 됨, 알파벳 토큰에 단어 경계가 없어 "AI Mode"가 "AI model"에도 매치 → 관찰 기간에 오판 draft 가능
 
+**sol 전환 후 관찰 (10-14~10-16):** 차단 4건 중 3건이 QC 발췌 누락 오판 (35%, Gemini app/AI Mode, 10-16 "public incident registry for cyber-capable AI"), 실제 문제 1건 (10-15 "cached inputs 95% off"). 10-16: research 88 자동 발행 ✅, business 72 + cap → draft.
+
+**발췌 개선 2차 (2026-10-16):**
+- frontload(EN) 내용어와 겹치는 단어 수로 문장 점수 (+3/단어, 최대 5) — 소문자 개념어 ("incident registry", "cyber-capable") 대응. writer의 U+2011 하이픈을 `-`로 정규화
+- 긴 무구두점 문장의 창(±180자)을 첫 claim이 아니라 **claim + 겹치는 단어가 가장 밀집한 구간**으로 선택 — Reuters 내비 텍스트가 리드 문장과 붙어 "400" 주변만 잘리던 문제
+- 기존 버그: 발췌 말줄임 시 "..." 3자 때문에 1,200자 상한을 최대 2자 초과 → 수정
+- 결과: 10-16 business 두 근거 문장 모두 발췌 포함. 4일치 발췌 크기 +8%. **sol 재채점 72 + cap → 78, cap 없음 (gate 통과)**. 테스트 936 passed
+- 남은 1건: 10-15 research "AI Mode in Search" — 같은 출처의 다른 문장이 출처당 1,200자 예산을 먼저 채움 (예산 한계)
+
 **롤백:** 전환 커밋 revert + push (reasoning=gpt-5-mini, threshold=85 동시 복구, 12/11 전까지 유효). 급하면 Railway에 `OPENAI_MODEL_REASONING=gpt-5-mini`, `AUTO_PUBLISH_THRESHOLD=85`를 추가해도 같은 효과 (나중에 삭제).
 **관찰 기간:** 3~5일 → 이상 없으면 main/light/nano 전환 (Task 1.5).
 
