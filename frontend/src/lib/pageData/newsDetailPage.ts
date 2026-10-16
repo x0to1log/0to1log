@@ -4,6 +4,8 @@ import { resolveDisplayTitleExcerpt } from '../personaTitle';
 import { fetchPublicTermIndex } from './publicTermIndex';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 import { pickReferencedTerms } from './termReferences';
+import { kstDay } from '../homeFront.js';
+import { deskDayRange } from '../newsDesks.js';
 
 interface NewsDetailPageContext extends DetailPageContext {
   previewPersona?: string | null;
@@ -16,6 +18,8 @@ export const NEWS_DETAIL_PUBLIC_COLUMNS = [
   'content_original', 'content_analysis', 'content_beginner', 'content_learner',
   'content_expert', 'fact_pack', 'source_cards', 'source_urls',
 ].join(', ');
+
+export const NEWS_SIBLING_COLUMNS = 'id, slug, title, title_learner, title_beginner, excerpt, post_type, reading_time_min';
 
 function hostnameLabel(url: string): string {
   try {
@@ -121,9 +125,13 @@ export async function getNewsDetailPageData({
   let analysisHtml = '';
   let factPack: Array<{ id: string; claim: string; why_it_matters: string; source_ids: string[]; confidence: string }> = [];
   let sourceCards: Array<{ id: string; title: string; publisher: string; url: string; published_at: string; evidence_snippet: string; claim_ids: string[] }> = [];
+  let sibling: { slug: string; title: string; excerpt: string | null; post_type: string; reading_time_min: number | null } | null = null;
+  let focusItemsAreFallback = true;
 
   if (post && publicSupabase) {
     const pairedLocale = locale === 'ko' ? 'en' : 'ko';
+    const siblingType = post.post_type === 'business' ? 'research' : post.post_type === 'research' ? 'business' : null;
+    const siblingRange = siblingType && post.published_at ? deskDayRange(kstDay(post.published_at)) : null;
 
     // Fire FastAPI call early — don't await, collect result later during markdown rendering
     const similarPostsPromise = (import.meta.env.FASTAPI_URL && post.id)
@@ -143,6 +151,7 @@ export async function getNewsDetailPageData({
       likeRes,
       hbTermsRes,
       backfillRes,
+      siblingRes,
     ] = await Promise.all([
       post.published_at
         ? publicSupabase
@@ -186,17 +195,43 @@ export async function getNewsDetailPageData({
             .order('published_at', { ascending: false })
             .limit(3)
         : Promise.resolve({ data: null }),
+      siblingType && siblingRange
+        ? publicSupabase
+            .from('news_posts')
+            .select(NEWS_SIBLING_COLUMNS)
+            .eq('status', 'published')
+            .eq('locale', locale)
+            .eq('post_type', siblingType)
+            .gte('published_at', siblingRange.start)
+            .lt('published_at', siblingRange.end)
+            .order('published_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
     ]);
 
     nextPost = nextRes.data ?? null;
     pairedSlug = pairedRes.data?.slug ?? null;
     likeCount = likeCountRes.count ?? 0;
     commentCount = commentCountRes.count ?? 0;
+    if (siblingRes.error) console.warn('[newsDetailPage] sibling query failed', siblingRes.error.message);
+    const siblingRow = siblingRes.error ? null : (siblingRes.data as any);
+    if (siblingRow) {
+      const shown = resolveDisplayTitleExcerpt(siblingRow, 'learner');
+      sibling = {
+        slug: siblingRow.slug,
+        title: shown.title || siblingRow.title,
+        excerpt: shown.excerpt || siblingRow.excerpt || null,
+        post_type: siblingRow.post_type,
+        reading_time_min: siblingRow.reading_time_min ?? null,
+      };
+    }
     // isBookmarked/isLiked stay false — hydrated client-side via status APIs
 
     focusItems = (post.focus_items && post.focus_items.length > 0)
       ? post.focus_items
       : getArticleFocusItems(locale, post.category);
+    focusItemsAreFallback = !(post.focus_items && post.focus_items.length > 0);
 
     const hbTerms = hbTermsRes;
     for (const entry of hbTerms) {
@@ -333,10 +368,12 @@ export async function getNewsDetailPageData({
     post,
     postError,
     focusItems,
+    focusItemsAreFallback,
     articleData,
     nextPost,
     pairedSlug,
     similarPosts,
+    sibling,
     isBookmarked: previewMode ? false : isBookmarked,
     isLiked: previewMode ? false : isLiked,
     likeCount,
