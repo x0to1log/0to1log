@@ -22,4 +22,9 @@ assert(/fetchTermOfDay\(supabase, locale, now\)/.test(home), 'home uses the shar
 assert(/Promise\.all\(\[[\s\S]*?fetchTermOfDay\(supabase, locale, now\)/.test(home), 'term of the day runs in parallel with the news query');
 assert(!/from\('handbook_terms'\)/.test(home), 'home owns no term query');
 
+for (const locale of ['ko', 'en']) {
+  const page = read(`pages/${locale}/handbook/index.astro`);
+  assert(page.includes(`fetchTermOfDay(supabase, locale, new Date(), 'hero_news_context_${locale}')`), `${locale} handbook: same term of the day as the home, plus the news line column`);
+}
+
 console.log('term-of-day.test.cjs passed');

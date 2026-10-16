@@ -11,14 +11,15 @@ function assert(condition, message) {
   }
 }
 
-const handbookRail = read('src/components/newsprint/HandbookListRail.astro');
+const koIndex = read('src/pages/ko/handbook/index.astro');
+const enIndex = read('src/pages/en/handbook/index.astro');
 assert(
-  handbookRail.includes('About This Glossary'),
-  'Handbook rail heading must say About This Glossary in English',
+  enIndex.includes("sc.handbook_intro || 'A concise reference of technical terms across AI, backend, frontend, security, and operations.'"),
+  'Handbook intro line must fall back to the English glossary description',
 );
 assert(
-  handbookRail.includes('용어집 소개'),
-  'Handbook rail heading must say 용어집 소개 in Korean',
+  koIndex.includes("sc.handbook_intro || 'AI, 백엔드, 프론트엔드, 보안, 운영 전반의 기술 용어를 한 곳에서 읽기 쉽게 정리합니다.'"),
+  'Handbook intro line must fall back to the Korean glossary description',
 );
 
 const libraryIndex = read('src/pages/library/index.astro');

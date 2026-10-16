@@ -1,0 +1,40 @@
+---
+// frontend/src/components/handbook/HandbookToday.astro
+// Handbook index: term of the day (same pick as the home front page) + an ink plate with the
+// first "how the news uses it" line. Without a line the plate is omitted and the text takes the full width.
+import type { TermOfDay } from '../../lib/pageData/termOfDay';
+import { firstNewsLine, plainDefinition, termNames } from '../../lib/handbookShelves.js';
+import { issueLabel, issueNumber } from '../../lib/issue.js';
+
+interface Props {
+  locale: 'en' | 'ko';
+  term: TermOfDay;
+  newsContext?: string | null;
+}
+
+const { locale, term, newsContext = null } = Astro.props;
+const isKo = locale === 'ko';
+const { name, sub } = termNames(term, locale);
+const definition = plainDefinition(term.definition);
+const newsLine = firstNewsLine(newsContext);
+const issue = issueLabel(locale, issueNumber(new Date()));
+const copy = isKo
+  ? { label: '오늘의 용어', read: '풀이 읽기 →', plate: '뉴스에서는 이렇게 쓰여요' }
+  : { label: 'Term of the day', read: 'Read the explainer →', plate: 'How the news uses it' };
+---
+
+<section class={`handbook-today${newsLine ? '' : ' handbook-today--solo'}`} aria-label={copy.label}>
+  <div class="handbook-today-main">
+    <p class="handbook-today-label">{copy.label} · {issue}</p>
+    <h2 class="handbook-today-name">{name}</h2>
+    {sub && <p class="handbook-today-sub">{sub}</p>}
+    {definition && <p class="handbook-today-def">{definition}</p>}
+    <a class="handbook-today-link" href={`/${locale}/handbook/${term.slug}/`}>{copy.read}</a>
+  </div>
+  {newsLine && (
+    <div class="handbook-today-plate">
+      <p class="handbook-today-plate-label">{copy.plate}</p>
+      <p class="handbook-today-plate-text">{newsLine}</p>
+    </div>
+  )}
+</section>

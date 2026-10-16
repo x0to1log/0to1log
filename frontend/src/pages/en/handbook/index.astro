@@ -3,59 +3,65 @@ export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
-import { getHandbookCategoryLabel, getHandbookCategories, getHandbookCategoryDescription } from '../../../lib/handbookCategories';
-import { getHandbookCategoryIcon } from '../../../lib/handbookCategoryIcons';
+import { getHandbookCategoryLabel, getHandbookCategories } from '../../../lib/handbookCategories';
 import { localField } from '../../../lib/handbookUtils';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
-import HandbookListRail from '../../../components/newsprint/HandbookListRail.astro';
+import HandbookToday from '../../../components/handbook/HandbookToday.astro';
+import HandbookShelves from '../../../components/handbook/HandbookShelves.astro';
+import HandbookAzIndex from '../../../components/handbook/HandbookAzIndex.astro';
 import { getSiteContents, parseJsonArray } from '../../../lib/siteContent';
 import { getHandbookPageData } from '../../../lib/pageData/handbookPage';
+import { fetchTermOfDay } from '../../../lib/pageData/termOfDay';
+import { buildShelves, buildAzIndex } from '../../../lib/handbookShelves.js';
 import { supabase } from '../../../lib/supabase';
 
 const locale = 'en';
-const PREVIEW_COUNT = 4;
 
-const { allTerms, termsByCategory, totalTerms, error: fetchError } = await getHandbookPageData(locale);
+const { allTerms, error: fetchError } = await getHandbookPageData(locale);
 if (fetchError) Astro.response.status = 503;
 
-const handbookTags: Record<string, string> = {
-  'products-platforms': 'GPT-4o · PyTorch · Anthropic · Hugging Face',
-  'llm-genai': 'RAG · Prompt Engineering · RLHF · Agent',
-  'deep-learning': 'CNN · Transformer · GAN · Diffusion Model',
-  'ml-fundamentals': 'SVM · Decision Tree · Overfitting · Cross-validation',
-  'data-engineering': 'ETL · Vector DB · Spark · Parquet',
-  'infra-hardware': 'GPU · CUDA · Kubernetes · Quantization',
-  'safety-ethics': 'AI Alignment · Adversarial Attack · Regulation',
-  'cs-fundamentals': 'API · SQL · OAuth · Data Structures',
-  'math-statistics': 'PCA · Probability · Entropy · Linear Algebra',
-};
+// Term of the day: the home's query (count + 1 row). Skipped on error, never a 503.
+const termOfDay = await fetchTermOfDay(supabase, locale, new Date(), 'hero_news_context_en');
+const todayTerm = termOfDay.term;
+const todayNews = typeof todayTerm?.hero_news_context_en === 'string' ? todayTerm.hero_news_context_en : null;
 
-// Popular terms (view_count based, fallback to latest published)
-let popularTerms: any[] = [];
+// Most viewed 10 (shelf ordering only; latest published when nothing has views yet)
+let popularTerms: { slug: string; view_count?: number | null }[] = [];
 if (supabase) {
   const { data } = await supabase
     .from('handbook_terms')
-    .select('term, slug, korean_name, definition_en, view_count')
+    .select('slug, view_count')
     .eq('status', 'published')
     .order('view_count', { ascending: false })
     .limit(10);
   popularTerms = data ?? [];
 }
-if (popularTerms.length === 0 || popularTerms.every((t: any) => !t.view_count)) {
+if (popularTerms.length === 0 || popularTerms.every((pt) => !pt.view_count)) {
   if (supabase) {
     const { data } = await supabase
       .from('handbook_terms')
-      .select('term, slug, korean_name, definition_en')
+      .select('slug')
       .eq('status', 'published')
       .order('published_at', { ascending: false })
       .limit(10);
     popularTerms = data ?? [];
   }
 }
-const railTerms = popularTerms.slice(0, 3);
+const trendingSlugs = popularTerms.map((pt) => pt.slug);
 
 const categories = getHandbookCategories();
+const indexTerms = allTerms.map((term) => ({
+  slug: term.slug,
+  term: term.term,
+  korean_name: term.korean_name,
+  categories: term.categories,
+  definition: localField(term, 'definition', locale),
+}));
+const shelves = buildShelves(indexTerms, categories, trendingSlugs);
+const azIndex = buildAzIndex(indexTerms);
+const termCount = termOfDay.total || allTerms.length;
+const categoryLabels = Object.fromEntries(categories.map((cat) => [cat, getHandbookCategoryLabel(locale, cat)]));
 
 // Site content from DB (fallback to hardcoded values)
 const sc = await getSiteContents(
@@ -63,6 +69,7 @@ const sc = await getSiteContents(
   'en',
 );
 const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', 'Reference', 'Learn']);
+const intro = sc.handbook_intro || 'A concise reference of technical terms across AI, backend, frontend, security, and operations.';
 ---
 
 <MainLayout title={t[locale]['handbook.title']} description="An AI & IT glossary with terms explained in plain language. Basic and advanced levels, real-world examples, and linked to daily AI news." locale={locale} slug="handbook/">
@@ -71,11 +78,13 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
     masthead={sc.handbook_masthead || 'AI Glossary'}
     editionLabel={sc.handbook_edition_label || 'CS · AI · Infra'}
     subkicker={hbSubkicker}
+    rail={false}
   >
+    <p class="handbook-intro">{intro}</p>
     <p class="handbook-hero-stats">
-      <span><strong>{totalTerms}+</strong> terms</span>
+      <span><strong>{termCount}+</strong> terms</span>
       <span class="handbook-hero-stats-sep" aria-hidden="true">&middot;</span>
-      <span><strong>{categories.length}</strong> categories</span>
+      <span><strong>{shelves.length}</strong> categories</span>
     </p>
 
     <div class="handbook-search-sticky">
@@ -89,58 +98,16 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
       />
     </div>
 
-    {/* Trending Terms */}
-    {popularTerms.length > 0 && (
-      <section class="handbook-trending">
-        <h3 class="handbook-trending-title">Trending Terms</h3>
-        <ol class="handbook-trending-list">
-          {popularTerms.map((pt: any, i: number) => (
-            <li>
-              <a href={`/${locale}/handbook/${pt.slug}/`} class="handbook-trending-link">
-                <span class="handbook-trending-rank">{i + 1}</span>
-                <span>{pt.term}</span>
-              </a>
-            </li>
-          ))}
-        </ol>
-      </section>
-    )}
-
-    <!-- Category showcase cards -->
-    <section class="product-category-showcase" id="handbook-showcase">
-      <div class="product-category-showcase-grid">
-        {categories.map((cat) => {
-          const catTerms = termsByCategory[cat] ?? [];
-          const topNames = handbookTags[cat] || '';
-          const desc = getHandbookCategoryDescription(locale, cat);
-          return (
-            <a href={`/${locale}/handbook/category/${cat}/`} class="product-category-showcase-card">
-              <div class="product-category-showcase-card-header">
-                <span class="product-category-showcase-icon" set:html={getHandbookCategoryIcon(cat)} />
-                <strong class="product-category-showcase-name">{getHandbookCategoryLabel(locale, cat)}</strong>
-              </div>
-              {topNames && <p class="product-category-showcase-tags">{topNames}</p>}
-              {desc && <p class="product-category-showcase-desc">{desc}</p>}
-            </a>
-          );
-        })}
-      </div>
-    </section>
-
-    <div id="handbook-controls" class="handbook-controls">
-      <div id="handbook-filters" class="handbook-filter-row">
-        <button type="button" class="handbook-filter-btn active" data-filter="all" aria-pressed="true">
-          {t[locale]['handbook.allCategories']}
-        </button>
-        {categories.map((cat) => (
-          <button type="button" class="handbook-filter-btn" data-filter={cat} aria-pressed="false">
-            <span class="handbook-filter-icon" set:html={getHandbookCategoryIcon(cat)} />
-            {getHandbookCategoryLabel(locale, cat)}
-          </button>
-        ))}
-      </div>
-    </div>
+    <a id="handbook-active-filter" class="handbook-active-filter" href={`/${locale}/handbook/`} hidden data-labels={JSON.stringify(categoryLabels)}></a>
     <div id="handbook-result-count" class="handbook-result-count" aria-live="polite" style="display: none;"></div>
+
+    {todayTerm && <HandbookToday locale={locale} term={todayTerm} newsContext={todayNews} />}
+    {allTerms.length > 0 && (
+      <>
+        <HandbookShelves locale={locale} shelves={shelves} />
+        <HandbookAzIndex locale={locale} index={azIndex} />
+      </>
+    )}
 
     {fetchError ? (
       <NewsprintNotice
@@ -169,10 +136,6 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
     <div id="handbook-no-results" style="display: none;">
       <NewsprintNotice variant="empty" message={t[locale]['handbook.searchNoResults']} />
     </div>
-
-    <Fragment slot="rail">
-      <HandbookListRail locale={locale} terms={railTerms.map((t: any) => ({ term: t.term, slug: t.slug, definition: t.definition_en }))} editorialNote={sc.handbook_intro || undefined} />
-    </Fragment>
   </NewsprintShell>
 </MainLayout>
 
@@ -185,37 +148,41 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
 </script>
 
 <script>
-  function initHandbookFilters(): void {
+  type TermEntry = { s: string; t: string; k: string; c: string[]; cl: string[]; d: string; id: string };
+
+  // Default mode (no query, no canonical ?category=): term of the day + shelves + A–Z index.
+  // Search mode: those sections hide and #search-results shows the filtered cards.
+  function initHandbookIndex(): void {
     const search = document.getElementById('handbook-search') as HTMLInputElement | null;
     const searchResults = document.getElementById('search-results');
+    if (!search || !searchResults || search.dataset.handbookIndexReady === 'true') return;
+    search.dataset.handbookIndexReady = 'true';
+
     const noResults = document.getElementById('handbook-no-results');
     const countEl = document.getElementById('handbook-result-count');
-    const filterBtns = document.querySelectorAll('.handbook-filter-btn');
-    if (!search || !searchResults) return;
-
-    let activeCategory = 'all';
-
-    // Parse JSON term data and build DOM cards lazily on first search
+    const activeFilterEl = document.getElementById('handbook-active-filter') as HTMLAnchorElement | null;
     const termsDataEl = document.getElementById('handbook-terms-data');
-    type TermEntry = { s: string; t: string; k: string; c: string[]; cl: string[]; d: string; id: string };
-    let termsData: TermEntry[] | null = null;
-    let cardsBuilt = false;
+    const browseSections = Array.from(document.querySelectorAll<HTMLElement>('.handbook-today, .handbook-shelves, .handbook-az'));
 
-    const BATCH_SIZE = 20;
-    let batchOffset = 0;
-    let isDefaultMode = false;
-    let sortedCards: HTMLElement[] = [];
-    let sentinel: HTMLDivElement | null = null;
+    // ?category= applies only to canonical slugs (data-labels keys come from getHandbookCategories())
+    const labels: Record<string, string> = JSON.parse(activeFilterEl?.dataset.labels || '{}');
+    const isKnownCategory = (slug: string | null): slug is string =>
+      !!slug && Object.prototype.hasOwnProperty.call(labels, slug);
+    const params = new URLSearchParams(window.location.search);
+    const urlCategory = params.get('category');
+    const activeCategory = isKnownCategory(urlCategory) ? urlCategory : '';
+
+    let cardsBuilt = false;
 
     function ensureCards(): void {
       if (cardsBuilt) return;
       cardsBuilt = true;
       if (!termsDataEl || !searchResults) return;
-      termsData = JSON.parse(termsDataEl.textContent || '[]');
-      if (termsData) termsData.sort((a, b) => a.t.localeCompare(b.t, undefined, { sensitivity: 'base' }));
+      const termsData: TermEntry[] = JSON.parse(termsDataEl.textContent || '[]');
+      termsData.sort((a, b) => a.t.localeCompare(b.t, undefined, { sensitivity: 'base' }));
       const locale = document.documentElement.lang || 'en';
       const frag = document.createDocumentFragment();
-      for (const t of termsData!) {
+      for (const t of termsData) {
         const a = document.createElement('a');
         a.href = `/${locale}/handbook/${t.s}/`;
         a.className = 'handbook-card';
@@ -242,48 +209,16 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
       window.dispatchEvent(new Event('content-status:refresh'));
     }
 
-    const trendingEl = document.querySelector<HTMLElement>('.handbook-trending');
-    const showcaseEl = document.getElementById('handbook-showcase');
-
-    function showSearchMode(): void {
-      isDefaultMode = false;
-      if (sentinel) sentinel.style.display = 'none';
-      if (searchResults) searchResults.style.display = 'block';
-      if (trendingEl) trendingEl.style.display = 'none';
-      if (showcaseEl) showcaseEl.style.display = 'none';
-    }
-
-    function showNextBatch(): void {
-      const end = Math.min(batchOffset + BATCH_SIZE, sortedCards.length);
-      for (let i = batchOffset; i < end; i++) sortedCards[i].style.display = 'block';
-      batchOffset = end;
-      if (sentinel) sentinel.style.display = batchOffset < sortedCards.length ? 'block' : 'none';
-    }
-
-    function ensureSentinel(): void {
-      if (sentinel) { sentinel.style.display = batchOffset < sortedCards.length ? 'block' : 'none'; return; }
-      sentinel = document.createElement('div');
-      sentinel.style.height = '1px';
-      searchResults!.insertAdjacentElement('afterend', sentinel);
-      new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && isDefaultMode) showNextBatch();
-      }, { rootMargin: '200px' }).observe(sentinel);
+    function setBrowseVisible(visible: boolean): void {
+      browseSections.forEach((el) => { el.style.display = visible ? '' : 'none'; });
     }
 
     function enterDefaultMode(): void {
-      isDefaultMode = true;
-      ensureCards();
-      if (!searchResults) return;
-      sortedCards = Array.from(searchResults.querySelectorAll<HTMLElement>('.handbook-card'));
-      sortedCards.forEach(c => c.style.display = 'none');
-      batchOffset = 0;
-      searchResults.style.display = 'block';
+      searchResults!.style.display = 'none';
       if (noResults) noResults.style.display = 'none';
       if (countEl) { countEl.textContent = ''; countEl.style.display = 'none'; }
-      if (trendingEl) trendingEl.style.display = '';
-      if (showcaseEl) showcaseEl.style.display = '';
-      showNextBatch();
-      ensureSentinel();
+      if (activeFilterEl) activeFilterEl.hidden = true;
+      setBrowseVisible(true);
     }
 
     function debounce(fn: () => void, ms: number): () => void {
@@ -294,15 +229,20 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
     function filter(): void {
       const query = search!.value.toLowerCase().trim();
 
-      if (!query && activeCategory === 'all') {
+      if (!query && !activeCategory) {
         enterDefaultMode();
         return;
       }
 
       ensureCards();
-      showSearchMode();
+      setBrowseVisible(false);
+      searchResults!.style.display = 'block';
+      if (activeFilterEl) {
+        activeFilterEl.hidden = !activeCategory;
+        if (activeCategory) activeFilterEl.textContent = labels[activeCategory] + ' · Back to all';
+      }
 
-      const cards = searchResults!.querySelectorAll('.handbook-card') as NodeListOf<HTMLElement>;
+      const cards = searchResults!.querySelectorAll<HTMLElement>('.handbook-card');
       let visible = 0;
 
       cards.forEach((card) => {
@@ -311,7 +251,7 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
         const korean = (card.dataset.korean || '').toLowerCase();
         const def = (card.dataset.def || '').toLowerCase();
 
-        const matchesCategory = activeCategory === 'all' || cats.includes(activeCategory);
+        const matchesCategory = !activeCategory || cats.includes(activeCategory);
         const matchesSearch = !query || term.includes(query) || korean.includes(query) || def.includes(query);
 
         const show = matchesCategory && matchesSearch;
@@ -319,57 +259,20 @@ const hbSubkicker = parseJsonArray<string>(sc.handbook_subkicker, ['Glossary', '
         if (show) visible++;
       });
 
-      if (noResults) {
-        noResults.style.display = visible === 0 ? 'block' : 'none';
-      }
+      if (noResults) noResults.style.display = visible === 0 ? 'block' : 'none';
       if (countEl) {
-        const total = cards.length;
-        const isFiltered = query || activeCategory !== 'all';
-        countEl.textContent = isFiltered ? `${visible} / ${total}` : '';
-        countEl.style.display = isFiltered ? 'block' : 'none';
+        countEl.textContent = `${visible} / ${cards.length}`;
+        countEl.style.display = 'block';
       }
     }
 
     search.addEventListener('input', debounce(filter, 150));
 
-    filterBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        filterBtns.forEach((b) => {
-          (b as HTMLElement).classList.remove('active');
-          (b as HTMLElement).setAttribute('aria-pressed', 'false');
-        });
-        (btn as HTMLElement).classList.add('active');
-        (btn as HTMLElement).setAttribute('aria-pressed', 'true');
-        activeCategory = (btn as HTMLElement).dataset.filter || 'all';
-        filter();
-      });
-    });
-
-    // Read URL query params and auto-activate filters
-    const params = new URLSearchParams(window.location.search);
-
-    const urlCategory = params.get('category');
-    if (urlCategory) {
-      activeCategory = urlCategory;
-      filterBtns.forEach((b) => {
-        const el = b as HTMLElement;
-        const isMatch = el.dataset.filter === urlCategory;
-        el.classList.toggle('active', isMatch);
-        el.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
-      });
-    }
-
     const urlQuery = params.get('q');
-    if (urlQuery) {
-      search.value = urlQuery;
-    }
-
-    if (urlCategory || urlQuery) {
-      filter();
-    }
-
+    if (urlQuery) search.value = urlQuery;
+    if (activeCategory || urlQuery) filter();
   }
 
-  document.addEventListener('astro:page-load', initHandbookFilters);
-  initHandbookFilters();
+  document.addEventListener('astro:page-load', initHandbookIndex);
+  initHandbookIndex();
 </script>

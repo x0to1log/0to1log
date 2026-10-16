@@ -1,5 +1,4 @@
 import { supabase } from '../supabase';
-import { getHandbookCategories } from '../handbookCategories';
 
 // =============================================================================
 // Types
@@ -18,7 +17,6 @@ export interface HandbookTermCard {
 
 export interface HandbookPageData {
   allTerms: HandbookTermCard[];
-  termsByCategory: Record<string, HandbookTermCard[]>;
   totalTerms: number;
   error: string | null;
 }
@@ -59,7 +57,7 @@ export async function getHandbookPageData(
   locale: 'en' | 'ko',
 ): Promise<HandbookPageData> {
   if (!supabase) {
-    return { allTerms: [], termsByCategory: {}, totalTerms: 0, error: null };
+    return { allTerms: [], totalTerms: 0, error: null };
   }
 
   const { data, error } = await supabase
@@ -70,28 +68,12 @@ export async function getHandbookPageData(
     .limit(500);
 
   if (error) {
-    return { allTerms: [], termsByCategory: {}, totalTerms: 0, error: error.message };
+    return { allTerms: [], totalTerms: 0, error: error.message };
   }
 
   const allTerms = (data ?? []).map((row) => toTermCard(row, locale));
 
-  // Group by category in the canonical order from handbookCategories
-  const categoryOrder = getHandbookCategories();
-  const termsByCategory: Record<string, HandbookTermCard[]> = {};
-
-  for (const slug of categoryOrder) {
-    termsByCategory[slug] = [];
-  }
-
-  for (const term of allTerms) {
-    for (const cat of term.categories) {
-      if (termsByCategory[cat]) {
-        termsByCategory[cat].push(term);
-      }
-    }
-  }
-
-  return { allTerms, termsByCategory, totalTerms: allTerms.length, error: null };
+  return { allTerms, totalTerms: allTerms.length, error: null };
 }
 
 // =============================================================================

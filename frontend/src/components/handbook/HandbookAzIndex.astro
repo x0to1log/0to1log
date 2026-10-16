@@ -1,0 +1,57 @@
+---
+// frontend/src/components/handbook/HandbookAzIndex.astro
+// Handbook index: A–Z letter bar + dictionary columns, grouped by the English term's first letter
+// ('#' = digits/other, anchor az-num). Letters without terms are muted, non-link spans.
+import { termNames } from '../../lib/handbookShelves.js';
+
+interface AzTerm {
+  slug: string;
+  term: string;
+  korean_name?: string | null;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  index: {
+    letters: { letter: string; anchor: string; has: boolean }[];
+    groups: { letter: string; anchor: string; items: AzTerm[] }[];
+  };
+}
+
+const { locale, index } = Astro.props;
+const isKo = locale === 'ko';
+const heading = isKo ? 'A–Z 색인' : 'A–Z index';
+---
+
+{index.groups.length > 0 && (
+  <section class="handbook-az" aria-labelledby="handbook-az-title">
+    <h2 class="handbook-index-head" id="handbook-az-title">{heading}</h2>
+    <nav class="handbook-az-bar" aria-label={heading}>
+      {index.letters.map((l) => (
+        l.has
+          ? <a href={`#az-${l.anchor}`}>{l.letter}</a>
+          : <span aria-hidden="true">{l.letter}</span>
+      ))}
+    </nav>
+    <div class="handbook-az-dict">
+      {index.groups.map((group) => (
+        <div class="handbook-az-group" id={`az-${group.anchor}`}>
+          <h3 class="handbook-az-letter">{group.letter}</h3>
+          <ul class="handbook-az-list">
+            {group.items.map((item) => {
+              const { name, sub } = termNames(item, locale);
+              return (
+                <li>
+                  <a href={`/${locale}/handbook/${item.slug}/`}>
+                    <span class="handbook-az-name">{name}</span>
+                    {sub && <span class="handbook-az-sub">{sub}</span>}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+)}

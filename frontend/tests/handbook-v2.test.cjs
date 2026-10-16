@@ -25,10 +25,9 @@ assert(/-webkit-line-clamp:\s*2/.test(rule('.handbook-card-def')), 'definition c
 const pill = rule('.handbook-cat-pill');
 assert(/background:\s*none/.test(pill) && pill.includes('var(--color-accent)'), 'category pill becomes an accent label');
 assert(css.includes('.handbook-cat-pill::before {'), 'category label has a dot');
-assert(rule('.handbook-filter-btn[aria-pressed="true"]::after').includes('var(--color-accent)'), 'active filter marked by an accent dot');
-assert(rules('.handbook-trending').length === 1, 'duplicate .handbook-trending block removed');
-assert(/border-bottom:\s*1px dotted/.test(rule('.handbook-trending-list li')), 'trending is a dotted numbered list');
-assert(css.includes('#handbook-showcase .product-category-showcase-card {'), 'showcase override is scoped to the handbook');
+assert(/border-top:\s*2px solid var\(--color-text-primary\)/.test(rule('.handbook-shelf')), 'shelf opens with a 2px ink rule');
+assert(/border-bottom:\s*1px dotted var\(--color-border\)/.test(rule('.handbook-shelf-list li')), 'shelf terms are a dotted list');
+assert(/column-count:\s*3/.test(rule('.handbook-az-dict')), 'A–Z dictionary in 3 columns');
 
 // Task 2: 상세
 for (const p of ['pages/ko/handbook/[slug].astro', 'pages/en/handbook/[slug].astro']) {
@@ -48,6 +47,9 @@ assert(rule('.handbook-level-btn--active::after').includes('var(--color-accent)'
 assert(!rule('.handbook-toc__title').includes('uppercase'), 'toc title not uppercase');
 assert(!rule('.handbook-section-label').includes('uppercase'), 'section label not uppercase');
 
-assert(/flex-wrap:\s*nowrap/.test(rule('.handbook-filter-row')), 'filter row stays on one scrolling line');
+const hbMobileAt = css.indexOf('/* Handbook index: mobile */');
+const hbMobile = css.slice(hbMobileAt, css.indexOf('\n}\n', hbMobileAt));
+assert(hbMobileAt > 0 && /\.handbook-az-bar\s*\{[^}]*overflow-x:\s*auto/.test(hbMobile), 'A–Z letter bar scrolls sideways on mobile');
+assert(/\.handbook-az-dict\s*\{[^}]*column-count:\s*1/.test(hbMobile), 'A–Z dictionary is one column on mobile');
 
 console.log('handbook-v2.test.cjs passed');

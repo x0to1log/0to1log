@@ -12894,6 +12894,436 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .product-detail-search.h
   color: var(--color-border);
 }
 
+/* Handbook index: intro, term of the day, shelves by field, A–Z index */
+.handbook-intro {
+  max-width: 640px;
+  margin: 0 auto 0.25rem;
+  text-align: center;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--color-text-muted);
+}
+
+.handbook-intro + .handbook-hero-stats {
+  justify-content: center;
+}
+
+.handbook-active-filter {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.handbook-active-filter:hover {
+  text-decoration: underline;
+}
+
+.handbook-active-filter[hidden] {
+  display: none;
+}
+
+.handbook-index-head {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  padding-bottom: 0.6rem;
+  margin-bottom: 1.1rem;
+  border-bottom: 1px solid var(--color-text-primary);
+}
+
+/* Term of the day: text | ink plate */
+.handbook-today {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: stretch;
+  padding: 1.75rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.handbook-today--solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.handbook-today-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.handbook-today-label::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.handbook-today-name {
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 1.5rem + 1.5vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.12;
+  margin-top: 0.6rem;
+  overflow-wrap: anywhere;
+}
+
+.handbook-today-sub {
+  font-family: var(--font-masthead);
+  font-size: 1.05rem;
+  color: var(--color-text-muted);
+  margin-top: 0.2rem;
+}
+
+.handbook-today-def {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  margin: 0.8rem 0 0.7rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.handbook-today-link {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.handbook-today-link:hover {
+  text-decoration: underline;
+}
+
+/* Same rules as the home keyword plate: ink in light themes, bg-tertiary in dark */
+.handbook-today-plate {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 170px;
+  padding: 2.4rem 1.25rem 1.1rem;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--color-text-primary);
+  color: var(--color-bg-primary);
+}
+
+.handbook-today-plate::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, currentColor 1.2px, transparent 1.6px);
+  background-size: 9px 9px;
+  opacity: 0.22;
+  -webkit-mask-image: linear-gradient(115deg, transparent 30%, #000 85%);
+  mask-image: linear-gradient(115deg, transparent 30%, #000 85%);
+}
+
+[data-theme="dark"] .handbook-today-plate {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+.handbook-today-plate-label {
+  position: absolute;
+  top: 0.85rem;
+  left: 1.25rem;
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+.handbook-today-plate-text {
+  position: relative;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.02rem;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Shelves by field: 3 columns, the largest field spans 2 rows */
+.handbook-shelves {
+  padding: 1.75rem 0 0.5rem;
+}
+
+.handbook-shelves-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: row dense;
+  gap: 1.75rem 2rem;
+}
+
+.handbook-shelf {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: 0.75rem;
+  border-top: 2px solid var(--color-text-primary);
+}
+
+.handbook-shelf--wide {
+  grid-row: span 2;
+}
+
+.handbook-shelf-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.handbook-shelf-name {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.3;
+}
+
+.handbook-shelf-name a {
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.handbook-shelf-name a:hover {
+  color: var(--color-accent);
+}
+
+.handbook-shelf-count {
+  font-family: var(--font-masthead);
+  font-variant-numeric: lining-nums;
+  font-size: 1.9rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--color-accent);
+}
+
+.handbook-shelf-list {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+}
+
+.handbook-shelf-list li {
+  border-bottom: 1px dotted var(--color-border);
+}
+
+.handbook-shelf-list a {
+  display: block;
+  padding: 0.5rem 0;
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.handbook-shelf-list a:hover {
+  color: var(--color-accent);
+}
+
+.handbook-shelf-def {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.handbook-shelf-more {
+  margin-top: auto;
+  padding-top: 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.handbook-shelf-more:hover {
+  text-decoration: underline;
+}
+
+/* A–Z index: letter bar + ruled dictionary columns */
+.handbook-az {
+  padding: 2rem 0 1rem;
+}
+
+.handbook-az-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.1rem;
+  margin-bottom: 1.25rem;
+}
+
+.handbook-az-bar a,
+.handbook-az-bar span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.9rem;
+  height: 1.9rem;
+  font-family: var(--font-masthead);
+  font-variant-numeric: lining-nums;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.handbook-az-bar a {
+  color: var(--color-text-primary);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.handbook-az-bar a:hover {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+.handbook-az-bar span {
+  color: var(--color-text-muted);
+}
+
+.handbook-az-dict {
+  column-count: 3;
+  column-gap: 2.25rem;
+  column-rule: 1px solid var(--color-border);
+}
+
+.handbook-az-group {
+  margin-bottom: 1.25rem;
+  scroll-margin-top: calc(var(--header-h, 4rem) + 4.5rem);
+}
+
+.handbook-az-letter {
+  font-family: var(--font-masthead);
+  font-variant-numeric: lining-nums;
+  font-size: 1.6rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--color-accent);
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--color-text-primary);
+  break-after: avoid;
+}
+
+.handbook-az-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.handbook-az-list li {
+  break-inside: avoid;
+  border-bottom: 1px dotted var(--color-border);
+}
+
+.handbook-az-list a {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.42rem 0;
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.handbook-az-list a:hover .handbook-az-name {
+  color: var(--color-accent);
+}
+
+.handbook-az-name {
+  min-width: 0;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.handbook-az-sub {
+  min-width: 0;
+  max-width: 50%;
+  font-family: var(--font-masthead);
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1023px) {
+  .handbook-shelves-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .handbook-az-dict {
+    column-count: 2;
+  }
+}
+
+/* Handbook index: mobile */
+@media (max-width: 767px) {
+  .handbook-today {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+    padding: 1.25rem 0;
+  }
+
+  .handbook-today-plate {
+    min-height: 120px;
+  }
+
+  .handbook-shelves-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .handbook-shelf--wide {
+    grid-row: auto;
+  }
+
+  .handbook-az-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .handbook-az-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .handbook-az-bar a,
+  .handbook-az-bar span {
+    flex-shrink: 0;
+  }
+
+  .handbook-az-dict {
+    column-count: 1;
+    column-rule: none;
+  }
+}
+
 /* Handbook "분야별로 보기": dotted list (products keep the card showcase) */
 #handbook-showcase .product-category-showcase-grid {
   display: grid;

@@ -1,0 +1,67 @@
+---
+// frontend/src/components/handbook/HandbookShelves.astro
+// Handbook index: one shelf per field (canonical order, empty fields hidden).
+// count = membership (matches the category page); items = terms whose first canonical field is this one.
+import { getHandbookCategoryLabel } from '../../lib/handbookCategories';
+import { plainDefinition, termNames } from '../../lib/handbookShelves.js';
+
+interface ShelfTerm {
+  slug: string;
+  term: string;
+  korean_name?: string | null;
+  definition?: string | null;
+}
+
+interface Shelf {
+  slug: string;
+  count: number;
+  wide: boolean;
+  items: ShelfTerm[];
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  shelves: Shelf[];
+}
+
+const { locale, shelves } = Astro.props;
+const isKo = locale === 'ko';
+const heading = isKo ? '분야별 서가' : 'Shelves by field';
+const moreLabel = (n: number) => (isKo ? `${n}개 모두 보기 →` : `All ${n} →`);
+---
+
+{shelves.length > 0 && (
+  <section class="handbook-shelves" aria-labelledby="handbook-shelves-title">
+    <h2 class="handbook-index-head" id="handbook-shelves-title">{heading}</h2>
+    <div class="handbook-shelves-grid">
+      {shelves.map((shelf) => {
+        const href = `/${locale}/handbook/category/${shelf.slug}/`;
+        return (
+          <article class={`handbook-shelf${shelf.wide ? ' handbook-shelf--wide' : ''}`}>
+            <div class="handbook-shelf-head">
+              <h3 class="handbook-shelf-name"><a href={href}>{getHandbookCategoryLabel(locale, shelf.slug)}</a></h3>
+              <span class="handbook-shelf-count">{shelf.count}</span>
+            </div>
+            {shelf.items.length > 0 && (
+              <ul class="handbook-shelf-list">
+                {shelf.items.map((item) => {
+                  const { name } = termNames(item, locale);
+                  const def = shelf.wide ? plainDefinition(item.definition) : '';
+                  return (
+                    <li>
+                      <a href={`/${locale}/handbook/${item.slug}/`}>
+                        {name}
+                        {def && <span class="handbook-shelf-def">{def}</span>}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <a class="handbook-shelf-more" href={href}>{moreLabel(shelf.count)}</a>
+          </article>
+        );
+      })}
+    </div>
+  </section>
+)}
