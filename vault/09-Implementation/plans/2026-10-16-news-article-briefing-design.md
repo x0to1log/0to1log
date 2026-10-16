@@ -1,6 +1,6 @@
 # 기사 상세 재설계 (B 브리핑 먼저 + C 짝 기사) — Design Spec
 
-**Status:** approved (2026-10-16)
+**Status:** implemented (2026-10-17) — [[2026-10-16-news-article-briefing]]
 **Mockup:** `.superpowers/brainstorm/article/article-v1.html` (B안 + C안의 짝 기사 링크)
 **관련:** [[2026-10-16-news-list-desks-design]], [[2026-10-15-site-redesign-phase4-article]]
 

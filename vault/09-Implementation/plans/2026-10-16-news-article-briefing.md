@@ -1,5 +1,7 @@
 # 기사 상세 B+C(브리핑 먼저 + 짝 기사) Implementation Plan
 
+**Status:** done (2026-10-17) — 실행 결과는 문서 끝 참조.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 뉴스 기사 상세를 한 단 집중 지면으로 바꾼다. 구성은 다음과 같다.
@@ -829,3 +831,13 @@ git commit -m "chore: remove news-only table of contents replaced by the single-
 - [ ] 스펙 Status를 `implemented (2026-10-16)`로, 이 계획에 Status와 실행 결과를 적는다.
 - [ ] `ACTIVE_SPRINT.md`에 REDESIGN-NEWS-ARTICLE 항목과 증거를 추가한다.
 - [ ] 커밋: `docs: record news article briefing redesign`
+
+---
+
+## 실행 결과 (2026-10-17)
+
+- 커밋: `bf1ad057` deskDayRange, `a731ff17` 짝 기사·브리핑 데이터, `c7434af5` 한 단 지면(+540/-152), `d6c43843` NewsprintTOC 삭제(-195).
+- 테스트: 실패 목록이 기준선과 이름 기준 동일, 신규 FAIL 0. 빌드 성공. 계획 단계에서 scratch 복사본으로 전체 적용·astro check 0 errors 사전 검증.
+- 브라우저 클릭 검증(/ko/news/2026-10-15-business-digest-ko/): 판 전환 학습→전문→입문(제목·본문 교체, active 표시), 용어 클릭 → 팝업(제미나이), 본문 찾기 "Argon" 9건, 공유 메뉴 열림, 짝 링크 → research-digest-ko. 액션 1세트(좋아요·북마크 1개씩), 레일·TOC 없음.
+- 매트릭스: 종이·순백·다크 × 1100px·375px × ko/en, 비즈니스·리서치·주간 정리(w38) — 가로 넘침 0, 새 블록 대비 미달 0. 주간 정리는 짝 링크·두 데스크 카드 없이 브리핑·용어·다음 글만.
+- 계획 대비: 페이지의 미사용 `normalizeCategorySlug, getCategoryLabel` import 줄 삭제. 제목 크기는 현행 clamp 유지(스펙 정정).
