@@ -3,14 +3,17 @@ import { issueLabel, issueNumber } from '../../lib/issue.js';
 
 interface Props {
   locale: 'en' | 'ko';
-  masthead: string;
+  masthead?: string;
   editionLabel?: string;
   subkicker?: string[];
   publishedAt?: string;
   rail?: boolean;
+  compact?: boolean;
+  backHref?: string;
+  backLabel?: string;
 }
 
-const { locale, masthead, editionLabel, subkicker, publishedAt, rail = true } = Astro.props;
+const { locale, masthead = '', editionLabel, subkicker, publishedAt, rail = true, compact = false, backHref, backLabel } = Astro.props;
 const isKo = locale === 'ko';
 const nonce = Astro.locals.cspNonce || '';
 const displayDate = publishedAt ? new Date(publishedAt) : new Date();
@@ -22,21 +25,29 @@ const dateLabel = isKo
 ---
 
 <section class="newsprint-page">
-  <header class="newsprint-header">
-    <div class="newsprint-kicker">
+  {compact ? (
+    <nav class="newsprint-crumb" aria-label={isKo ? '위치' : 'Breadcrumb'}>
+      <a href={backHref ?? `/${locale}/news/`}>← {backLabel ?? (isKo ? 'AI 뉴스' : 'AI News')}</a>
       <span>{issueLabel(locale, issueNumber(displayDate))}</span>
-      <span>{editionLabel ?? (isKo ? 'AI 뉴스 데일리' : 'AI Daily Dispatch')}</span>
-      <span data-local-date data-date-iso={browserDateIso} data-date-locale={browserLocale}>
-        {dateLabel}
-      </span>
-    </div>
-    <h1 class="newsprint-masthead">{masthead}</h1>
-    {subkicker && subkicker.length > 0 && (
-      <div class="newsprint-subkicker">
-        {subkicker.map((item) => <span>{item}</span>)}
+      <span data-local-date data-date-iso={browserDateIso} data-date-locale={browserLocale}>{dateLabel}</span>
+    </nav>
+  ) : (
+    <header class="newsprint-header">
+      <div class="newsprint-kicker">
+        <span>{issueLabel(locale, issueNumber(displayDate))}</span>
+        <span>{editionLabel ?? (isKo ? 'AI 뉴스 데일리' : 'AI Daily Dispatch')}</span>
+        <span data-local-date data-date-iso={browserDateIso} data-date-locale={browserLocale}>
+          {dateLabel}
+        </span>
       </div>
-    )}
-  </header>
+      <h1 class="newsprint-masthead">{masthead}</h1>
+      {subkicker && subkicker.length > 0 && (
+        <div class="newsprint-subkicker">
+          {subkicker.map((item) => <span>{item}</span>)}
+        </div>
+      )}
+    </header>
+  )}
   <script is:inline nonce={nonce}>
     function updateNewsprintLocalDates(root) {
       var scope = root && root.querySelectorAll ? root : document;
@@ -59,7 +70,7 @@ const dateLabel = isKo
   </script>
 
   <div class={`newsprint-grid${rail ? '' : ' newsprint-grid--full'}`}>
-    <div class="newsprint-main">
+    <div class={`newsprint-main${compact ? ' newsprint-main--article' : ''}`}>
       <slot />
     </div>
     {rail && (

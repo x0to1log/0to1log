@@ -3,14 +3,13 @@ export const prerender = false;
 
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
-import { normalizeCategorySlug, getCategoryLabel } from '../../../lib/categories';
 import { getNewsDetailPageData } from '../../../lib/pageData/newsDetailPage';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
-import NewsprintTOC from '../../../components/newsprint/NewsprintTOC.astro';
-import NewsprintSideRail from '../../../components/newsprint/NewsprintSideRail.astro';
 import NewsprintArticleLayout from '../../../components/newsprint/NewsprintArticleLayout.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
-import ReadingActionsRail from '../../../components/common/ReadingActionsRail.astro';
+import NewsArticleTerms from '../../../components/newsprint/NewsArticleTerms.astro';
+import NewsTwinDesks from '../../../components/newsprint/NewsTwinDesks.astro';
+import NewsReadNext from '../../../components/newsprint/NewsReadNext.astro';
 
 const { slug } = Astro.params;
 const pageSlug = slug ?? '';
@@ -23,10 +22,12 @@ const {
   post,
   postError,
   focusItems,
+  focusItemsAreFallback,
   articleData,
   nextPost,
   pairedSlug,
   similarPosts,
+  sibling,
   isBookmarked,
   isLiked,
   likeCount,
@@ -58,14 +59,6 @@ if (postError) {
   Astro.response.status = 404;
 }
 
-const masthead = 'Latest AI News';
-const editionMap: Record<string, string> = {
-  'ai-news': 'Daily Dispatch',
-  study: 'Study Notes',
-  career: 'Career Notes',
-  project: 'Build Log',
-};
-const editionLabel = post ? (editionMap[normalizeCategorySlug(post.category) || ''] || 'Deep Dive') : 'Deep Dive';
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
 const pageTitle = post ? (displayTitle || post.title) : 'Not Found';
@@ -79,9 +72,10 @@ const weekTool: {name?: string; description?: string; url?: string} | null = isW
 <MainLayout title={pageTitle} description={pageDescription} locale="en" slug={`news/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode} needsKatex={true}>
   <NewsprintShell
     locale="en"
-    masthead={masthead}
-    editionLabel={editionLabel}
-    subkicker={['AI · Papers', 'Daily Curation', 'Open Access']}
+    compact
+    rail={false}
+    backHref="/en/news/"
+    backLabel="AI News"
     publishedAt={post?.published_at}
   >
     <form class="handbook-detail-search handbook-search-sticky handbook-search-sticky--detail" action="/en/news/" method="get">
@@ -139,9 +133,15 @@ const weekTool: {name?: string; description?: string; url?: string} | null = isW
         guideItems={post.guide_items}
         initialFindQuery={articleFindQuery}
         previewMode={previewMode}
-        showStickyActions={false}
         postType={post.post_type}
-      />
+        briefingItems={focusItemsAreFallback ? [] : focusItems}
+        sibling={sibling}
+      >
+        <Fragment slot="after-guide">
+          <NewsArticleTerms locale="en" terms={relatedTerms} />
+          <NewsTwinDesks locale="en" currentTitle={displayTitle || post.title} currentType={post.post_type} sibling={sibling} />
+        </Fragment>
+      </NewsprintArticleLayout>
     )}
 
     {isWeekly && (weekTerms.length > 0 || weekTool?.name) && (
@@ -166,38 +166,7 @@ const weekTool: {name?: string; description?: string; url?: string} | null = isW
         )}
       </div>
     )}
-
-    <Fragment slot="rail">
-      <form class="handbook-detail-search newsprint-rail-search" action="/en/news/" method="get">
-        <input
-          type="text"
-          name="q"
-          aria-label={t.en['news.search']}
-          placeholder={t.en['news.search']}
-          class="handbook-search-input"
-        />
-      </form>
-      <ReadingActionsRail
-        className="newsprint-rail-stack"
-        locale="en"
-        variant="news"
-        title={post?.title || pageTitle}
-        shareUrl={`${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}/en/news/${pageSlug}/`}
-        itemId={post?.id}
-        itemType="news"
-        isBookmarked={isBookmarked}
-        previewMode={previewMode}
-        isAuthenticated={!!user && !!accessToken}
-        articleRedirect={`/en/news/${pageSlug}/`}
-        commentRedirect={`/en/news/${pageSlug}/#comments`}
-        likeCount={likeCount}
-        commentCount={commentCount}
-        isLiked={isLiked}
-      >
-        <NewsprintTOC locale="en" />
-        <NewsprintSideRail locale="en" focusItems={focusItems} similarPosts={similarPosts} relatedTerms={relatedTerms} />
-      </ReadingActionsRail>
-    </Fragment>
+    {post && <NewsReadNext locale="en" posts={similarPosts} />}
   </NewsprintShell>
 </MainLayout>
 

@@ -1,0 +1,28 @@
+---
+// frontend/src/components/newsprint/NewsTwinDesks.astro
+// "Two desks on this story": the story just read next to the same-day story from the other desk.
+import { postTypeLabel } from '../../lib/postType.js';
+
+interface Sibling { slug: string; title: string; excerpt?: string | null; post_type: string; }
+interface Props { locale: 'en' | 'ko'; currentTitle: string; currentType?: string | null; sibling: Sibling | null; }
+const { locale, currentTitle, currentType, sibling } = Astro.props;
+const isKo = locale === 'ko';
+const desk = (type?: string | null) => (type === 'research' ? 'research' : 'business');
+---
+
+{sibling && (
+  <section class="news-twin-desks">
+    <h2 class="news-end-title">{isKo ? '이 소식, 두 데스크의 시선' : 'Two desks on this story'}</h2>
+    <div class="news-twin-desks-grid">
+      <div class={`news-twin-desk news-twin-desk--${desk(currentType)}`}>
+        <span class="news-twin-desk-label">{postTypeLabel(locale, currentType)} · {isKo ? '지금 읽은 글' : 'You just read'}</span>
+        <p class="news-twin-desk-title">{currentTitle}</p>
+      </div>
+      <a class={`news-twin-desk news-twin-desk--${desk(sibling.post_type)}`} href={`/${locale}/news/${sibling.slug}/`}>
+        <span class="news-twin-desk-label">{postTypeLabel(locale, sibling.post_type)}</span>
+        <p class="news-twin-desk-title">{sibling.title}</p>
+        {sibling.excerpt && <p class="news-twin-desk-excerpt">{sibling.excerpt}</p>}
+      </a>
+    </div>
+  </section>
+)}

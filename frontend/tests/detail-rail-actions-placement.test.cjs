@@ -31,13 +31,13 @@ assertIncludes(newsLayout, 'showStickyActions = true', 'news layout sticky actio
 assertIncludes(blogLayout, 'showStickyActions?: boolean;', 'blog layout sticky action visibility prop');
 assertIncludes(blogLayout, 'showStickyActions = true', 'blog layout sticky action default');
 
-assertIncludes(newsEn, 'showStickyActions={false}', 'news EN inline actions disabled');
-assertIncludes(newsKo, 'showStickyActions={false}', 'news KO inline actions disabled');
+if (newsEn.includes('showStickyActions={false}')) throw new Error('news EN uses inline reading actions');
+if (newsKo.includes('showStickyActions={false}')) throw new Error('news KO uses inline reading actions');
 assertIncludes(blogEn, 'showStickyActions={false}', 'blog EN inline actions disabled');
 assertIncludes(blogKo, 'showStickyActions={false}', 'blog KO inline actions disabled');
 
-assertIncludes(newsEn, '<ReadingActionsRail', 'news EN right rail action wrapper');
-assertIncludes(newsKo, '<ReadingActionsRail', 'news KO right rail action wrapper');
+if (newsEn.includes('<ReadingActionsRail')) throw new Error('news EN has no right rail');
+if (newsKo.includes('<ReadingActionsRail')) throw new Error('news KO has no right rail');
 assertIncludes(blogEn, '<ReadingActionsRail', 'blog EN right rail action wrapper');
 assertIncludes(blogKo, '<ReadingActionsRail', 'blog KO right rail action wrapper');
 assertIncludes(handbookEn, '<ReadingActionsRail', 'handbook EN right rail action wrapper');

@@ -71,6 +71,8 @@ interface Props {
   previewMode?: boolean;
   showStickyActions?: boolean;
   postType?: string | null;
+  briefingItems?: string[];
+  sibling?: { slug: string; title: string; excerpt?: string | null; post_type: string; reading_time_min?: number | null } | null;
 }
 
 const {
@@ -106,6 +108,8 @@ const {
   previewMode = false,
   showStickyActions = true,
   postType = null,
+  briefingItems = [],
+  sibling = null,
 } = Astro.props;
 
 const isKo = locale === 'ko';
@@ -229,6 +233,10 @@ const copy = {
 };
 
 const previewCommentsReadonly = 'Preview mode · comments are read-only.';
+const siblingDesk = sibling?.post_type === 'research' ? 'research' : 'business';
+const siblingLead = !sibling ? '' : siblingDesk === 'research'
+  ? (isKo ? '리서치 데스크는 이렇게 봤어요 →' : "The research desk's take →")
+  : (isKo ? '비즈니스 데스크는 이렇게 봤어요 →' : "The business desk's take →");
 ---
 
 <article class="newsprint-article">
@@ -260,6 +268,58 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     </div>
   )}
   <div class="newsprint-divider"></div>
+
+  {sibling && (
+    <a class={`newsprint-twin-link newsprint-twin-link--${siblingDesk}`} href={`/${locale}/news/${sibling.slug}/`}>
+      <span class="newsprint-twin-link-label">{siblingLead}</span>
+      <span class="newsprint-twin-link-title">{sibling.title}</span>
+    </a>
+  )}
+
+  {showPersonaSwitcher && (
+    <>
+      <div class="switcher-bar">
+        <div class="switcher-bar-line"></div>
+        <span class="switcher-bar-label">{locale === 'ko' ? '판 선택' : 'Edition'}</span>
+        <div class="persona-switcher">
+        {(['beginner', 'learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
+          <button
+            type="button"
+            class={`persona-switcher-btn ${p === activePersona ? 'persona-switcher-btn--active' : ''}`}
+            data-persona={p}
+          >
+            {personaLabels[locale]?.[p] || p}
+          </button>
+        ))}
+        </div>
+        <div class="switcher-bar-line"></div>
+      </div>
+      <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)} data-display={JSON.stringify(personaDisplayMap || {})} data-quizzes={JSON.stringify({
+        expert: guideItemsAny?.quiz_poll_expert || null,
+        learner: guideItemsAny?.quiz_poll_learner || null,
+        beginner: guideItemsAny?.quiz_poll_beginner || null,
+      })} data-weekly-quizzes={JSON.stringify({
+        expert: Array.isArray(guideItemsAny?.weekly_quiz_expert) ? guideItemsAny!.weekly_quiz_expert : [],
+        learner: Array.isArray(guideItemsAny?.weekly_quiz_learner) ? guideItemsAny!.weekly_quiz_learner : [],
+        beginner: Array.isArray(guideItemsAny?.weekly_quiz_beginner) ? guideItemsAny!.weekly_quiz_beginner : [],
+      })} data-sources={JSON.stringify({
+        expert: guideItemsAny?.sources_expert || null,
+        learner: guideItemsAny?.sources_learner || null,
+        beginner: guideItemsAny?.sources_beginner || null,
+      })}></template>
+    </>
+  )}
+
+  {briefingItems.length > 0 && (
+    <section class="news-briefing" aria-label={isKo ? '30초 브리핑' : '30-second briefing'}>
+      <p class="news-briefing-label">{isKo ? '30초 브리핑' : '30-second briefing'}</p>
+      <ol class="news-briefing-list">
+        {briefingItems.slice(0, 3).map((item, i) => (
+          <li><span class="news-briefing-num" aria-hidden="true">{i + 1}</span><span>{item}</span></li>
+        ))}
+      </ol>
+    </section>
+  )}
 
   <div class="newsprint-article-find">
     <label class="newsprint-article-find-label" for="article-find">{copy.articleFindLabel}</label>
@@ -304,40 +364,6 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
         <Fragment set:html={analysisHtml} />
       </div>
     </section>
-  )}
-
-  {showPersonaSwitcher && (
-    <>
-      <div class="switcher-bar">
-        <div class="switcher-bar-line"></div>
-        <span class="switcher-bar-label">{locale === 'ko' ? '판 선택' : 'Edition'}</span>
-        <div class="persona-switcher">
-        {(['beginner', 'learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
-          <button
-            type="button"
-            class={`persona-switcher-btn ${p === activePersona ? 'persona-switcher-btn--active' : ''}`}
-            data-persona={p}
-          >
-            {personaLabels[locale]?.[p] || p}
-          </button>
-        ))}
-        </div>
-        <div class="switcher-bar-line"></div>
-      </div>
-      <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)} data-display={JSON.stringify(personaDisplayMap || {})} data-quizzes={JSON.stringify({
-        expert: guideItemsAny?.quiz_poll_expert || null,
-        learner: guideItemsAny?.quiz_poll_learner || null,
-        beginner: guideItemsAny?.quiz_poll_beginner || null,
-      })} data-weekly-quizzes={JSON.stringify({
-        expert: Array.isArray(guideItemsAny?.weekly_quiz_expert) ? guideItemsAny!.weekly_quiz_expert : [],
-        learner: Array.isArray(guideItemsAny?.weekly_quiz_learner) ? guideItemsAny!.weekly_quiz_learner : [],
-        beginner: Array.isArray(guideItemsAny?.weekly_quiz_beginner) ? guideItemsAny!.weekly_quiz_beginner : [],
-      })} data-sources={JSON.stringify({
-        expert: guideItemsAny?.sources_expert || null,
-        learner: guideItemsAny?.sources_learner || null,
-        beginner: guideItemsAny?.sources_beginner || null,
-      })}></template>
-    </>
   )}
 
   {showPersonaSwitcher ? (
@@ -427,6 +453,7 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     </aside>
   )}
 
+  <slot name="after-guide" />
   {hasSources && (
     <section class="newsprint-sources">
       <h2 class="newsprint-section-title">{sectionCopy.sources} <span class="newsprint-sources-count">{(sourceCards || []).length}</span></h2>

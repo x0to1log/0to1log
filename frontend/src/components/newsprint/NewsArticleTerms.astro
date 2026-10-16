@@ -1,0 +1,25 @@
+---
+// frontend/src/components/newsprint/NewsArticleTerms.astro
+// End-of-article glossary list (was the right-rail "이 기사의 용어").
+interface RelatedTerm { slug: string; term: string; koreanName: string; definition: string; }
+interface Props { locale: 'en' | 'ko'; terms: RelatedTerm[]; }
+const { locale, terms } = Astro.props;
+const isKo = locale === 'ko';
+---
+
+{terms.length > 0 && (
+  <section class="news-article-terms">
+    <h2 class="news-end-title">{isKo ? '이 기사의 용어' : 'Terms in This Article'}</h2>
+    <ul>
+      {terms.slice(0, 3).map((t) => (
+        <li>
+          <a href={`/${locale}/handbook/${t.slug}/`}>
+            <strong class="news-article-term-name">{isKo && t.koreanName ? t.koreanName : t.term}</strong>
+            {isKo && t.koreanName && <span class="news-article-term-en">{t.term}</span>}
+          </a>
+          {t.definition && <p>{t.definition}</p>}
+        </li>
+      ))}
+    </ul>
+  </section>
+)}

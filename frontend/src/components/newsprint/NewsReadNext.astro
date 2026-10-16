@@ -1,0 +1,26 @@
+---
+// frontend/src/components/newsprint/NewsReadNext.astro
+// "Read next" list under the article (was the right-rail block).
+import { postTypeLabel } from '../../lib/postType.js';
+
+interface SimilarPost { post_id: string; slug: string; title: string; post_type?: string | null; }
+interface Props { locale: 'en' | 'ko'; posts: SimilarPost[]; }
+const { locale, posts } = Astro.props;
+const isKo = locale === 'ko';
+---
+
+{posts.length > 0 && (
+  <section class="news-read-next">
+    <h2 class="news-end-title">{isKo ? '다음 읽어볼 글' : 'Read Next'}</h2>
+    <ul>
+      {posts.slice(0, 3).map((p) => (
+        <li>
+          <a href={`/${locale}/news/${p.slug}/`}>
+            {p.post_type && <span class="news-read-next-type">{postTypeLabel(locale, p.post_type)}</span>}
+            <span class="news-read-next-title">{p.title}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+)}

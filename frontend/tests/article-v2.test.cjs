@@ -42,6 +42,7 @@ assert(/box-shadow:\s*none/.test(rule('.newsprint-fact-pack-item')), 'fact pack 
 // Task 3: 용어 / 레일 / 퀴즈·출처
 const rail = read('components/newsprint/NewsprintSideRail.astro');
 assert(rail.includes("{isKo ? '이 기사의 용어' : 'Terms in This Article'}"), 'rail term section title');
+assert(read('components/newsprint/NewsArticleTerms.astro').includes("{isKo ? '이 기사의 용어' : 'Terms in This Article'}"), 'end-of-article term title');
 const term = rule('.handbook-term');
 assert(/text-decoration:\s*none/.test(term), 'term highlight drops the dotted underline');
 assert(/linear-gradient\(transparent 60%/.test(term), 'term highlight is a highlighter stroke');
