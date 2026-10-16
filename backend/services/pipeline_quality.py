@@ -235,19 +235,38 @@ def _claim_token_hits(sentence: str, claim_tokens: tuple[str, ...]) -> int:
 _CLAIM_WINDOW_CHARS = 180
 
 
-def _claim_window(sentence: str, claim_tokens: tuple[str, ...]) -> str:
-    """Trim an over-long "sentence" (e.g. an unpunctuated bullet list) to the
-    text around its first claim match, so the match survives the char budget."""
-    if len(sentence) <= 2 * _CLAIM_WINDOW_CHARS:
+def _claim_window(
+    sentence: str,
+    claim_tokens: tuple[str, ...],
+    overlap_terms: frozenset[str] = frozenset(),
+) -> str:
+    """Trim an over-long "sentence" (an unpunctuated list, or nav text fused with
+    a lead sentence) to the window holding the most distinct claim matches and
+    shared frontload terms, so they survive the char budget. Centering on the
+    first claim cut off "cyber-capable AI systems" after "400 scientists"."""
+    width = 2 * _CLAIM_WINDOW_CHARS
+    if len(sentence) <= width:
         return sentence
-    starts = [
-        m.start() for token in claim_tokens
-        if (m := re.search(_claim_token_pattern(token), sentence, re.IGNORECASE))
-    ]
-    if not starts:
+    anchors: list[tuple[int, tuple[str, str], int]] = []
+    for token in claim_tokens:
+        for m in re.finditer(_claim_token_pattern(token), sentence, re.IGNORECASE):
+            anchors.append((m.start(), ("claim", token), 10))
+    if overlap_terms:
+        # Same-length mapping, so offsets line up with `sentence`.
+        lowered = sentence.translate(_HYPHEN_VARIANTS).lower()
+        for m in _OVERLAP_WORD_RE.finditer(lowered):
+            for term in _overlap_terms(m.group(0)) & overlap_terms:
+                anchors.append((m.start(), ("term", term), _OVERLAP_POINTS_PER_TERM))
+    if not anchors:
         return sentence
-    begin = max(0, min(starts) - _CLAIM_WINDOW_CHARS)
-    end = min(len(sentence), min(starts) + _CLAIM_WINDOW_CHARS)
+    best_begin, best_score = 0, -1
+    for pos, _, _ in anchors:
+        begin = max(0, pos - width // 6)
+        covered = {key: weight for p, key, weight in anchors if begin <= p < begin + width}
+        if sum(covered.values()) > best_score:
+            best_begin, best_score = begin, sum(covered.values())
+    begin = best_begin
+    end = min(len(sentence), begin + width)
     window = sentence[begin:end]
     if begin:
         window = "..." + window.split(" ", 1)[-1]
@@ -256,8 +275,44 @@ def _claim_window(sentence: str, claim_tokens: tuple[str, ...]) -> str:
     return window
 
 
+# Lexical overlap with the frontload catches claims that are neither numbers
+# nor names ("public incident registry for cyber-capable AI", 2026-10-16).
+# Writers often emit U+2011 non-breaking hyphens while sources use "-".
+_HYPHEN_VARIANTS = str.maketrans({"‐": "-", "‑": "-", "‒": "-", "–": "-", "−": "-"})
+_OVERLAP_WORD_RE = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*")
+_OVERLAP_STOPWORDS = frozenset({
+    "about", "after", "again", "against", "among", "their", "there", "these", "those", "which",
+    "while", "where", "would", "could", "should", "other", "under", "since", "until", "being",
+})
+_OVERLAP_MIN_LEN = 5
+_OVERLAP_POINTS_PER_TERM = 3
+_OVERLAP_MAX_TERMS = 5
+
+
+def _overlap_terms(text: str) -> frozenset[str]:
+    """Content words (5+ chars, crude plural folding), with hyphenated words also split."""
+    terms: set[str] = set()
+    for word in _OVERLAP_WORD_RE.findall(str(text or "").translate(_HYPHEN_VARIANTS).lower()):
+        for part in {word, *word.split("-")}:
+            if len(part) < _OVERLAP_MIN_LEN or part in _OVERLAP_STOPWORDS:
+                continue
+            terms.add(part[:-1] if part.endswith("s") and len(part) > _OVERLAP_MIN_LEN else part)
+    return frozenset(terms)
+
+
+def _frontload_overlap_terms(frontload: dict[str, Any] | None) -> frozenset[str]:
+    """Overlap terms from the English frontload (sources are English)."""
+    frontload = frontload or {}
+    parts = [str(frontload.get("headline") or ""), str(frontload.get("excerpt") or "")]
+    parts.extend(str(item) for item in frontload.get("focus_items") or [])
+    return _overlap_terms(" ".join(parts))
+
+
 def _frontload_relevant_snippets(
-    text: str, max_chars: int, claim_tokens: tuple[str, ...] = (),
+    text: str,
+    max_chars: int,
+    claim_tokens: tuple[str, ...] = (),
+    overlap_terms: frozenset[str] = frozenset(),
 ) -> list[str]:
     scored: list[tuple[int, int, str]] = []
     for idx, sentence in enumerate(_split_evidence_sentences(text)):
@@ -268,10 +323,12 @@ def _frontload_relevant_snippets(
             score += 4
         if _FRONTLOAD_BUSINESS_EVIDENCE_RE.search(sentence):
             score += 2
+        shared = len(_overlap_terms(sentence) & overlap_terms) if overlap_terms else 0
+        score += _OVERLAP_POINTS_PER_TERM * min(shared, _OVERLAP_MAX_TERMS)
         claim_hits = _claim_token_hits(sentence, claim_tokens)
-        if claim_hits:
-            score += 10 * claim_hits
-            sentence = _claim_window(sentence, claim_tokens)
+        score += 10 * claim_hits
+        if claim_hits or shared:
+            sentence = _claim_window(sentence, claim_tokens, overlap_terms)
         if score:
             scored.append((score, idx, sentence))
 
@@ -311,12 +368,15 @@ def _frontload_relevant_snippets(
 
 
 def _compact_evidence_text(
-    value: Any, max_chars: int = 1200, claim_tokens: tuple[str, ...] = (),
+    value: Any,
+    max_chars: int = 1200,
+    claim_tokens: tuple[str, ...] = (),
+    overlap_terms: frozenset[str] = frozenset(),
 ) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     if len(text) <= max_chars:
         return text
-    snippets = _frontload_relevant_snippets(text, max_chars, claim_tokens)
+    snippets = _frontload_relevant_snippets(text, max_chars, claim_tokens, overlap_terms)
     if snippets:
         opening = text[: min(320, max_chars // 3)].rsplit(" ", 1)[0]
         compacted = (
@@ -326,8 +386,9 @@ def _compact_evidence_text(
         )
         if len(compacted) <= max_chars:
             return compacted
-        return compacted[:max_chars].rsplit(" ", 1)[0] + "..."
-    return text[:max_chars].rsplit(" ", 1)[0] + "..."
+        # Reserve room for the "..." suffix so the result stays within max_chars.
+        return compacted[: max_chars - 3].rsplit(" ", 1)[0] + "..."
+    return text[: max_chars - 3].rsplit(" ", 1)[0] + "..."
 
 
 def _build_frontload_source_evidence(
@@ -347,6 +408,7 @@ def _build_frontload_source_evidence(
     """
     raw_content_map = raw_content_map or {}
     claim_tokens = _frontload_claim_tokens(frontload)
+    overlap_terms = _frontload_overlap_terms(frontload)
     candidates: list[tuple[str, str, str]] = []
     seen: set[str] = set()
 
@@ -372,15 +434,20 @@ def _build_frontload_source_evidence(
                 entry.get("content") or entry.get("raw_content") or entry.get("snippet") or "",
             )
 
-    if claim_tokens and len(candidates) > max_sources:
-        # Most claim matches first (stable): a source naming several asserted
-        # entities outranks one that only shares a generic phrase.
-        candidates.sort(key=lambda c: -_claim_token_hits(c[2], claim_tokens))
+    if (claim_tokens or overlap_terms) and len(candidates) > max_sources:
+        # Most claim matches first, then most shared frontload terms (stable):
+        # a source naming several asserted entities outranks a generic one.
+        candidates.sort(key=lambda c: (
+            -_claim_token_hits(c[2], claim_tokens),
+            -len(_overlap_terms(c[2]) & overlap_terms),
+        ))
     return [
         {
             "title": title,
             "url": url,
-            "content": _compact_evidence_text(source_text, claim_tokens=claim_tokens),
+            "content": _compact_evidence_text(
+                source_text, claim_tokens=claim_tokens, overlap_terms=overlap_terms,
+            ),
         }
         for url, title, source_text in candidates[:max_sources]
     ]

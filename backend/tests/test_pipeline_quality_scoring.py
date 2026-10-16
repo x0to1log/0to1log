@@ -310,6 +310,63 @@ def test_frontload_source_evidence_covers_each_claim_before_repeating_a_frequent
     assert "Gemini 3.8 Flash TTS" in evidence[0]["content"]
 
 
+def test_frontload_source_evidence_ranks_sentences_by_shared_frontload_terms():
+    # Real failure (2026-10-16): the excerpt's "public incident registry for
+    # cyber-capable AI" is stated by Reuters, but those lowercase terms were not
+    # claim tokens, so numeric/business sentences filled the excerpt and QC
+    # judged the claim unsupported. The frontload also used U+2011 hyphens.
+    import services.pipeline  # noqa: F401 - load re-exports before direct quality import
+    from services.pipeline_quality import _build_frontload_source_evidence
+
+    url = "https://www.reuters.com/legal/scientists-call-international-body"
+    content = (
+        "".join(f"Investors committed ${n} million to {n} startups across the region. " for n in range(10, 40))
+        + "The scientists called for a body to oversee incident reporting for advanced cyber-capable AI systems. "
+        + "It would maintain a registry of significant security incidents that should eventually be made public."
+    )
+    evidence = _build_frontload_source_evidence(
+        _source_group([url]),
+        raw_content_map={url: content},
+        frontload={
+            "excerpt": "An open letter urges air‑gapped containment and a public incident registry "
+                       "for cyber‑capable AI.",
+        },
+    )
+
+    compacted = evidence[0]["content"]
+    assert "cyber-capable AI systems" in compacted
+    assert "registry of significant security incidents" in compacted
+    assert len(compacted) <= 1200
+
+
+def test_long_sentence_window_follows_densest_claim_and_term_cluster():
+    # Real failure (2026-10-16): Reuters nav text has no periods, so it fused
+    # with the lead sentence. The window centered on the first claim ("400")
+    # and cut off "cyber-capable AI systems" ~250 chars later.
+    import services.pipeline  # noqa: F401 - load re-exports before direct quality import
+    from services.pipeline_quality import _build_frontload_source_evidence
+
+    url = "https://www.reuters.com/legal/scientists-call-international-body"
+    nav = " ".join(f"Follow company {i} Show more companies" for i in range(12))
+    content = (
+        f"{nav} Oct 13 (Reuters) - Around 400 scientists including AI pioneers and many researchers from labs "
+        "across several continents and a long list of universities and institutes on Tuesday called for an "
+        "international body to oversee containment standards and incident reporting for advanced "
+        "cyber-capable AI systems. "
+        + "".join(f"Investors committed ${n} million to {n} startups across the region. " for n in range(10, 40))
+    )
+    evidence = _build_frontload_source_evidence(
+        _source_group([url]),
+        raw_content_map={url: content},
+        frontload={
+            "headline": "400 scientists call for global AI oversight body",
+            "excerpt": "The letter urges containment standards and incident reporting for cyber‑capable AI.",
+        },
+    )
+
+    assert "cyber-capable AI systems" in evidence[0]["content"]
+
+
 def test_frontload_source_evidence_keeps_claim_matched_source_past_the_source_cap():
     import services.pipeline  # noqa: F401 - load re-exports before direct quality import
     from services.pipeline_quality import _build_frontload_source_evidence
