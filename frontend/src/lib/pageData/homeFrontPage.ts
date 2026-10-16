@@ -1,7 +1,8 @@
 // frontend/src/lib/pageData/homeFrontPage.ts
-// Lean data for the home front page: 1 news query + term count + 1 term row.
+// Lean data for the home front page: 1 news query + the shared term of the day (count + 1 row).
 import { supabase } from '../supabase';
-import { selectFrontPage, termIndex } from '../homeFront.js';
+import { selectFrontPage } from '../homeFront.js';
+import { fetchTermOfDay } from './termOfDay';
 
 export interface HomeFrontNews {
   title: string;
@@ -34,9 +35,8 @@ const EMPTY: HomeFrontPageData = { lead: null, leadIsToday: false, sibling: null
 
 export async function getHomeFrontPageData(locale: 'en' | 'ko', now = new Date()): Promise<HomeFrontPageData> {
   if (!supabase) return EMPTY;
-  const definitionField = locale === 'ko' ? 'definition_ko' : 'definition_en';
 
-  const [newsRes, countRes] = await Promise.all([
+  const [newsRes, termOfDay] = await Promise.all([
     supabase
       .from('news_posts')
       .select('title, slug, post_type, published_at, excerpt, reading_time_min, tags')
@@ -45,30 +45,12 @@ export async function getHomeFrontPageData(locale: 'en' | 'ko', now = new Date()
       .order('published_at', { ascending: false })
       .order('post_type', { ascending: true }) // same-day stories share 00:00Z; keep the lead stable across cache refreshes
       .limit(6),
-    supabase
-      .from('handbook_terms')
-      .select('slug', { count: 'exact', head: true })
-      .eq('status', 'published'),
+    fetchTermOfDay(supabase, locale, now),
   ]);
 
   if (newsRes.error) console.warn('[homeFrontPage] news query failed', newsRes.error.message);
-  if (countRes.error) console.warn('[homeFrontPage] term count query failed', countRes.error.message);
   const news = newsRes.error ? [] : ((newsRes.data ?? []) as HomeFrontNews[]);
-
-  let term: HomeFrontTerm | null = null;
-  const total = countRes.error ? 0 : (countRes.count ?? 0);
-  const i = termIndex(now, total);
-  if (i !== null) {
-    const termRes = await supabase
-      .from('handbook_terms')
-      .select(`term, slug, korean_name, definition:${definitionField}`)
-      .eq('status', 'published')
-      .order('slug', { ascending: true })
-      .range(i, i)
-      .maybeSingle();
-    if (termRes.error) console.warn('[homeFrontPage] term query failed', termRes.error.message);
-    else term = (termRes.data ?? null) as HomeFrontTerm | null;
-  }
+  const term = termOfDay.term as HomeFrontTerm | null;
 
   return selectFrontPage({ news, term, now }) as HomeFrontPageData;
 }
