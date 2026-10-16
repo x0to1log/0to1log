@@ -26,7 +26,7 @@
    - `.newsprint-main--article`의 **전체 폭은 최대 800px**, 가운데 정렬이다(제목·브리핑·끝 블록 공통).
    - 데스크톱 인라인 액션 칼럼(72px + gap 0.9rem)을 뺀 본문 prose 폭은 약 714px다.
 3. **제목 영역**: `NewsprintArticleLayout` 기존 마크업(topline, h1 `.newsprint-lead-title`, `.newsprint-deck`, 태그) 그대로다.
-   - 제목 크기만 데스크톱 약 2.25rem(36px)으로 키운다.
+   - 제목 크기는 현행 `clamp(1.85rem, 2.8vw, 2.4rem)`을 유지한다. 이미 데스크톱에서 약 36–38px이다.
 4. **짝 기사 링크 (C)** — 제목 영역 바로 아래, 판 선택 줄 위
    - `리서치 데스크는 이렇게 봤어요 → {제목}` 한 줄. 비즈니스 기사면 "리서치 데스크", 리서치 기사면 "비즈니스 데스크"다.
    - 데스크 색 2px 왼쪽 선: `--tier-paid`(비즈니스)·`--tier-freemium`(리서치). 뉴스 목록과 같은 토큰이다.
@@ -155,7 +155,7 @@
   - Shell: compact 분기, crumb
   - 데이터: `NEWS_SIBLING_COLUMNS` select, `.limit(1)`, 반대 데스크 조건, `deskDayRange` 사용, sibling 오류가 503을 만들지 않음, `focusItemsAreFallback`
   - KO/EN 문구: 브리핑, 데스크 링크, 두 데스크의 시선, 용어, 다음 글
-  - CSS: 720px 칼럼, 브리핑 3열 + 모바일 1열, 짝 링크 데스크 색 토큰
+  - CSS: 800px 칼럼, 브리핑 3열 + 모바일 1열, 짝 링크 데스크 색 토큰
 - **갱신**
   - `detail-rail-actions-placement.test.cjs`: 뉴스 페이지의 `showStickyActions={false}`와 `<ReadingActionsRail` 단언을 반대로 바꾼다(인라인 액션 사용, 레일 래퍼 없음). 블로그·용어집 단언은 유지한다.
   - `article-v2.test.cjs`: `NewsprintSideRail`의 "이 기사의 용어" 단언은 SideRail이 남으므로 유지한다. 새 `NewsArticleTerms`에 같은 KO/EN 제목이 있는지 추가로 단언한다.
