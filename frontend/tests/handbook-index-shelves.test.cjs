@@ -88,4 +88,10 @@ assert(/\.handbook-shelf--wide\s*\{[^}]*grid-row:\s*auto/.test(mobile), 'mobile:
 assert(/\.handbook-az-bar\s*\{[^}]*overflow-x:\s*auto/.test(mobile), 'mobile: letter bar scrolls sideways');
 assert(/\.handbook-az-dict\s*\{[^}]*column-count:\s*1/.test(mobile), 'mobile: dictionary one column');
 
+// unused CSS removed (Task 4); .handbook-result-count stays because the news list uses it
+for (const gone of ['.handbook-trending', '#handbook-showcase', '.product-category-showcase', '.newsprint-rail-category-', '.handbook-filter-', '.handbook-difficulty-btn', '.handbook-controls']) {
+  assert(!css.includes(gone), `unused CSS removed: ${gone}`);
+}
+assert(css.includes('.handbook-result-count {'), 'result count style stays (news list)');
+
 console.log('handbook-index-shelves.test.cjs passed');

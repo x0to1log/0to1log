@@ -68,7 +68,7 @@ const productTabsStart = globalCss.indexOf('.product-filter-tabs {');
 assert(productTabsStart !== -1, 'Missing base product filter tabs styles');
 const mobileStart = globalCss.indexOf('@media (max-width: 767px) {', productTabsStart);
 assert(mobileStart !== -1, 'Missing mobile media query for product filter bar');
-const mobileCss = globalCss.slice(mobileStart, globalCss.indexOf('/* --- Handbook trending terms --- */', mobileStart));
+const mobileCss = globalCss.slice(mobileStart, globalCss.indexOf('/* --- Category Preview Section --- */', mobileStart));
 const mobileTabsBlock = extractBlock(mobileCss, '.product-filter-tabs');
 
 assert(
