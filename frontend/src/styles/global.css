@@ -286,10 +286,6 @@
   gap: 1.5rem;
 }
 
-.newsprint-rail-search {
-  display: none;
-}
-
 @media (min-width: 1024px) {
   .newsprint-grid {
     grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
@@ -308,12 +304,6 @@
     position: sticky;
     top: 4.5rem;
     align-self: start;
-  }
-
-  /* Rail search: show on desktop */
-  .newsprint-rail-search {
-    display: block;
-    margin-bottom: 0.75rem;
   }
 
   /* Hide main-column search on desktop (detail pages only) */
@@ -1684,97 +1674,6 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   border-bottom: none;
   background: none;
   padding: 0;
-}
-
-/* ================================================================
-   HandbookSectionNav — client-side TOC in the side rail.
-   Styles live here (not in the .astro component's <style>) because
-   the <li>/<a> children are built at runtime via JS and therefore
-   don't carry Astro's data-astro-cid scoping attribute. Scoped
-   selectors would silently skip them.
-   ================================================================ */
-.handbook-toc {
-  margin-bottom: 1.5rem;
-}
-
-.handbook-toc[hidden] {
-  display: none;
-}
-
-.handbook-toc__title {
-  margin: 0 0 0.625rem;
-  padding: 0;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  color: var(--color-text-muted);
-}
-
-.handbook-toc__list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  counter-reset: hb-toc;
-}
-
-.handbook-toc__item {
-  counter-increment: hb-toc;
-  padding: 0;
-  margin: 0.0625rem 0;
-}
-
-.handbook-toc__link {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  padding: 0.4375rem 0.625rem 0.4375rem 0.5rem;
-  font-size: 0.8125rem;
-  line-height: 1.4;
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  border-left: 2px solid transparent;
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  transition: color 150ms ease, background-color 150ms ease,
-    border-color 150ms ease;
-}
-
-.handbook-toc__link::before {
-  content: counter(hb-toc);
-  flex: 0 0 1rem;
-  font-size: 0.68rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 500;
-  color: var(--color-text-muted);
-  text-align: right;
-}
-
-.handbook-toc__text {
-  flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.handbook-toc__link:hover {
-  color: var(--color-text-primary);
-  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
-}
-
-.handbook-toc__item[data-active="true"] > .handbook-toc__link {
-  color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 9%, transparent);
-  border-left-color: var(--color-accent);
-  font-weight: 600;
-}
-
-.handbook-toc__item[data-active="true"] > .handbook-toc__link::before {
-  color: var(--color-accent);
-}
-
-@media (max-width: 1024px) {
-  .handbook-toc {
-    display: none;
-  }
 }
 
 /* ================================================================

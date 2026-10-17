@@ -109,4 +109,10 @@ const mobile = css.slice(mobileAt, css.indexOf('\n}\n', mobileAt));
 assert(/\.handbook-entry \.handbook-detail-title\s*\{[^}]*font-size:\s*2\.4rem/.test(mobile), 'mobile headword 2.4rem');
 assert(/\.handbook-news-mentions a\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto/.test(mobile), 'mobile news rows wrap');
 
+// unused CSS removed (Task 4): the TOC was page-only, the rail search lived in the removed rail
+for (const gone of ['.handbook-toc', 'HandbookSectionNav', '.newsprint-rail-search']) {
+  assert(!css.includes(gone), `unused CSS removed: ${gone}`);
+}
+assert(css.includes('  .handbook-search-sticky--detail {\n    display: none;'), 'desktop still hides the main-column search');
+
 console.log('handbook-term-entry.test.cjs passed');

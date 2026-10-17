@@ -44,7 +44,6 @@ for (const body of rules('.handbook-detail-title')) {
 assert(rule('.handbook-detail-meta').includes('var(--color-accent)'), 'detail category label is accent');
 assert(/border:\s*none/.test(rule('.handbook-level-switcher')), 'level switcher has no box border');
 assert(rule('.handbook-level-btn--active::after').includes('var(--color-accent)'), 'active level marked by an accent dot');
-assert(!rule('.handbook-toc__title').includes('uppercase'), 'toc title not uppercase');
 assert(!rule('.handbook-section-label').includes('uppercase'), 'section label not uppercase');
 
 const hbMobileAt = css.indexOf('/* Handbook index: mobile */');
