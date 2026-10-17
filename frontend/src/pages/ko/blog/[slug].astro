@@ -6,11 +6,10 @@ import { t } from '../../../i18n/index';
 import { supabase } from '../../../lib/supabase';
 import { getBlogDetailPageData } from '../../../lib/pageData/blogDetailPage';
 import { fetchCategories } from '../../../lib/pageData/blogCategories';
+import { locatePost, toSerialProps } from '../../../lib/blogSerial.js';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
 import BlogShell from '../../../components/blog/BlogShell.astro';
 import BlogArticleLayout from '../../../components/blog/BlogArticleLayout.astro';
-import BlogTOC from '../../../components/blog/BlogTOC.astro';
-import ReadingActionsRail from '../../../components/common/ReadingActionsRail.astro';
 
 const { slug } = Astro.params;
 const pageSlug = slug ?? '';
@@ -20,7 +19,7 @@ const {
   post,
   postError,
   articleData,
-  nextPost,
+  recentPosts,
   pairedSlug,
   isBookmarked,
   isLiked,
@@ -29,7 +28,6 @@ const {
   handbookTermsJson,
   hasTerms,
   htmlContent,
-  sidebarPosts,
 } = await getBlogDetailPageData({
   locale: 'ko',
   slug: pageSlug,
@@ -44,6 +42,8 @@ if (postError) {
 }
 
 const dbCategories = supabase ? await fetchCategories(supabase) : [];
+// Series position (episode, previous/next) from the same posts and rules as the blog list.
+const serial = toSerialProps(locatePost(recentPosts, dbCategories, pageSlug), dbCategories, 'ko', post?.category);
 
 const user = Astro.locals.user;
 const accessToken = Astro.locals.accessToken;
@@ -54,24 +54,7 @@ const altSlugValue = pairedSlug || undefined;
 ---
 
 <MainLayout title={pageTitle} description={pageDescription} locale="ko" slug={`blog/${slug}/`} altSlug={altSlugValue} article={articleData} previewMode={previewMode} needsKatex={true}>
-  <BlogShell
-    locale="ko"
-    sidebarPosts={sidebarPosts}
-    currentSlug={pageSlug}
-    currentCategory={post?.category}
-    totalCount={sidebarPosts.length}
-    mode="detail"
-    showTOC={!!post}
-  >
-    <!-- Mobile toggle -->
-    <div class="blog-mobile-toolbar">
-      <button class="blog-mobile-toggle" data-sidebar-toggle aria-label="메뉴">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M3 5h14M3 10h14M3 15h14" />
-        </svg>
-      </button>
-    </div>
-
+  <BlogShell locale="ko" sidebar={false}>
     {postError ? (
       <NewsprintNotice variant="error" message={t.ko['blog.error']} linkHref="/ko/blog/" linkLabel={t.ko['blog.back']} />
     ) : !post ? (
@@ -82,13 +65,11 @@ const altSlugValue = pairedSlug || undefined;
         slug={pageSlug}
         title={post.title}
         excerpt={post.excerpt}
-        category={post.category}
         publishedAt={post.published_at}
         readingTimeMin={post.reading_time_min}
         tags={post.tags}
         htmlContent={htmlContent}
-        backLabel={t.ko['blog.back']}
-        nextPost={nextPost}
+        serial={serial}
         basePath="/ko/blog"
         isBookmarked={isBookmarked}
         itemId={post.id}
@@ -99,33 +80,8 @@ const altSlugValue = pairedSlug || undefined;
         commentCount={commentCount}
         isLiked={isLiked}
         previewMode={previewMode}
-        showStickyActions={false}
-        categories={dbCategories}
       />
     )}
-
-    <Fragment slot="toc">
-      <ReadingActionsRail
-        className="blog-rail"
-        contentClassName="blog-rail__content"
-        locale="ko"
-        variant="blog"
-        title={post?.title || pageTitle}
-        shareUrl={`${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}/ko/blog/${pageSlug}/`}
-        itemId={post?.id}
-        itemType="blog"
-        isBookmarked={isBookmarked}
-        previewMode={previewMode}
-        isAuthenticated={!!user && !!accessToken}
-        articleRedirect={`/ko/blog/${pageSlug}/`}
-        commentRedirect={`/ko/blog/${pageSlug}/#comments`}
-        likeCount={likeCount}
-        commentCount={commentCount}
-        isLiked={isLiked}
-      >
-        <BlogTOC locale="ko" />
-      </ReadingActionsRail>
-    </Fragment>
   </BlogShell>
 </MainLayout>
 

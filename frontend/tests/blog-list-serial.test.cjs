@@ -7,13 +7,16 @@ const assert = require('assert');
 const src = path.join(__dirname, '..', 'src');
 const read = (p) => fs.readFileSync(path.join(src, p), 'utf8');
 
-// shell: sidebar prop (default true). Only the list passes false; category and detail pages keep the sidebar.
+// shell: sidebar prop (default true). The list and post pages pass false; category pages keep the sidebar.
 const shell = read('components/blog/BlogShell.astro');
 assert(shell.includes('sidebar?: boolean;') && shell.includes('sidebar = true,'), 'shell: sidebar prop defaults to true');
 assert(/\{sidebar && \(\s*<>\s*<BlogSidebar[\s\S]*?data-sidebar-overlay><\/div>\s*<\/>\s*\)\}/.test(shell), 'shell: sidebar + overlay only when sidebar');
 assert(shell.includes("class:list={['blog-shell', { 'blog-shell--single': !sidebar }]}"), 'shell: single-column modifier');
-for (const p of ['pages/ko/blog/[slug].astro', 'pages/en/blog/[slug].astro', 'pages/ko/blog/category/[slug].astro', 'pages/en/blog/category/[slug].astro']) {
+for (const p of ['pages/ko/blog/category/[slug].astro', 'pages/en/blog/category/[slug].astro']) {
   assert(!read(p).includes('sidebar={false}'), `${p} keeps the sidebar`);
+}
+for (const p of ['pages/ko/blog/[slug].astro', 'pages/en/blog/[slug].astro']) {
+  assert(read(p).includes('sidebar={false}'), `${p} is one column (blog post A)`);
 }
 
 // pages

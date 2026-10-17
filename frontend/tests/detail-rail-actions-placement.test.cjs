@@ -33,13 +33,14 @@ assertIncludes(blogLayout, 'showStickyActions = true', 'blog layout sticky actio
 
 if (newsEn.includes('showStickyActions={false}')) throw new Error('news EN uses inline reading actions');
 if (newsKo.includes('showStickyActions={false}')) throw new Error('news KO uses inline reading actions');
-assertIncludes(blogEn, 'showStickyActions={false}', 'blog EN inline actions disabled');
-assertIncludes(blogKo, 'showStickyActions={false}', 'blog KO inline actions disabled');
+// Blog post A (2026-10-17): blog uses the inline actions too (right 72px column from 1024px, bottom bar below).
+if (blogEn.includes('showStickyActions={false}')) throw new Error('blog EN uses inline reading actions');
+if (blogKo.includes('showStickyActions={false}')) throw new Error('blog KO uses inline reading actions');
 
 if (newsEn.includes('<ReadingActionsRail')) throw new Error('news EN has no right rail');
 if (newsKo.includes('<ReadingActionsRail')) throw new Error('news KO has no right rail');
-assertIncludes(blogEn, '<ReadingActionsRail', 'blog EN right rail action wrapper');
-assertIncludes(blogKo, '<ReadingActionsRail', 'blog KO right rail action wrapper');
+if (blogEn.includes('<ReadingActionsRail')) throw new Error('blog EN has no right rail');
+if (blogKo.includes('<ReadingActionsRail')) throw new Error('blog KO has no right rail');
 if (handbookEn.includes('<ReadingActionsRail')) throw new Error('handbook EN has no right rail');
 if (handbookKo.includes('<ReadingActionsRail')) throw new Error('handbook KO has no right rail');
 assertIncludes(handbookEn, '<StickyReadingActions', 'handbook EN inline term actions');

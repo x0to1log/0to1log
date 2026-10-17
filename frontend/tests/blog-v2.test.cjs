@@ -50,17 +50,17 @@ assert(!rule('.blog-folder-btn--group').includes('uppercase'), 'sidebar group la
 const layout = read('components/blog/BlogArticleLayout.astro');
 assert(!layout.includes('📘') && !layout.includes('blog-article-icon'), 'hardcoded 📘 article icon removed');
 assert(layout.includes('data-admin-only') && layout.includes('newsprint-comments') && layout.includes('data-comment-form') && layout.includes('ContentFeedback') && layout.includes('id="persona-data"'), 'blog article keeps admin/comments/feedback/persona hooks');
-assert(/class="blog-article-category"[^>]*--cat-color/.test(layout), 'article meta shows the category as a color dot label');
+assert(/class="blog-category-badge blog-post-byline-series"[^>]*--cat-color/.test(layout), 'byline shows the series as a color dot label');
 assert(!/style=\{`background:/.test(layout), 'article tags have no inline colors');
 assert(/font-weight:\s*700/.test(rule('.blog-article-title')), 'article title 700');
-assert(!rule('.blog-toc-header').includes('uppercase'), 'toc header not uppercase');
+assert(!rule('.blog-post-toc-summary').includes('uppercase'), 'contents label not uppercase');
 for (const p of ['pages/ko/blog/[slug].astro', 'pages/en/blog/[slug].astro']) {
   const f = read(p);
   assert(f.includes('onSessionReady') && f.includes('recordReadingHistory') && f.includes('handbook-terms-data'), `${p} keeps session/reading-history/terms hooks`);
 }
 
 // Follow-up fixes
-assert(rule('.blog-article-meta').includes('var(--font-blog-ui)'), 'article meta uses the blog UI font');
+assert(rule('.blog-post-byline-meta').includes('var(--font-blog-ui)'), 'byline uses the blog UI font');
 for (const d of ['components/blog', 'pages/ko/blog', 'pages/en/blog']) {
   for (const f of fs.readdirSync(path.join(src, d))) {
     if (!f.endsWith('.astro')) continue;

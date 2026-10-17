@@ -1,5 +1,4 @@
 import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markdown';
-import { buildBlogSidebarDataset, toSidebarPost } from './blogSidebar';
 import { fetchPublicTermIndex } from './publicTermIndex';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 import { pickReferencedTerms } from './termReferences';
@@ -39,9 +38,8 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
     }
   }
 
-  let sidebarRows: any[] = [];
+  let listRows: any[] = [];
   let articleData: any = undefined;
-  let nextPost: { title: string; slug: string; category: string | null } | null = null;
   let pairedSlug: string | null = null;
   let isBookmarked = false;
   let isLiked = false;
@@ -88,30 +86,20 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
     // Track 2: remaining DB queries (all parallel).
     // isBookmarked/isLiked stay false — hydrated client-side so HTML is cacheable.
     const [
-      sidebarRes,
-      nextRes,
+      listRes,
       pairedRes,
       likeCountRes,
       commentCountRes,
     ] = await Promise.all([
+      // Same window, order and columns as the blog list page (created_at desc, 100 posts), so the
+      // episode number and previous/next computed by locatePost() match the list.
       publicSupabase
         .from('blog_posts')
         .select('title, slug, category, published_at')
         .eq('status', 'published')
         .eq('locale', locale)
-        .order('published_at', { ascending: false })
-        .limit(50),
-      post.published_at
-        ? publicSupabase
-            .from('blog_posts')
-            .select('title, slug, category')
-            .eq('status', 'published')
-            .eq('locale', locale)
-            .lt('published_at', post.published_at)
-            .order('published_at', { ascending: false })
-            .limit(1)
-            .single()
-        : Promise.resolve({ data: null }),
+        .order('created_at', { ascending: false })
+        .limit(100),
       post.translation_group_id
         ? (previewMode && previewSupabase ? previewSupabase : publicSupabase)
             .from('blog_posts')
@@ -136,8 +124,7 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
     handbookTermsJson = renderResult.termsJson;
     htmlContent = renderResult.html;
 
-    sidebarRows = sidebarRes.data ?? [];
-    nextPost = nextRes.data ?? null;
+    listRows = listRes.data ?? [];
     pairedSlug = pairedRes.data?.slug ?? null;
     likeCount = likeCountRes.count ?? 0;
     commentCount = commentCountRes.count ?? 0;
@@ -148,24 +135,12 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
   }
 
   const hasTerms = handbookTermsMap.size > 0;
-  const sidebarPosts = buildBlogSidebarDataset(
-    sidebarRows.map((item) => toSidebarPost(item)),
-    post
-      ? toSidebarPost({
-          title: post.title,
-          slug: post.slug,
-          category: post.category,
-          published_at: post.published_at,
-        })
-      : null,
-  );
 
   return {
     post,
     postError,
-    recentPosts: sidebarRows,
+    recentPosts: listRows,
     articleData,
-    nextPost,
     pairedSlug,
     isBookmarked: previewMode ? false : isBookmarked,
     isLiked: previewMode ? false : isLiked,
@@ -174,6 +149,5 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
     handbookTermsJson: pickReferencedTerms(handbookTermsJson, [htmlContent]),
     hasTerms,
     htmlContent,
-    sidebarPosts,
   };
 }

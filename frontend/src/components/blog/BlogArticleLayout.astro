@@ -1,24 +1,39 @@
 ---
-import BlogBreadcrumb from './BlogBreadcrumb.astro';
+// Blog post A (one column): crumb, title, dek, byline, contents, body + inline actions,
+// then tags, admin actions, feedback, previous/next, series list and comments.
+// Series position comes from the page (locatePost + toSerialProps in lib/blogSerial.js).
+// Public HTML stays user-neutral: bookmark/like state is hydrated client-side.
 import PreviewReadonlyBanner from '../common/PreviewReadonlyBanner.astro';
 import StickyReadingActions from '../common/StickyReadingActions.astro';
 import ReadingProgressBar from '../common/ReadingProgressBar.astro';
 import ContentFeedback from '../common/ContentFeedback.astro';
-import { normalizeCategorySlug } from '../../lib/categories';
-import type { BlogCategory } from '../../lib/pageData/blogCategories';
+import { formatBlogDate } from '../../lib/blogSerial.js';
+import { t } from '../../i18n/index';
+
+interface SerialLink {
+  title: string;
+  slug: string;
+}
 
 interface Props {
   locale: 'en' | 'ko';
   slug: string;
   title: string;
   excerpt?: string | null;
-  category?: string | null;
   publishedAt?: string | null;
   readingTimeMin?: number | null;
   tags?: string[] | null;
   htmlContent: string;
-  backLabel: string;
-  nextPost?: { title: string; slug: string; category?: string | null } | null;
+  serial: {
+    categoryLabel: string | null;
+    categoryHref: string | null;
+    categoryColor: string | null;
+    episode: number | null;
+    total: number | null;
+    episodes: SerialLink[];
+    prev: SerialLink | null;
+    next: SerialLink | null;
+  };
   isBookmarked?: boolean;
   itemId?: string;
   itemType?: 'news' | 'blog' | 'term';
@@ -32,7 +47,6 @@ interface Props {
   personaHtmlMap?: Record<string, string>;
   previewMode?: boolean;
   showStickyActions?: boolean;
-  categories?: BlogCategory[];
 }
 
 const {
@@ -40,13 +54,11 @@ const {
   slug,
   title,
   excerpt,
-  category,
   publishedAt,
   readingTimeMin,
   tags,
   htmlContent,
-  backLabel,
-  nextPost = null,
+  serial,
   isBookmarked = false,
   itemId,
   itemType,
@@ -60,7 +72,6 @@ const {
   personaHtmlMap,
   previewMode = false,
   showStickyActions = true,
-  categories = [],
 } = Astro.props;
 
 const personaLabels: Record<string, Record<string, string>> = {
@@ -69,22 +80,18 @@ const personaLabels: Record<string, Record<string, string>> = {
 };
 const showPersonaSwitcher = personaHtmlMap && Object.keys(personaHtmlMap).length > 1;
 
-const dateLabel = publishedAt
-  ? new Date(publishedAt).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US')
-  : null;
-const readingLabel = readingTimeMin
-  ? locale === 'ko'
-    ? `약 ${readingTimeMin}분`
-    : `${readingTimeMin} min read`
-  : null;
-const normalizedCat = normalizeCategorySlug(category);
-const catMatch = normalizedCat ? categories.find(c => c.slug === normalizedCat) : null;
-const categoryLabel = catMatch ? (locale === 'ko' ? catMatch.label_ko : catMatch.label_en) : normalizedCat;
-const catColor = catMatch?.color ?? 'var(--color-accent)';
-const nextNormCat = normalizeCategorySlug(nextPost?.category);
-const nextCategoryLabel = nextNormCat
-  ? ((locale === 'ko' ? categories.find(c => c.slug === nextNormCat)?.label_ko : categories.find(c => c.slug === nextNormCat)?.label_en) ?? nextNormCat)
-  : null;
+const isKo = locale === 'ko';
+const episode = serial.episode ?? 0;
+const total = serial.total ?? 0;
+const isSeries = episode > 0 && total > 0;
+const ep = (n: number) => (isKo ? `${n}화` : `Ep. ${n}`);
+
+const dateLabel = formatBlogDate(publishedAt, locale, { year: true });
+const readingLabel = readingTimeMin ? (isKo ? `약 ${readingTimeMin}분` : `${readingTimeMin} min read`) : '';
+const bylineSeries = isSeries && serial.categoryLabel
+  ? (isKo ? `${serial.categoryLabel} · ${total}편 중 ${episode}화` : `${serial.categoryLabel} · Ep. ${episode} of ${total}`)
+  : '';
+const catColor = serial.categoryColor || 'var(--color-border)';
 
 const resolvedBasePath = basePath || `/${locale}/blog`;
 const shareUrl = `${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}${resolvedBasePath}/${slug}/`;
@@ -94,34 +101,56 @@ const editHref = `/admin/blog/edit/${slug}`;
 const unpublishApi = '/api/admin/blog/status';
 
 const copy = {
-  comments: locale === 'ko' ? '댓글' : 'Comments',
-  writeComment: locale === 'ko' ? '댓글을 작성해주세요...' : 'Write a comment...',
-  postComment: locale === 'ko' ? '게시' : 'Post',
-  loginToComment: locale === 'ko' ? '댓글을 작성하려면 로그인하세요' : 'Log in to comment',
-  deleteConfirm: locale === 'ko' ? '댓글을 삭제할까요?' : 'Delete this comment?',
-  copied: locale === 'ko' ? '복사됨' : 'Copied',
+  crumb: isKo ? '글 위치' : 'Post location',
+  toc: isKo ? '이 글의 차례' : 'In this post',
+  pager: isKo ? '이전·다음 글' : 'Previous and next posts',
+  prev: isSeries ? `← ${ep(episode - 1)}` : (isKo ? '← 이전 글' : '← Previous'),
+  next: isSeries ? `${ep(episode + 1)} →` : (isKo ? '다음 글 →' : 'Next →'),
+  seriesMore: isKo ? `연재 ${total}편 · 전체 보기 →` : `${total} post${total === 1 ? '' : 's'} · View all →`,
+  seriesCount: isKo ? `연재 ${total}편` : `${total} post${total === 1 ? '' : 's'}`,
+  readingNow: isKo ? ' · 지금 읽는 글' : ' · Reading now',
+  comments: isKo ? '댓글' : 'Comments',
+  writeComment: isKo ? '댓글을 작성해주세요...' : 'Write a comment...',
+  postComment: isKo ? '게시' : 'Post',
+  loginToComment: isKo ? '댓글을 작성하려면 로그인하세요' : 'Log in to comment',
 };
 
 const previewCommentsReadonly = 'Preview mode · comments are read-only.';
 ---
 
 <article class="newsprint-article">
-  <BlogBreadcrumb locale={locale} category={category} title={title} categories={categories} />
-  {previewMode && (
-    <>
-      <!-- Admin preview -->
-      <PreviewReadonlyBanner locale={locale} />
-    </>
-  )}
-
   <header class="blog-article-header">
+    <nav class="blog-post-crumb" aria-label={copy.crumb}>
+      <a href={`/${locale}/blog/`}>← {t[locale]['blog.title']}</a>
+      {serial.categoryLabel && (
+        <>
+          <span class="blog-post-crumb-sep" aria-hidden="true">·</span>
+          {serial.categoryHref ? <a href={serial.categoryHref}>{serial.categoryLabel}</a> : <span>{serial.categoryLabel}</span>}
+        </>
+      )}
+      {isSeries && (
+        <>
+          <span class="blog-post-crumb-sep" aria-hidden="true">·</span>
+          <span>{ep(episode)}</span>
+        </>
+      )}
+    </nav>
+    {previewMode && (
+      <>
+        <!-- Admin preview -->
+        <PreviewReadonlyBanner locale={locale} />
+      </>
+    )}
     <h1 class="blog-article-title">{title}</h1>
-    <div class="blog-article-meta">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      {dateLabel && <span>{dateLabel}</span>}
-      {readingLabel && <><span>&middot;</span><span>{readingLabel}</span></>}
-      {categoryLabel && <><span>&middot;</span><span class="blog-article-category" style={`--cat-color: ${catColor}`}>{categoryLabel}</span></>}
+    {excerpt && <p class="blog-post-dek">{excerpt}</p>}
+    <div class="blog-post-byline">
+      <p class="blog-post-byline-meta"><strong>Amy</strong>{dateLabel && ` · ${dateLabel}`}{readingLabel && ` · ${readingLabel}`}</p>
+      {bylineSeries && <span class="blog-category-badge blog-post-byline-series" style={`--cat-color: ${catColor}`}>{bylineSeries}</span>}
     </div>
+    <details class="blog-post-toc" hidden>
+      <summary class="blog-post-toc-summary">{copy.toc} (<span data-toc-count>0</span>)</summary>
+      <ol class="blog-post-toc-list"></ol>
+    </details>
   </header>
 
   {showPersonaSwitcher && (
@@ -138,13 +167,6 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
     </div>
     <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)}></template>
   )}
-
-  <div class="persona-float persona-float--back">
-    <a href={`${resolvedBasePath}/`} class="persona-float-btn persona-float-btn--link">
-      {backLabel}
-      <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-left:0.35em;flex-shrink:0;"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
-    </a>
-  </div>
 
   <div class={`reading-actions-layout ${showStickyActions ? 'reading-actions-layout--article' : ''}`.trim()}>
     {showStickyActions && (
@@ -170,105 +192,131 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
         <Fragment set:html={htmlContent} />
       </div>
 
-  {tags && tags.length > 0 && (
-    <div class="blog-tags-footer">
-      {tags.map(tag => (
-        <span class="blog-mono-tag">{tag}</span>
-      ))}
-    </div>
-  )}
-
-
-  <!-- Admin Actions (admin only) -->
-  {itemId && !previewMode && (
-    <div class="newsprint-admin-actions" data-toolbar-id={itemId} data-toolbar-api={unpublishApi} data-admin-only hidden={!isAdmin}>
-      <a href={editHref} class="newsprint-admin-action-btn">Edit</a>
-      <button type="button" class="newsprint-admin-action-btn newsprint-admin-action-btn--unpublish">Unpublish</button>
-    </div>
-  )}
-
-  <ContentFeedback
-    sourceType="blog"
-    sourceId={itemId ?? ''}
-    locale={locale}
-    isAuthenticated={isAuthenticated}
-    loginUrl={`/api/auth/login?redirect=${encodeURIComponent(Astro.url.pathname)}`}
-    previewMode={previewMode}
-  />
-
-  <div data-reading-end></div>
-
-  <!-- Comments Section -->
-  <section
-    id="comments"
-    class="newsprint-comments"
-    data-preview-mode={previewMode ? 'true' : 'false'}
-    data-post-id={itemId}
-    data-content-type={itemType === 'blog' ? 'blog' : 'news'}
-    data-locale={locale}
-    data-authenticated={isAuthenticated ? 'true' : 'false'}
-    data-comment-redirect={commentRedirect}
-  >
-    <h3 class="newsprint-comments-title">{copy.comments} (<span data-comment-total>{commentCount}</span>)</h3>
-    {previewMode && (
-      <>
-        <!-- Preview mode 쨌 comments are read-only. -->
-        <p class="newsprint-preview-note">{previewCommentsReadonly}</p>
-      </>
-    )}
-    <div data-comments-list class="newsprint-comments-list"></div>
-    <div data-comment-form-wrapper>
-      <form data-comment-form class="newsprint-comment-form" style="display:none;">
-        <textarea
-          data-comment-input
-          placeholder={copy.writeComment}
-          maxlength="2000"
-          rows="3"
-          class="newsprint-comment-input"
-        ></textarea>
-        <div class="newsprint-comment-form-actions">
-          <span data-comment-charcount class="newsprint-comment-charcount"></span>
-          <button type="submit" class="newsprint-comment-submit">{copy.postComment}</button>
+      {tags && tags.length > 0 && (
+        <div class="blog-tags-footer">
+          {tags.map(tag => (
+            <span class="blog-mono-tag">{tag}</span>
+          ))}
         </div>
-      </form>
-      <button
-        type="button"
-        data-comment-login
-        class="newsprint-comment-login"
-        data-auth-gate
-        data-auth-action="comment"
-        data-auth-redirect={commentRedirect}
-        style="display:none;"
-      >
-        <div class="newsprint-comment-login-box">
-          <div class="newsprint-comment-login-input" aria-hidden="true">{copy.writeComment}</div>
-          <div class="newsprint-comment-form-actions">
-            <span class="newsprint-comment-charcount">0/2000</span>
-            <span class="newsprint-comment-submit newsprint-comment-submit--disabled" aria-hidden="true">{copy.postComment}</span>
-          </div>
-          <span class="newsprint-comment-login-hint">{copy.loginToComment}</span>
-        </div>
-      </button>
-    </div>
-  </section>
-
-  <nav class="newsprint-article-nav" aria-label={locale === 'ko' ? '글 탐색' : 'Article navigation'}>
-    <div class="newsprint-article-nav-row">
-      <a class="newsprint-nav-back" href={`${resolvedBasePath}/`}>
-        <span class="newsprint-nav-back-arrow">&larr;</span>
-        <span>{backLabel}</span>
-      </a>
-      {nextPost && (
-        <a class="newsprint-nav-next" href={`${resolvedBasePath}/${nextPost.slug}/`}>
-          <span class="newsprint-nav-next-arrow">&rarr;</span>
-          <div class="newsprint-nav-next-title">{nextPost.title}</div>
-          {nextCategoryLabel && (
-            <div class="newsprint-nav-next-meta">{nextCategoryLabel}</div>
-          )}
-        </a>
       )}
-    </div>
-      </nav>
+
+      <!-- Admin Actions (admin only) -->
+      {itemId && !previewMode && (
+        <div class="newsprint-admin-actions" data-toolbar-id={itemId} data-toolbar-api={unpublishApi} data-admin-only hidden={!isAdmin}>
+          <a href={editHref} class="newsprint-admin-action-btn">Edit</a>
+          <button type="button" class="newsprint-admin-action-btn newsprint-admin-action-btn--unpublish">Unpublish</button>
+        </div>
+      )}
+
+      <ContentFeedback
+        sourceType="blog"
+        sourceId={itemId ?? ''}
+        locale={locale}
+        isAuthenticated={isAuthenticated}
+        loginUrl={`/api/auth/login?redirect=${encodeURIComponent(Astro.url.pathname)}`}
+        previewMode={previewMode}
+      />
+
+      <div data-reading-end></div>
+
+      {(serial.prev || serial.next) && (
+        <nav class="blog-post-pager" aria-label={copy.pager}>
+          {serial.prev && (
+            <a class="blog-post-pager-link" href={`${resolvedBasePath}/${serial.prev.slug}/`}>
+              <span class="blog-post-pager-label">{copy.prev}</span>
+              <span class="blog-post-pager-title">{serial.prev.title}</span>
+            </a>
+          )}
+          {serial.next && (
+            <a class="blog-post-pager-link blog-post-pager-link--next" href={`${resolvedBasePath}/${serial.next.slug}/`}>
+              <span class="blog-post-pager-label">{copy.next}</span>
+              <span class="blog-post-pager-title">{serial.next.title}</span>
+            </a>
+          )}
+        </nav>
+      )}
+
+      {isSeries && (
+        <aside class="blog-post-series" aria-labelledby="blog-post-series-title">
+          <div class="blog-post-series-head">
+            <p id="blog-post-series-title" class="blog-post-series-title">{serial.categoryLabel}</p>
+            {serial.categoryHref ? (
+              <a class="blog-post-series-more" href={serial.categoryHref}>{copy.seriesMore}</a>
+            ) : (
+              <span class="blog-post-series-more">{copy.seriesCount}</span>
+            )}
+          </div>
+          <ol class="blog-post-series-list">
+            {serial.episodes.map((item, i) => (
+              i + 1 === episode ? (
+                <li class="blog-post-series-item blog-post-series-item--current">
+                  <span class="blog-post-series-ep">{ep(i + 1)}</span>
+                  <span class="blog-post-series-name" aria-current="page">{item.title}<span class="blog-post-series-now">{copy.readingNow}</span></span>
+                </li>
+              ) : (
+                <li class="blog-post-series-item">
+                  <span class="blog-post-series-ep">{ep(i + 1)}</span>
+                  <a class="blog-post-series-name" href={`${resolvedBasePath}/${item.slug}/`}>{item.title}</a>
+                </li>
+              )
+            ))}
+          </ol>
+        </aside>
+      )}
+
+      <!-- Comments Section -->
+      <section
+        id="comments"
+        class="newsprint-comments"
+        data-preview-mode={previewMode ? 'true' : 'false'}
+        data-post-id={itemId}
+        data-content-type={itemType === 'blog' ? 'blog' : 'news'}
+        data-locale={locale}
+        data-authenticated={isAuthenticated ? 'true' : 'false'}
+        data-comment-redirect={commentRedirect}
+      >
+        <h2 class="newsprint-comments-title">{copy.comments} (<span data-comment-total>{commentCount}</span>)</h2>
+        {previewMode && (
+          <>
+            <!-- Preview mode · comments are read-only. -->
+            <p class="newsprint-preview-note">{previewCommentsReadonly}</p>
+          </>
+        )}
+        <div data-comments-list class="newsprint-comments-list"></div>
+        <div data-comment-form-wrapper>
+          <form data-comment-form class="newsprint-comment-form" style="display:none;">
+            <textarea
+              data-comment-input
+              placeholder={copy.writeComment}
+              maxlength="2000"
+              rows="3"
+              class="newsprint-comment-input"
+            ></textarea>
+            <div class="newsprint-comment-form-actions">
+              <span data-comment-charcount class="newsprint-comment-charcount"></span>
+              <button type="submit" class="newsprint-comment-submit">{copy.postComment}</button>
+            </div>
+          </form>
+          <button
+            type="button"
+            data-comment-login
+            class="newsprint-comment-login"
+            data-auth-gate
+            data-auth-action="comment"
+            data-auth-redirect={commentRedirect}
+            style="display:none;"
+          >
+            <div class="newsprint-comment-login-box">
+              <div class="newsprint-comment-login-input" aria-hidden="true">{copy.writeComment}</div>
+              <div class="newsprint-comment-form-actions">
+                <span class="newsprint-comment-charcount">0/2000</span>
+                <span class="newsprint-comment-submit newsprint-comment-submit--disabled" aria-hidden="true">{copy.postComment}</span>
+              </div>
+              <span class="newsprint-comment-login-hint">{copy.loginToComment}</span>
+            </div>
+          </button>
+        </div>
+      </section>
     </div>
   </div>
 </article>
@@ -276,6 +324,78 @@ const previewCommentsReadonly = 'Preview mode · comments are read-only.';
 <ReadingProgressBar locale={locale} />
 
 <script src="../../scripts/share.ts"></script>
+
+<script>
+  // "이 글의 차례" / "In this post": the body's h2s in document order (h3 excluded), rebuilt on every page load.
+  // Heading ids keep the rule of the removed right-rail contents: existing id → latin slug → section-{n}; duplicates get -{k}.
+  // Stays hidden below two headings. Opens by default from 1024px (CSS cannot set the open attribute).
+  function slugifyHeading(value: string): string {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9\-]/g, '');
+  }
+
+  function readHeaderOffsetPx(): number {
+    const shell = document.querySelector('.blog-shell');
+    const styles = getComputedStyle(shell || document.documentElement);
+    const rawValue = styles.getPropertyValue('--blog-shell-header-offset').trim();
+    const numericValue = Number.parseFloat(rawValue);
+    const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
+    if (!Number.isFinite(numericValue)) {
+      return 80;
+    }
+
+    return rawValue.endsWith('rem') ? numericValue * rootFontSize : numericValue;
+  }
+
+  function initBlogPostToc(): void {
+    const toc = document.querySelector<HTMLDetailsElement>('details.blog-post-toc');
+    const list = toc?.querySelector<HTMLOListElement>('.blog-post-toc-list');
+    if (!toc || !list) return;
+
+    list.innerHTML = '';
+    const prose = document.querySelector('.newsprint-prose');
+    const headings = prose
+      ? Array.from(prose.querySelectorAll<HTMLHeadingElement>('h2')).filter((heading) => !!heading.textContent?.trim())
+      : [];
+    if (headings.length < 2) {
+      toc.hidden = true;
+      return;
+    }
+
+    const usedIds = new Map<string, number>();
+    headings.forEach((heading, index) => {
+      const baseId = heading.id || slugifyHeading(heading.textContent || '') || `section-${index + 1}`;
+      const occurrence = (usedIds.get(baseId) || 0) + 1;
+      usedIds.set(baseId, occurrence);
+      heading.id = occurrence === 1 ? baseId : `${baseId}-${occurrence}`;
+
+      const link = document.createElement('a');
+      link.className = 'blog-post-toc-link';
+      link.href = `#${heading.id}`;
+      link.textContent = heading.textContent?.trim() || '';
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        const top = window.scrollY + heading.getBoundingClientRect().top - readHeaderOffsetPx() - 24;
+        window.scrollTo({ top, behavior: 'smooth' });
+      });
+
+      const item = document.createElement('li');
+      item.appendChild(link);
+      list.appendChild(item);
+    });
+
+    const count = toc.querySelector('[data-toc-count]');
+    if (count) count.textContent = String(headings.length);
+    toc.open = window.matchMedia('(min-width: 1024px)').matches;
+    toc.hidden = false;
+  }
+
+  document.addEventListener('astro:page-load', initBlogPostToc);
+</script>
 
 <script>
   function initPersonaSwitcher() {

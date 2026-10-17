@@ -81,10 +81,8 @@ function assertNoInlineToolbar(relativePath) {
   );
 }
 
-// The list page has no sidebar (and no drawer toggle); category pages keep the toolbar.
+// The list and post pages have no sidebar (and no drawer toggle); category pages keep the toolbar.
 assertNoInlineToolbar('frontend/src/pages/ko/blog/category/[slug].astro');
 assertNoInlineToolbar('frontend/src/pages/en/blog/category/[slug].astro');
-assertNoInlineToolbar('frontend/src/pages/ko/blog/[slug].astro');
-assertNoInlineToolbar('frontend/src/pages/en/blog/[slug].astro');
 
 console.log('blog-sidebar-layout.test.cjs passed');

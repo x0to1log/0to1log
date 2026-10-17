@@ -19,10 +19,12 @@ assert(helper.includes('buildBlogSidebarDataset'), 'Shared sidebar helper must e
 assert(helper.includes('getBlogSidebarCategoryState'), 'Shared sidebar helper must expose category display state');
 assert(helper.includes('getBlogSidebarGroupExpanded'), 'Shared sidebar helper must expose group expansion logic');
 
+// Blog post A (2026-10-17): the post page has no sidebar. Its list window feeds locatePost (series position),
+// so it keeps the current post and the list page's 100-post window.
 const detailLoader = read('src/lib/pageData/blogDetailPage.ts');
-assert(detailLoader.includes("from './blogSidebar'"), 'Blog detail loader must reuse the shared sidebar helper');
-assert(!detailLoader.includes('.limit(4)'), 'Blog detail sidebar dataset must not be limited to 4 recent posts');
-assert(!detailLoader.includes(".neq('slug', pageSlug)"), 'Blog detail sidebar dataset must not exclude the current slug');
+assert(!detailLoader.includes("from './blogSidebar'"), 'Blog detail loader must not build a sidebar dataset');
+assert(!detailLoader.includes('.limit(4)') && detailLoader.includes('.limit(100)'), 'Blog detail list window must match the list page (100 posts)');
+assert(!detailLoader.includes(".neq('slug', pageSlug)"), 'Blog detail list window must not exclude the current slug');
 
 const blogShell = read('src/components/blog/BlogShell.astro');
 assert(blogShell.includes('mode?: BlogSidebarMode;'), 'Blog shell must expose an explicit sidebar mode prop');
@@ -31,12 +33,10 @@ assert(blogShell.includes('mode={mode}'), 'Blog shell must pass the sidebar mode
 assert(blogShell.includes('currentCategory={currentCategory}'), 'Blog shell must pass the current category through to BlogSidebar');
 
 const koDetail = read('src/pages/ko/blog/[slug].astro');
-assert(koDetail.includes('mode="detail"'), 'Korean blog detail page must render sidebar in detail mode');
-assert(koDetail.includes('currentCategory={post?.category}'), 'Korean blog detail page must pass the current post category to the sidebar');
+assert(koDetail.includes('sidebar={false}') && !koDetail.includes('mode="detail"'), 'Korean blog detail page must render without the sidebar');
 
 const enDetail = read('src/pages/en/blog/[slug].astro');
-assert(enDetail.includes('mode="detail"'), 'English blog detail page must render sidebar in detail mode');
-assert(enDetail.includes('currentCategory={post?.category}'), 'English blog detail page must pass the current post category to the sidebar');
+assert(enDetail.includes('sidebar={false}') && !enDetail.includes('mode="detail"'), 'English blog detail page must render without the sidebar');
 
 // The list page (A: serial column) renders without the sidebar; category pages keep it in index mode.
 const koIndex = read('src/pages/ko/blog/index.astro');
