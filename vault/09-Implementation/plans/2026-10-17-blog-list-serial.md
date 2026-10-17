@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** ready (2026-10-17)
+**Status:** done (2026-10-17) — 실행 결과는 문서 끝 참조.
 
 **Goal:** `/ko|en/blog/`를 "마스트헤드 → 필자 줄(+글 검색) → 최신 글(+연재 요약) → 연재(분야별 회차 목록, 2열) → 짧은 글" 한 단(최대 820px) 지면으로 바꾼다. 왼쪽 사이드바·모바일 서랍 토글·분야 탭·추천 4편·"모든 글" 무한 스크롤은 목록 페이지에서 없앤다. 분야 페이지와 글 상세는 그대로다.
 
@@ -1575,3 +1575,13 @@ git commit -m "chore: remove blog featured card, tab and section header CSS"
   git commit -m "docs: record blog list serial column redesign"
   ```
   (Task 5에서 고친 다른 vault 노트가 있으면 그 경로도 `git add`에 더한다.)
+
+---
+
+## 실행 결과 (2026-10-17)
+
+- 커밋: `e6b0c0a9` 연재 칼럼 계산(blogSerial.js), `36937103` 목록을 연재 칼럼으로(바이라인·최신 글·연재·짧은 글, 목록에서 사이드바 제거), `e3cc40ee` 대표 카드·탭·섹션 머리 CSS 삭제.
+- 테스트: PASS 82, 기준선 대비 변화는 `blog-section-heading-font` FAIL→PASS 하나뿐, 신규 FAIL 0.
+- 브라우저 클릭 검증(/ko/blog/): 검색 "rag" 2건·"흐름" 1건·없는 말 → 빈 안내·지우면 11건 복원, 연재 제목 → /ko/blog/category/study/·project/, 행마다 저장 버튼 1개(11개), 최신 글 블록에는 저장 버튼 없음, 1화 = 가장 이른 글.
+- 매트릭스: 종이·순백·다크 × 1100px·375px × ko/en — 가로 넘침 0, 대비 미달 0. EN은 글 0편이라 빈 안내.
+- 회귀: 카테고리 페이지(사이드바 유지, 5건)와 글 상세(/ko/blog/ai-agent/, 사이드바 유지) 정상.

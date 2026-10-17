@@ -1,6 +1,6 @@
 # 블로그 목록 재설계 (A 연재 칼럼) — Design Spec
 
-**Status:** approved (2026-10-17)
+**Status:** implemented (2026-10-17) — [[2026-10-17-blog-list-serial]]
 **Mockup:** `.superpowers/brainstorm/blog2/blog-v1.html` (A안)
 **관련:** [[2026-10-15-site-redesign-phase7-blog]], [[2026-10-16-news-list-desks-design]]
 
