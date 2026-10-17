@@ -29,5 +29,8 @@ const handbook = fs.readFileSync(path.join(root, contracts[1][0]), 'utf8');
 for (const field of ['body_basic_ko', 'body_basic_en', 'body_advanced_ko', 'body_advanced_en', 'references_ko', 'references_en']) {
   assert.match(handbook, new RegExp(`\\b${field}\\b`), `handbook detail contract must retain ${field}`);
 }
+for (const field of ['term_type', 'facet_intent', 'facet_volatility']) {
+  assert.match(handbook, new RegExp(`'${field}'`), `handbook detail contract must include entry facet ${field}`);
+}
 
 console.log('public-detail-query-contract.test.cjs passed');

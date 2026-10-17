@@ -1,4 +1,5 @@
 import { localField } from '../handbookUtils';
+import { orderBySlugs } from '../handbookFacets.js';
 import { renderMarkdown, renderMarkdownWithTerms, renderHandbookMarkdown, type TermsMap } from '../markdown';
 import { fetchPublicTermIndex } from './publicTermIndex';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
@@ -34,6 +35,7 @@ export const HANDBOOK_DETAIL_PUBLIC_COLUMNS = [
   'definition_ko', 'definition_en', 'body_basic_ko', 'body_basic_en',
   'body_advanced_ko', 'body_advanced_en', 'hero_news_context_ko',
   'hero_news_context_en', 'references_ko', 'references_en', 'related_term_slugs',
+  'term_type', 'facet_intent', 'facet_volatility',
 ].join(', ');
 
 export async function getHandbookDetailPageData({
@@ -102,14 +104,6 @@ export async function getHandbookDetailPageData({
         .or(`tags.cs.{${term.term.toLowerCase()}},title.ilike.%${term.term}%`)
         .order('published_at', { ascending: false })
         .limit(5),
-      // Pre-fetch recent news for backfill (avoids sequential query later)
-      publicSupabase
-        .from('news_posts')
-        .select('title, slug, category, published_at, post_type')
-        .eq('status', 'published')
-        .eq('locale', locale)
-        .order('published_at', { ascending: false })
-        .limit(3),
       term.related_term_slugs?.length
         ? publicSupabase
             .from('handbook_terms')
@@ -155,7 +149,7 @@ export async function getHandbookDetailPageData({
     // Both Basic and Advanced go through renderMd so auto-linkification of
     // other handbook terms fires in both bodies (otherwise Advanced §7
     // related-terms links would never become clickable popups).
-    const [basicHtml, advancedHtml, [articlesRes, recentNewsRes, relatedRes, sameCatRes]] = await Promise.all([
+    const [basicHtml, advancedHtml, [articlesRes, relatedRes, sameCatRes]] = await Promise.all([
       bodyBasic ? renderMd(bodyBasic) : Promise.resolve(''),
       bodyAdvanced ? renderMd(bodyAdvanced) : Promise.resolve(''),
       queriesPromise,
@@ -164,10 +158,11 @@ export async function getHandbookDetailPageData({
     if (basicHtml) levelHtmlMap.basic = basicHtml;
     if (advancedHtml) levelHtmlMap.advanced = advancedHtml;
 
-    // Use tag-matched articles, fall back to recent news
-    relatedArticles = (articlesRes.data?.length ? articlesRes.data : recentNewsRes.data) ?? [];
+    // Only news that actually mentions the term (no latest-news filler).
+    relatedArticles = articlesRes.data ?? [];
 
-    relatedTerms = relatedRes.data ?? [];
+    // .in() returns rows in DB order; show them in the editor's related_term_slugs order.
+    relatedTerms = orderBySlugs(relatedRes.data ?? [], term.related_term_slugs ?? []);
     sameCategoryTerms = sameCatRes.data ?? [];
   } else {
     // No term found — still render markdown if bodies exist
