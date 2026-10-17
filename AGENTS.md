@@ -1,56 +1,67 @@
 # 0to1log
 
-AI 뉴스 큐레이션 플랫폼. Solo 프로젝트 (Amy).
+AI news curation + AI glossary (Handbook) + IT blog platform. Solo project (Amy).
 
 ## Stack
 
 - Frontend: Astro v5 + Tailwind CSS v4 + Vercel (`frontend/`)
 - Backend: FastAPI + Railway (`backend/`)
 - DB: Supabase (PostgreSQL + Auth + RLS)
-- AI: OpenAI (gpt-4o / gpt-4o-mini) + PydanticAI
-- Search: Tavily API
+- AI: OpenAI + PydanticAI. Production model names live in `backend/core/config.py` (single source of truth).
+- Search: Tavily API (semantic)
 
 ## Phase
 
-현재 **Phase 1a Foundation**. 태스크 추적 → `docs/plans/ACTIVE_SPRINT.md`
+Current phase: see `vault/09-Implementation/plans/ACTIVE_SPRINT.md`.
 
-## Docs 참조 규칙
+## Reference Rules
 
-- `docs/01~08` = 원본 스펙 (계약서). 구현 전 반드시 해당 스펙 확인.
-- `docs/IMPLEMENTATION_PLAN.md` = Phase 방향 + 게이트 조건 정본.
-- `docs/plans/ACTIVE_SPRINT.md` = 현재 스프린트 태스크 상태.
-- `docs/plans/2026-03-07-handbook-feature.md` = Handbook(용어 사전) 기능 계획. 메인 Phase와 병렬 트랙.
-- `docs/plans/2026-03-08-user-features-design.md` = 일반 사용자 기능 설계 (소셜 로그인, 북마크, 읽기 기록, 내 서재).
-- AGENTS.md는 실행 규칙만. 스펙 내용을 여기에 복제하지 않는다.
-
-## Workflow
-
-1. 세션 시작 → `ACTIVE_SPRINT.md` 읽기 → 다음 `todo` 태스크 확인
-2. 태스크 1개만 `doing`으로 전환 → 구현 → 완료 기준 통과 → `done` + `[x]`
-3. `Current Doing` 표를 태스크 상태와 동기화
-4. `done` 시 증거 링크 필수 (PR/로그/스크린샷)
-
-## 금지 사항 (전역)
-
-- Framer Motion 사용 금지 → `motion` (v11+) 사용
-- `docs/` 스펙 파일은 사용자의 명시적인 요청 없이 임의로 수정하지 않는다
-- 스프린트 게이트 미충족 시 다음 Phase로 넘어가지 않는다
-- `.env` 파일 커밋 금지 (`.env.example`만 커밋)
-- `package-lock.json`은 반드시 커밋 (CI 재현성)
-
-## Commit
-
-- 기능 단위 커밋. 메시지: `feat:`, `fix:`, `chore:`, `docs:`
-- 코드 구현 세션과 리뷰 세션을 분리한다
+- `vault/` = project knowledge base (Obsidian vault). Specs, designs, plans, decisions all live here.
+- `vault/09-Implementation/plans/` = design docs, implementation plans, sprint files.
+- AGENTS.md contains execution rules only. Do not duplicate spec content here.
+- New design/plan documents go in `vault/09-Implementation/plans/YYYY-MM-DD-<topic>.md`.
 
 ## Directory
 
 ```
-frontend/  → Vercel (Astro v5). AGENTS.md 참조.
-backend/   → Railway (FastAPI). AGENTS.md 참조.
-supabase/  → DB 마이그레이션 (Phase 2)
-docs/      → 스펙 문서 (사용자 요청 시만 수정)
+frontend/  → Vercel (Astro v5)
+backend/   → Railway (FastAPI)
+supabase/  → DB migrations
+vault/     → Project knowledge base (specs, plans, decisions)
+docs/      → Legacy spec files (modify only on explicit user request)
 ```
+
+## Workflow
+
+0. **Plan first.** All work requires a plan before implementation, except trivial code fixes (typos, 1-line changes) or vault doc sync. Use Plan mode or vault plan documents.
+1. Session start: check `vault/` to understand current sprint/plan state.
+2. Move exactly 1 task to `doing` → implement → pass completion criteria → mark `done` + `[x]`.
+3. Keep the `Current Doing` table in sync with task status.
+4. When marking `done`, include evidence links (PR/logs/screenshots).
+5. After completing a plan: update related vault notes (changed architecture, new decisions, etc.).
+
+## Vault Rules
+
+- Write design/plan documents in `vault/09-Implementation/plans/`.
+- After implementation: grep `vault/` for changed file/feature names → identify related notes → update only essential content.
+- Move completed design/plan documents to `vault/90-Archive/YYYY-MM/plans-completed/` or `plans-archive/` (read-only).
+- Keep only active plans in `vault/09-Implementation/plans/` (ACTIVE_SPRINT.md and current Phase files).
+
+## Prohibitions (Global)
+
+- No Framer Motion. Use `motion` (v11+) instead.
+- Do not modify `docs/` legacy spec files without explicit user request.
+- Do not advance to next Phase if sprint gate criteria are not met.
+- Never commit `.env` files (commit `.env.example` only).
+- Always commit `package-lock.json` (CI reproducibility).
+
+## Commit
+
+- Commit by feature unit. Messages: `feat:`, `fix:`, `chore:`, `docs:`.
+- Separate code implementation sessions from review sessions.
+- Group related changes into a single commit. E.g., 3 prompt tweaks for the same issue = 1 commit; a bug's root cause + fix = 1 commit.
+- Before committing, ask: "Do these changes share a single intent?" If not, split them.
+- Do NOT include `Co-Authored-By` in commit messages.
 
 ## Python venv policy
 
