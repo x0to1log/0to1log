@@ -1,6 +1,6 @@
 # 제품 상세 재설계 (A 리뷰 지면) — Design Spec
 
-**Status:** approved (2026-10-18)
+**Status:** implemented (2026-10-18) — [[2026-10-18-product-detail-review]]
 **Mockup:** `.superpowers/brainstorm/products/product-detail-v1.html` (A안)
 **관련:** [[2026-10-18-products-catalog-design]], [[2026-10-17-handbook-term-entry-design]]
 

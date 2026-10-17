@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** ready
+**Status:** done (2026-10-18) — 실행 결과는 문서 끝 참조.
 
 **Goal:** `/ko|en/products/{slug}/`를 섹션 11개가 같은 무게로 쌓인 페이지(ChatGPT 기준 4,365px)에서 가운데 한 단(본문 최대 900px)의 리뷰 지면으로 바꾼다. 위에서부터 "경로 줄(← AI 제품군 · 분야) → 머리(로고·원래 이름·한 줄 소개·분야/태그 | 스펙 상자: 가격·난이도·플랫폼·한국어 + 사이트 방문·찜) → 에디터 한마디(큰 인용) → 장단점 2칸 → 이렇게 써보세요(3개 + `details` 더 보기) → 주요 기능 · 이런 상황에 추천 2단 → 가격 → 시작하는 법 → 소개 → 한국어 메모 · 공식 자료 → 관련 뉴스 → 비슷한 도구(목록과 같은 `ProductRow`) → FAQ → 확인일 · 피드백 · 관리자"이다. 상세의 sticky 검색과 큰 하단 CTA를 없애고, 모바일(≤767px)에서는 스펙 상자의 버튼 줄을 화면 아래에 고정한다.
 
@@ -2041,3 +2041,14 @@ git commit -m "chore: remove product detail search, hero, chips and unused detai
   git commit -m "docs: record product detail review redesign"
   ```
   (Task 5에서 고친 다른 vault 노트가 있으면 그 경로도 `git add`에 더한다.)
+
+---
+
+## 실행 결과 (2026-10-18)
+
+- 커밋: `3d697589` 비슷한 도구 원래 이름 + ProductRow 추출, `12e2f1b0` 제품 상세를 리뷰 지면으로(경로 줄·스펙 상자·에디터 한마디·장단점·시나리오 더 보기·2단·가격·끝 블록, 상세 검색 제거), `12475893` 상세 검색 sticky 분기·옛 hero·칩·미사용 CSS 삭제.
+- 테스트: PASS 83 / FAIL 18(기준선 83 / 19). 변화는 `product-detail-review` 추가, `product-detail-search-sticky`·`-spacing` 삭제, `product-detail-scenarios-theme` FAIL→PASS. 나머지 18개 실패는 이름·첫 오류 동일, 신규 FAIL 0. 빌드 성공(각 Task 후). 계획 단계에서 scratch 복사본 + 운영 데이터 렌더로 사전 검증.
+- 브라우저 클릭 검증(/ko/products/chatgpt/): 페이지 높이 4,365px → 3,342px, `#product-like-btn` 1개, h2 순서 에디터 한마디 → 장단점 → 이렇게 써보세요 → 주요 기능 → 이런 상황 → 가격 → 시작하는 법 → 소개 → 관련 뉴스 → 비슷한 도구 → FAQ, 경로 줄 `/ko/products/?cat=assistant`, 사이트 방문 `_blank noopener noreferrer`, 시나리오 3개 + "2개 더 보기", FAQ 펼침, 찜(비로그인) → 로그인 시트, 비슷한 도구 원래 이름(OpenClaw·Google Notebook LM·Anima·Bubble.io), 상세 검색 없음.
+- 매트릭스: 종이·순백·다크 × 1100px·375px, 대상 chatgpt·flowise(가격표 없음 → h2 9개)·grok(한국어 메모)·en chatgpt — 가로 넘침 0, 대비 미달 0. 375px 버튼 바 `position: fixed` / z-index 50, 페이지 끝에서 푸터 하단 728px < 바 상단 731px(가림 없음). 쿠키 배너가 떠 있으면 바를 가림(스펙에서 허용).
+- 회귀: 목록 `/ko/products/?q=chatgpt` 2줄, 123줄 모두 `data-search-text` 유지.
+- 계획 단계 결정: 로고 `border-radius: 12px`(다른 테스트 기준선 메시지 보존), import 단언 갱신, 중복 테두리 규칙 정리, 가격 제목 "가격". 실행 중 계획의 중복 `console.log` 한 줄 제거.
