@@ -1,0 +1,40 @@
+---
+// frontend/src/components/handbook/HandbookNewsMentions.astro
+// Term detail end block: news that actually mentions the term (max 5). Nothing when there are none.
+import { postTypeLabel } from '../../lib/postType.js';
+
+interface Mention {
+  title: string;
+  slug: string;
+  published_at?: string | null;
+  post_type?: string | null;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  articles: Mention[];
+}
+
+const { locale, articles } = Astro.props;
+const isKo = locale === 'ko';
+const heading = isKo ? '최근 뉴스에서' : 'In recent news';
+const formatDate = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleDateString(isKo ? 'ko-KR' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+---
+
+{articles.length > 0 && (
+  <section class="handbook-news-mentions" aria-labelledby="handbook-news-mentions-title">
+    <h2 class="news-end-title" id="handbook-news-mentions-title">{heading}</h2>
+    <ul>
+      {articles.slice(0, 5).map((a) => (
+        <li>
+          <a href={`/${locale}/news/${a.slug}/`}>
+            <span class="handbook-news-mentions-type">{postTypeLabel(locale, a.post_type)}</span>
+            <span class="handbook-news-mentions-title">{a.title}</span>
+            {a.published_at && <time class="handbook-news-mentions-date" datetime={a.published_at}>{formatDate(a.published_at)}</time>}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+)}

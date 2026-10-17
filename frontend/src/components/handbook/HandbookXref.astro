@@ -1,0 +1,36 @@
+---
+// frontend/src/components/handbook/HandbookXref.astro
+// Term detail: "→ 함께 볼 말" — curated related terms (editorial order), else same-field terms.
+import { termNames } from '../../lib/handbookShelves.js';
+
+interface XrefTerm {
+  slug: string;
+  term: string;
+  korean_name?: string | null;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  relatedTerms: XrefTerm[];
+  sameCategoryTerms: XrefTerm[];
+}
+
+const { locale, relatedTerms, sameCategoryTerms } = Astro.props;
+const isKo = locale === 'ko';
+const curated = relatedTerms.length > 0;
+const items = curated ? relatedTerms : sameCategoryTerms;
+const copy = curated
+  ? (isKo ? { label: '→ 함께 볼 말', aria: '함께 볼 말' } : { label: '→ See also', aria: 'See also' })
+  : (isKo ? { label: '→ 같은 분야', aria: '같은 분야' } : { label: '→ Same field', aria: 'Same field' });
+---
+
+{items.length > 0 && (
+  <nav class="handbook-xref" aria-label={copy.aria}>
+    <span class="handbook-xref-label">{copy.label}</span>
+    <ul class="handbook-xref-list">
+      {items.map((t) => (
+        <li><a href={`/${locale}/handbook/${t.slug}/`}>{termNames(t, locale).name}</a></li>
+      ))}
+    </ul>
+  </nav>
+)}

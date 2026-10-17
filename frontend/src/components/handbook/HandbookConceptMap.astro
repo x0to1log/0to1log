@@ -1,0 +1,63 @@
+---
+// frontend/src/components/handbook/HandbookConceptMap.astro
+// Term detail end block: server-rendered concept map. Ink circle = this term, up to 6 linked terms around it
+// (curated related terms, else same-field terms). A group of links, not an image. Lives outside
+// #handbook-body / .newsprint-prose (the level switch replaces that innerHTML; the popup script owns prose links).
+import { termNames } from '../../lib/handbookShelves.js';
+import { CONCEPT_MAP, centerLabel, conceptMapNodes, nodeLabel } from '../../lib/conceptMap.js';
+
+interface MapTerm {
+  slug: string;
+  term: string;
+  korean_name?: string | null;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  term: MapTerm;
+  relatedTerms: MapTerm[];
+  sameCategoryTerms: MapTerm[];
+}
+
+const { locale, term, relatedTerms, sameCategoryTerms } = Astro.props;
+const isKo = locale === 'ko';
+const heading = isKo ? '개념 지도' : 'Concept map';
+const items = (relatedTerms.length > 0 ? relatedTerms : sameCategoryTerms).slice(0, 6);
+const { width, height, cx, cy, rx, ry, centerRadius, nodeRadius, fontSize } = CONCEPT_MAP;
+const nodes = conceptMapNodes(items.length, { cx, cy, rx, ry });
+const center = centerLabel(termNames(term, locale).name);
+const links = items.map((item, i) => {
+  const name = termNames(item, locale).name;
+  return { href: `/${locale}/handbook/${item.slug}/`, name, node: nodes[i], label: nodeLabel(name, nodes[i]) };
+});
+---
+
+{links.length > 0 && (
+  <section class="handbook-concept-map" aria-labelledby="handbook-concept-map-title">
+    <h2 class="news-end-title" id="handbook-concept-map-title">{heading}</h2>
+    <svg
+      class="handbook-concept-map-svg"
+      viewBox={`0 0 ${width} ${height}`}
+      role="group"
+      aria-labelledby="handbook-concept-map-title"
+    >
+      <g aria-hidden="true">
+        {links.map((l) => (
+          <line class="handbook-concept-map-edge" x1={cx} y1={cy} x2={l.node.x} y2={l.node.y} />
+        ))}
+      </g>
+      <g class="handbook-concept-map-center" aria-hidden="true">
+        <circle cx={cx} cy={cy} r={centerRadius} />
+        <text text-anchor="middle" font-size={center.fontSize}>
+          {center.lines.map((line) => <tspan x={cx} y={line.y}>{line.text}</tspan>)}
+        </text>
+      </g>
+      {links.map((l) => (
+        <a class="handbook-concept-map-node" href={l.href} aria-label={l.name}>
+          <circle cx={l.node.x} cy={l.node.y} r={nodeRadius} />
+          <text x={l.label.x} y={l.label.y} text-anchor={l.node.anchor} font-size={fontSize}>{l.label.text}</text>
+        </a>
+      ))}
+    </svg>
+  </section>
+)}

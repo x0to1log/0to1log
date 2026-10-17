@@ -40,8 +40,10 @@ if (newsEn.includes('<ReadingActionsRail')) throw new Error('news EN has no righ
 if (newsKo.includes('<ReadingActionsRail')) throw new Error('news KO has no right rail');
 assertIncludes(blogEn, '<ReadingActionsRail', 'blog EN right rail action wrapper');
 assertIncludes(blogKo, '<ReadingActionsRail', 'blog KO right rail action wrapper');
-assertIncludes(handbookEn, '<ReadingActionsRail', 'handbook EN right rail action wrapper');
-assertIncludes(handbookKo, '<ReadingActionsRail', 'handbook KO right rail action wrapper');
+if (handbookEn.includes('<ReadingActionsRail')) throw new Error('handbook EN has no right rail');
+if (handbookKo.includes('<ReadingActionsRail')) throw new Error('handbook KO has no right rail');
+assertIncludes(handbookEn, '<StickyReadingActions', 'handbook EN inline term actions');
+assertIncludes(handbookKo, '<StickyReadingActions', 'handbook KO inline term actions');
 
 assertIncludes(css, '.reading-actions--rail-placement {', 'desktop rail placement action styles');
 assertIncludes(css, '.newsprint-rail-stack {', 'newsprint rail stack wrapper styles');

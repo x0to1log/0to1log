@@ -8,12 +8,14 @@ import { levelLabels } from '../../../lib/handbookUtils';
 import { getHandbookDetailPageData } from '../../../lib/pageData/handbookDetailPage';
 import NewsprintShell from '../../../components/newsprint/NewsprintShell.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
-import HandbookSideRail from '../../../components/newsprint/HandbookSideRail.astro';
-import HandbookSectionNav from '../../../components/newsprint/HandbookSectionNav.astro';
 import HandbookHeroCard from '../../../components/newsprint/HandbookHeroCard.astro';
 import HandbookReferences from '../../../components/newsprint/HandbookReferences.astro';
+import HandbookEntryHead from '../../../components/handbook/HandbookEntryHead.astro';
+import HandbookXref from '../../../components/handbook/HandbookXref.astro';
+import HandbookConceptMap from '../../../components/handbook/HandbookConceptMap.astro';
+import HandbookNewsMentions from '../../../components/handbook/HandbookNewsMentions.astro';
 import PreviewReadonlyBanner from '../../../components/common/PreviewReadonlyBanner.astro';
-import ReadingActionsRail from '../../../components/common/ReadingActionsRail.astro';
+import StickyReadingActions from '../../../components/common/StickyReadingActions.astro';
 import ReadingProgressBar from '../../../components/common/ReadingProgressBar.astro';
 import ContentFeedback from '../../../components/common/ContentFeedback.astro';
 
@@ -58,6 +60,9 @@ const pageTitle = term
   ? (term.korean_name ? `${term.term} (${term.korean_name})` : term.term)
   : t[locale]['handbook.notfound'];
 const pageDescription = definition ? definition.slice(0, 150) : '';
+const crumbItems: string[] = (term?.categories || [])
+  .map((cat: string) => getHandbookCategoryLabel(locale, cat))
+  .filter((label: string | null): label is string => Boolean(label));
 ---
 
 <MainLayout
@@ -68,7 +73,14 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
   previewMode={previewMode}
   needsKatex={true}
 >
-  <NewsprintShell locale={locale} masthead="AI 용어집" editionLabel="CS · AI · Infra" subkicker={['용어 사전', '레퍼런스', '학습']}>
+  <NewsprintShell
+    locale={locale}
+    compact
+    rail={false}
+    backHref={`/${locale}/handbook/`}
+    backLabel="AI 용어집"
+    crumbItems={crumbItems}
+  >
     <form class="handbook-detail-search handbook-search-sticky handbook-search-sticky--detail" action={`/${locale}/handbook/`} method="get">
       <input
         type="text"
@@ -101,28 +113,15 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
             <PreviewReadonlyBanner locale={locale} />
           </>
         )}
-        <header style="margin-bottom: 1.5rem;">
-          <div class="handbook-detail-meta">
-            {(term.categories || []).map((cat: string) => (
-              <span>
-                {getHandbookCategoryLabel(locale, cat)}
-              </span>
-            ))}
-          </div>
-
-          <h1 class="handbook-detail-title" style="margin-top: 0.75rem;">
-            {term.term}{term.korean_name && <span class="handbook-detail-korean">{term.korean_name}</span>}
-          </h1>
-          {term.term_full && term.term_full !== term.term && (
-            <p class="handbook-detail-subtitle">{term.term_full}</p>
-          )}
-        </header>
+        <HandbookEntryHead locale={locale} term={term} />
 
         <HandbookHeroCard
           definition={definition}
           newsContext={heroNewsContext}
           locale={locale}
         />
+
+        <HandbookXref locale={locale} relatedTerms={relatedTerms} sameCategoryTerms={sameCategoryTerms} />
 
         <div class="newsprint-divider"></div>
 
@@ -173,82 +172,62 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
           </div>
         )}
 
-        <div class="reading-actions-layout">
+        <div class="reading-actions-layout reading-actions-layout--article">
+          <StickyReadingActions
+            locale={locale}
+            variant="term"
+            title={pageTitle}
+            shareUrl={`${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}/${locale}/handbook/${pageSlug}/`}
+            itemId={term.id}
+            itemType="term"
+            previewMode={previewMode}
+            isAuthenticated={!!user}
+            articleRedirect={`/${locale}/handbook/${pageSlug}/`}
+          />
           <div class="reading-actions-layout__body">
             {htmlContent && (
               <div class="newsprint-prose newsprint-prose--no-dropcap" id="handbook-body">
                 <Fragment set:html={htmlContent} />
               </div>
             )}
-        <HandbookReferences references={references} locale={locale} />
-        <div data-reading-end></div>
-        {!previewMode && (
-          <div class="handbook-action-bar" data-auth-only hidden>
-            <button class="learning-check" data-term-id={term.id} data-status="none">
-              학습 완료 표시
-            </button>
-          </div>
-        )}
+            <HandbookConceptMap locale={locale} term={term} relatedTerms={relatedTerms} sameCategoryTerms={sameCategoryTerms} />
+            <HandbookNewsMentions locale={locale} articles={relatedArticles} />
+            <HandbookReferences references={references} locale={locale} />
+            <div data-reading-end></div>
+            {!previewMode && (
+              <div class="handbook-action-bar" data-auth-only hidden>
+                <button class="learning-check" data-term-id={term.id} data-status="none">
+                  학습 완료 표시
+                </button>
+              </div>
+            )}
 
+            <ContentFeedback
+              sourceType="handbook"
+              sourceId={term.id}
+              locale={locale}
+              isAuthenticated={!!user}
+              loginUrl={`/api/auth/login?redirect=${encodeURIComponent(Astro.url.pathname)}`}
+              previewMode={previewMode}
+            />
 
-        <ContentFeedback
-          sourceType="handbook"
-          sourceId={term.id}
-          locale={locale}
-          isAuthenticated={!!user}
-          loginUrl={`/api/auth/login?redirect=${encodeURIComponent(Astro.url.pathname)}`}
-          previewMode={previewMode}
-        />
+            {!previewMode && (
+              <div class="newsprint-admin-actions" data-toolbar-id={term.id} data-toolbar-api="/api/admin/handbook/status" data-admin-only hidden={!Astro.locals.isAdmin}>
+                <a href={`/admin/handbook/edit/${pageSlug}`} class="newsprint-admin-action-btn">Edit</a>
+                <button type="button" class="newsprint-admin-action-btn newsprint-admin-action-btn--unpublish">Unpublish</button>
+              </div>
+            )}
 
-        {!previewMode && (
-          <div class="newsprint-admin-actions" data-toolbar-id={term.id} data-toolbar-api="/api/admin/handbook/status" data-admin-only hidden={!Astro.locals.isAdmin}>
-            <a href={`/admin/handbook/edit/${pageSlug}`} class="newsprint-admin-action-btn">Edit</a>
-            <button type="button" class="newsprint-admin-action-btn newsprint-admin-action-btn--unpublish">Unpublish</button>
-          </div>
-        )}
-
-        <nav class="handbook-bottom-nav" aria-label="핸드북 내비게이션">
-          <a href={`/${locale}/handbook/`} class="handbook-nav-link">
-            {t[locale]['handbook.back']}
-          </a>
+            <nav class="handbook-bottom-nav" aria-label="핸드북 내비게이션">
+              <a href={`/${locale}/handbook/`} class="handbook-nav-link">
+                {t[locale]['handbook.back']}
+              </a>
             </nav>
           </div>
         </div>
       </article>
       <ReadingProgressBar locale="ko" />
     )}
-
-    <Fragment slot="rail">
-      <form class="handbook-detail-search newsprint-rail-search" action={`/${locale}/handbook/`} method="get">
-        <input
-          type="text"
-          name="q"
-          aria-label={t[locale]['handbook.search']}
-          placeholder={t[locale]['handbook.search']}
-          class="handbook-search-input"
-        />
-      </form>
-      <ReadingActionsRail
-        className="newsprint-rail-stack"
-        locale={locale}
-        variant="term"
-        title={pageTitle}
-        shareUrl={`${import.meta.env.PUBLIC_SITE_URL || 'https://0to1log.com'}/${locale}/handbook/${pageSlug}/`}
-        itemId={term.id}
-        itemType="term"
-        previewMode={previewMode}
-        isAuthenticated={!!user}
-        articleRedirect={`/${locale}/handbook/${pageSlug}/`}
-      >
-        <HandbookSectionNav locale={locale} />
-        <HandbookSideRail
-          locale={locale}
-          relatedTerms={relatedTerms}
-          sameCategoryTerms={sameCategoryTerms}
-          relatedArticles={relatedArticles}
-        />
-      </ReadingActionsRail>
-    </Fragment>
   </NewsprintShell>
   {Object.keys(handbookTermsJson).length > 0 && (
     <script type="application/json" id="handbook-terms-data" set:html={JSON.stringify(handbookTermsJson)} />
@@ -376,15 +355,18 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
   let _levelObserver: IntersectionObserver | null = null;
 
   function initLevelSwitcher(): void {
+    const switcher = document.querySelector<HTMLElement>('.handbook-level-switcher');
+    // astro:page-load also fires on the first load, right after the direct call below: bind once per page.
+    if (!switcher || switcher.dataset.levelReady === 'true') return;
+    switcher.dataset.levelReady = 'true';
     if (_levelObserver) { _levelObserver.disconnect(); _levelObserver = null; }
 
     const template = document.getElementById('level-data') as HTMLTemplateElement | null;
     if (!template) return;
     const map: Record<string, string> = JSON.parse(template.dataset.map || '{}');
     const prose = document.getElementById('handbook-body');
-    const switcher = document.querySelector<HTMLElement>('.handbook-level-switcher');
     const floatEl = document.getElementById('level-float');
-    if (!prose || !switcher) return;
+    if (!prose) return;
 
     let userPicked = false;
 
@@ -407,7 +389,7 @@ const pageDescription = definition ? definition.slice(0, 150) : '';
       if (btn) { userPicked = true; setActiveLevel(btn.dataset.level!); }
     });
 
-    // Cached HTML starts on 'basic'; apply the signed-in reader's saved level.
+    // Cached HTML starts on 'basic'; apply the signed-in reader's saved level (once per page).
     onSessionReady((session) => {
       const saved = session.handbookLevel;
       const active = switcher.querySelector<HTMLElement>('.handbook-level-btn--active')?.dataset.level;

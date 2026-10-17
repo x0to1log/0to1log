@@ -1,0 +1,35 @@
+---
+// frontend/src/components/handbook/HandbookEntryHead.astro
+// Term detail: dictionary headword block — label, headword (+ Korean name on KO), full name, grammar line.
+// h1 keeps .handbook-detail-title: the level switcher scrolls back to it.
+import { entryGrammar } from '../../lib/handbookFacets.js';
+
+interface EntryTerm {
+  term: string;
+  korean_name?: string | null;
+  term_full?: string | null;
+  term_type?: string | null;
+  facet_intent?: string[] | null;
+  facet_volatility?: string | null;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  term: EntryTerm;
+}
+
+const { locale, term } = Astro.props;
+const isKo = locale === 'ko';
+const label = isKo ? '표제어' : 'Entry';
+const grammar = entryGrammar(locale, term);
+const fullName = term.term_full && term.term_full !== term.term ? term.term_full : '';
+---
+
+<header class="handbook-entry">
+  <p class="handbook-entry-label">{label}</p>
+  <h1 class="handbook-detail-title">
+    {term.term}{isKo && term.korean_name && <span class="handbook-detail-korean">{term.korean_name}</span>}
+  </h1>
+  {fullName && <p class="handbook-detail-subtitle">{fullName}</p>}
+  {grammar && <p class="handbook-entry-gram">{grammar}</p>}
+</header>

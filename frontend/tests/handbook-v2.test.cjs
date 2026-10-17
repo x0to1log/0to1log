@@ -32,7 +32,7 @@ assert(/column-count:\s*3/.test(rule('.handbook-az-dict')), 'A–Z dictionary in
 // Task 2: 상세
 for (const p of ['pages/ko/handbook/[slug].astro', 'pages/en/handbook/[slug].astro']) {
   const page = read(p);
-  assert(!/handbook-detail-meta[\s\S]{0,400}<span style=/.test(page), `${p} meta spans have no inline styles`);
+  assert(!page.includes('handbook-detail-meta') && page.includes('crumbItems={crumbItems}'), `${p} field labels moved to the crumb`);
   assert(page.includes('data-auth-only') && page.includes('learning-check') && page.includes('data-term-id'), `${p} keeps the learning action bar`);
   assert(page.includes('id="level-data"') && page.includes('data-level'), `${p} keeps the level switcher hooks`);
   assert(page.includes('onSessionReady'), `${p} keeps session hydration`);

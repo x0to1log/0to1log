@@ -56,8 +56,10 @@ assertIncludes(newsLayout, 'showStickyActions = true', 'news layout sticky defau
 assertIncludes(blogLayout, 'showStickyActions = true', 'blog layout sticky default');
 assertIncludes(newsLayout, "class={`reading-actions-layout ${showStickyActions ? 'reading-actions-layout--article' : ''}`.trim()}", 'news article action layout modifier');
 assertIncludes(blogLayout, "class={`reading-actions-layout ${showStickyActions ? 'reading-actions-layout--article' : ''}`.trim()}", 'blog article action layout modifier');
-assertIncludes(handbookEn, '<ReadingActionsRail', 'handbook EN rail action wrapper');
-assertIncludes(handbookKo, '<ReadingActionsRail', 'handbook KO rail action wrapper');
+assertIncludes(handbookEn, '<StickyReadingActions', 'handbook EN inline term actions');
+assertIncludes(handbookKo, '<StickyReadingActions', 'handbook KO inline term actions');
+assertIncludes(handbookEn, '<div class="reading-actions-layout reading-actions-layout--article">', 'handbook EN article action layout');
+assertIncludes(handbookKo, '<div class="reading-actions-layout reading-actions-layout--article">', 'handbook KO article action layout');
 
 assertNotIncludes(newsLayout, 'class="newsprint-engagement-bar"', 'legacy news inline engagement bar');
 assertNotIncludes(blogLayout, 'class="newsprint-engagement-bar"', 'legacy blog inline engagement bar');

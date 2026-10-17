@@ -11,9 +11,11 @@ interface Props {
   compact?: boolean;
   backHref?: string;
   backLabel?: string;
+  /** compact only: shown instead of the issue/date, joined with ' · ' (e.g. handbook fields) */
+  crumbItems?: string[];
 }
 
-const { locale, masthead = '', editionLabel, subkicker, publishedAt, rail = true, compact = false, backHref, backLabel } = Astro.props;
+const { locale, masthead = '', editionLabel, subkicker, publishedAt, rail = true, compact = false, backHref, backLabel, crumbItems } = Astro.props;
 const isKo = locale === 'ko';
 const nonce = Astro.locals.cspNonce || '';
 const displayDate = publishedAt ? new Date(publishedAt) : new Date();
@@ -28,8 +30,14 @@ const dateLabel = isKo
   {compact ? (
     <nav class="newsprint-crumb" aria-label={isKo ? '위치' : 'Breadcrumb'}>
       <a href={backHref ?? `/${locale}/news/`}>← {backLabel ?? (isKo ? 'AI 뉴스' : 'AI News')}</a>
-      <span>{issueLabel(locale, issueNumber(displayDate))}</span>
-      <span data-local-date data-date-iso={browserDateIso} data-date-locale={browserLocale}>{dateLabel}</span>
+      {crumbItems ? (
+        crumbItems.length > 0 && <span class="newsprint-crumb-items">{crumbItems.join(' · ')}</span>
+      ) : (
+        <>
+          <span>{issueLabel(locale, issueNumber(displayDate))}</span>
+          <span data-local-date data-date-iso={browserDateIso} data-date-locale={browserLocale}>{dateLabel}</span>
+        </>
+      )}
     </nav>
   ) : (
     <header class="newsprint-header">
