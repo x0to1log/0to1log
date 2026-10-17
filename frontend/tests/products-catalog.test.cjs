@@ -51,13 +51,17 @@ assert(section.includes('<h2 class="product-cat-title" id={titleId} tabindex="-1
 assert(section.includes("{ko ? `${total}개 모두 보기 →` : `See all ${total} →`}") && section.includes('{total > PREVIEW_ROWS && ('), 'see-all button only above six rows');
 assert(section.includes('const PREVIEW_ROWS = 6;'), 'six rows per field');
 assert(section.includes('<p class="product-cat-lede">') && section.includes('<p class="product-cat-desc" hidden>'), 'lede + hidden full description');
-for (const attr of ['data-search-text=', 'data-category={product.primary_category}', 'data-secondary-categories=', "data-overflow={index >= PREVIEW_ROWS ? '' : undefined}"]) {
-  assert(section.includes(attr), `row attribute ${attr}`);
+assert(section.includes("import ProductRow from './ProductRow.astro';") && section.includes('overflow={index >= PREVIEW_ROWS}'), 'rows come from ProductRow, data-overflow after six');
+assert(section.includes("searchText={searchTexts[product.id] ?? ''}"), 'list rows carry their search text');
+const row = read('components/products/ProductRow.astro');
+for (const attr of ['data-search-text={searchText}', 'data-category={product.primary_category}', 'data-secondary-categories=', "data-overflow={overflow ? '' : undefined}"]) {
+  assert(row.includes(attr), `row attribute ${attr}`);
 }
-assert(section.includes('class="product-pricing-badge" data-pricing={product.pricing}') && section.includes('class="product-difficulty-badge" data-difficulty={product.difficulty}'), 'existing badge classes');
-assert(section.includes('difficultyLabel(locale, product.difficulty)'), 'difficulty labels from lib/productCatalog.js');
-assert(section.includes('{name}</span>') && section.includes('product.name_original ?? product.name'), 'brand name');
-assert(section.includes('loading="lazy"') && section.includes('alt=""'), 'lazy decorative logo');
+assert(row.includes('<li\n  class="product-row"'), 'row root is li.product-row');
+assert(row.includes('class="product-pricing-badge" data-pricing={product.pricing}') && row.includes('class="product-difficulty-badge" data-difficulty={product.difficulty}'), 'existing badge classes');
+assert(row.includes('difficultyLabel(locale, product.difficulty)'), 'difficulty labels from lib/productCatalog.js');
+assert(row.includes('{name}</span>') && row.includes('product.name_original ?? product.name'), 'brand name');
+assert(row.includes('loading="lazy"') && row.includes('alt=""'), 'lazy decorative logo');
 assert(section.includes('<div class="product-cat-also" hidden>'), 'hidden "also used" box');
 
 const picks = read('components/products/ProductPicks.astro');
@@ -84,6 +88,8 @@ assert(listFn.includes('notesRes.error ? [] : notesRes.data'), 'failed note quer
 assert(listFn.includes('orderPicks(resolvedProducts)'), 'picks ordered by orderPicks');
 assert(!data.includes('spotlightProduct'), 'spotlightProduct removed');
 assert(data.includes('picks: ProductPick[];'), 'ProductsPageData.picks');
+const altFn = data.slice(data.indexOf('export async function fetchAlternatives'), data.indexOf('// Detail page: related news'));
+assert(altFn.includes('name_original: p.name as string,'), 'similar tools keep the brand name (name_original)');
 
 // script
 const script = read('scripts/productCatalog.ts');

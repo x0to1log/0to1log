@@ -342,6 +342,7 @@ export async function fetchAlternatives(
   if (!data) return [];
   return (data as unknown as ProductCardData[]).map((p) => ({
     ...p,
+    name_original: p.name as string,
     name: (locale === 'ko' ? (p as any).name_ko || p.name : p.name) as string,
     tagline: (locale === 'ko' ? (p as any).tagline_ko || p.tagline : p.tagline) as string | null,
     display_tags: resolveLocalizedProductTags(p, locale),

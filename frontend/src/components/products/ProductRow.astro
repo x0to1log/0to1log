@@ -1,0 +1,54 @@
+---
+// One product row: logo, brand name, one-line description, price and difficulty.
+// Shared by the catalog field sections (ProductCatalogSection) and the detail page's similar tools.
+// overflow / searchText are list-only (data-overflow, data-search-text); undefined attributes are omitted.
+import type { ProductCardData } from '../../lib/pageData/productsPage';
+import { t } from '../../i18n/index';
+import { difficultyLabel } from '../../lib/productCatalog.js';
+
+interface Props {
+  product: ProductCardData;
+  locale: 'en' | 'ko';
+  overflow?: boolean;
+  searchText?: string;
+}
+
+const { product, locale, overflow = false, searchText } = Astro.props;
+const tr = t[locale] as Record<string, string>;
+const name = product.name_original ?? product.name;
+const pricingLabel = (value: string) => tr[`products.${value}`] ?? value;
+---
+
+<li
+  class="product-row"
+  data-search-text={searchText}
+  data-category={product.primary_category}
+  data-secondary-categories={(product.secondary_categories ?? []).join(',')}
+  data-overflow={overflow ? '' : undefined}
+>
+  <a href={`/${locale}/products/${product.slug}/`}>
+    <span class="product-catalog-logo">
+      {product.logo_url ? (
+        <img src={product.logo_url} alt="" width="30" height="30" loading="lazy" />
+      ) : (
+        <span class="product-catalog-logo-initial" data-category={product.primary_category}>{(name ?? '?').charAt(0)}</span>
+      )}
+    </span>
+    <span class="product-row-text">
+      <span class="product-row-name">{name}</span>
+      {product.tagline && <span class="product-row-tagline">{product.tagline}</span>}
+      {(product.pricing || product.difficulty) && (
+        <span class="product-row-meta">
+          {product.pricing && (
+            <span class="product-pricing-badge" data-pricing={product.pricing}>{pricingLabel(product.pricing)}</span>
+          )}
+          {product.difficulty && (
+            <span class="product-difficulty-badge" data-difficulty={product.difficulty}>
+              {difficultyLabel(locale, product.difficulty) || product.difficulty}
+            </span>
+          )}
+        </span>
+      )}
+    </span>
+  </a>
+</li>
