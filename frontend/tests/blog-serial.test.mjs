@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const { buildBlogFront, normalizeBlogCategory, formatBlogDate } = await import(
+const { buildBlogFront, normalizeBlogCategory, formatBlogDate, locatePost, toSerialProps } = await import(
   pathToFileURL(path.join(here, '../src/lib/blogSerial.js')).href
 );
 
@@ -98,5 +98,99 @@ assert.equal(formatBlogDate('2026-03-10T18:42:39.552+00:00', 'en'), 'Mar 11');
 assert.equal(formatBlogDate('2026-03-10T09:42:35.438+00:00', 'ko'), '3월 10일');
 assert.equal(formatBlogDate(null, 'ko'), '');
 assert.equal(formatBlogDate('not a date', 'en'), '');
+
+// --- blog post page (A: one column): where a post sits, serial props, dates with the year ---
+const SERIAL_CATS = [
+  cat('study', 'main', 0, { label_ko: '학습 노트', label_en: 'Study Notes', color: '#6E9682' }),
+  cat('project', 'main', 1),
+  cat('work-note', 'sub', 0, { label_ko: '작업 메모', label_en: 'Work Notes' }),
+  cat('secret-note', 'sub', 1, { is_visible: false }),
+];
+// created_at desc order on purpose (like the query); timeline oldest first: s1, p1, s2, note-a, s3
+const SERIAL = [
+  post('s3', 'study', '2026-03-12T00:00:00Z'),
+  post('note-a', 'work-note', '2026-03-11T12:00:00Z'),
+  post('s2', 'study', '2026-03-11T00:00:00Z'),
+  post('p1', 'project', '2026-03-10T12:00:00Z'),
+  post('s1', 'tech', '2026-03-10T00:00:00Z'),
+  post('undated-note', 'work-note', null),
+  post('hidden', 'secret-note', '2026-03-09T00:00:00Z'),
+  post('lost', 'ghost', '2026-03-08T00:00:00Z'),
+];
+const NONE = { series: null, index: -1, prev: null, next: null };
+
+// in a series: index + neighbouring episodes of the same series
+const s2 = locatePost(SERIAL, SERIAL_CATS, 's2');
+assert.equal(s2.series.category.slug, 'study');
+assert.deepEqual(titles(s2.series.posts), ['s1', 's2', 's3']);
+assert.equal(s2.index, 1);
+assert.equal(s2.prev.title, 's1');
+assert.equal(s2.next.title, 's3');
+const s1 = locatePost(SERIAL, SERIAL_CATS, 's1');
+assert.equal(s1.index, 0, 'legacy tech post is episode 1 of the study series');
+assert.equal(s1.prev, null, 'first episode has no previous');
+assert.equal(s1.next.title, 's2');
+assert.equal(s1.series.posts[0].category, 'study');
+assert.equal(locatePost(SERIAL, SERIAL_CATS, 's3').next, null, 'last episode has no next');
+const p1 = locatePost(SERIAL, SERIAL_CATS, 'p1');
+assert.deepEqual([p1.series.category.slug, p1.index, p1.prev, p1.next], ['project', 0, null, null], 'one-episode series');
+
+// not in a series: neighbours among every dated post, episodes included, oldest first
+const noteA = locatePost(SERIAL, SERIAL_CATS, 'note-a');
+assert.equal(noteA.series, null);
+assert.equal(noteA.index, -1);
+assert.equal(noteA.prev.title, 's2');
+assert.equal(noteA.next.title, 's3');
+const hidden = locatePost(SERIAL, SERIAL_CATS, 'hidden');
+assert.deepEqual([hidden.series, hidden.prev && hidden.prev.title, hidden.next && hidden.next.title], [null, 'lost', 's1'], 'hidden field: short note, timeline neighbours');
+assert.deepEqual(locatePost(SERIAL, SERIAL_CATS, 'undated-note'), NONE, 'undated short note: no neighbours');
+assert.deepEqual(locatePost(SERIAL, SERIAL_CATS, 'draft-preview'), NONE, 'slug missing from the list');
+assert.deepEqual(locatePost(null, null, 's1'), NONE);
+assert.equal(SERIAL[4].category, 'tech', 'input posts are not mutated');
+
+// serial props (one builder for the ko/en pages)
+assert.deepEqual(toSerialProps(s2, SERIAL_CATS, 'ko'), {
+  categoryLabel: '학습 노트',
+  categoryHref: '/ko/blog/category/study/',
+  categoryColor: '#6E9682',
+  episode: 2,
+  total: 3,
+  episodes: [{ title: 's1', slug: 's1' }, { title: 's2', slug: 's2' }, { title: 's3', slug: 's3' }],
+  prev: { title: 's1', slug: 's1' },
+  next: { title: 's3', slug: 's3' },
+});
+const s2en = toSerialProps(s2, SERIAL_CATS, 'en', 'study');
+assert.deepEqual([s2en.categoryLabel, s2en.categoryHref], ['Study Notes', '/en/blog/category/study/']);
+assert.deepEqual(toSerialProps(noteA, SERIAL_CATS, 'ko', 'work-note'), {
+  categoryLabel: '작업 메모',
+  categoryHref: '/ko/blog/category/work-note/',
+  categoryColor: null,
+  episode: null,
+  total: null,
+  episodes: [],
+  prev: { title: 's2', slug: 's2' },
+  next: { title: 's3', slug: 's3' },
+});
+const hiddenProps = toSerialProps(hidden, SERIAL_CATS, 'ko', 'secret-note');
+assert.deepEqual([hiddenProps.categoryLabel, hiddenProps.categoryHref], ['secret-note', null], 'hidden field: label without a link');
+const lostProps = toSerialProps(locatePost(SERIAL, SERIAL_CATS, 'lost'), SERIAL_CATS, 'ko', 'ghost');
+assert.deepEqual([lostProps.categoryLabel, lostProps.categoryHref, lostProps.categoryColor], [null, null, null], 'field missing from the DB: no label');
+const draftProps = toSerialProps(NONE, SERIAL_CATS, 'ko', 'tech');
+assert.deepEqual(draftProps, {
+  categoryLabel: '학습 노트',
+  categoryHref: '/ko/blog/category/study/',
+  categoryColor: '#6E9682',
+  episode: null,
+  total: null,
+  episodes: [],
+  prev: null,
+  next: null,
+}, 'draft preview: field from the post itself (tech → study), no series, no neighbours');
+
+// byline dates: KST with the year; without the option the list format is unchanged (asserted above)
+assert.equal(formatBlogDate('2026-03-10T18:42:39.552+00:00', 'ko', { year: true }), '2026년 3월 11일');
+assert.equal(formatBlogDate('2026-03-10T18:42:39.552+00:00', 'en', { year: true }), 'Mar 11, 2026');
+assert.equal(formatBlogDate('2025-12-31T16:00:00Z', 'en', { year: true }), 'Jan 1, 2026', 'the year rolls over in KST');
+assert.equal(formatBlogDate(null, 'ko', { year: true }), '');
 
 console.log('blog-serial.test.mjs passed');
