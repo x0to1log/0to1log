@@ -28,9 +28,9 @@ const stickyActions = read('frontend/src/components/common/StickyReadingActions.
 
 assertNotIncludes(stickyActions, 'const shareDropdown = (', 'frontmatter JSX share dropdown constant');
 assertIncludes(stickyActions, '<div class="newsprint-share-wrapper reading-actions__share-wrapper">', 'inline share dropdown markup');
-assertIncludes(stickyActions, "const placementClass = placement === 'rail' ? 'reading-actions--rail-placement' : '';", 'placement class helper');
-assertIncludes(stickyActions, 'reading-actions reading-actions--article ${placementClass}', 'article action rail modifier');
-assertIncludes(stickyActions, 'reading-actions reading-actions--term reading-actions--article ${placementClass}', 'term action rail article modifier');
+assertNotIncludes(stickyActions, 'placement', 'rail placement (removed with ReadingActionsRail)');
+assertIncludes(stickyActions, '<aside class="reading-actions reading-actions--article"', 'article action modifier');
+assertIncludes(stickyActions, 'class="reading-actions reading-actions--term reading-actions--article"', 'term action article modifier');
 assertIncludes(stickyActions, 'class="reading-actions__items reading-actions__items--article"', 'article action group container');
 assertIncludes(stickyActions, 'class="reading-actions__items reading-actions__items--article reading-actions__items--term"', 'term action group container');
 assertIncludes(stickyActions, 'class="reading-actions__group reading-actions__group--primary"', 'primary action group');

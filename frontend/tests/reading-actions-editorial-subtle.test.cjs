@@ -19,45 +19,26 @@ function assertNotIncludes(haystack, needle, label) {
   }
 }
 
+// Blog post A (2026-10-17): the editorial rail placement (ReadingActionsRail, blog only) is gone.
+// News, handbook and blog details all use the inline article actions; keep them quiet and flat.
 const css = read('frontend/src/styles/global.css');
-const railHoverBlock = css.split('.reading-actions--rail-placement .reading-actions__button:hover {')[1]?.split('}')[0] || '';
+const articleButtonBlock = css.split('\n.reading-actions--article .reading-actions__button {')[1]?.split('}')[0] || '';
+
+assertNotIncludes(css, '.reading-actions--rail-placement', 'removed rail placement styles');
 
 assertIncludes(
-  css,
-  '.reading-actions--rail-placement .reading-actions__button {',
-  'desktop rail button block'
-);
-
-assertIncludes(
-  css,
-  'min-height: 3.35rem;',
-  'smaller editorial rail buttons'
-);
-
-assertIncludes(
-  css,
-  'box-shadow: none;',
-  'flat editorial button treatment'
-);
-
-assertIncludes(
-  css,
+  articleButtonBlock,
   'color: var(--color-text-secondary);',
-  'subtle rail button text color'
+  'subtle article action text color'
 );
 
 assertIncludes(
-  css,
-  '.reading-actions--rail-placement .reading-actions__items--article {\n    display: grid;\n    grid-template-columns: repeat(4, minmax(0, 1fr));',
-  'desktop rail actions arranged in a single four-button row'
+  articleButtonBlock,
+  'background: color-mix(in srgb, var(--color-bg-secondary) 92%, transparent);',
+  'quiet article action surface'
 );
 
-assertIncludes(
-  css,
-  '.reading-actions--rail-placement .reading-actions__button:hover {',
-  'editorial rail hover state'
-);
-
-assertNotIncludes(railHoverBlock, 'transform:', 'lifted hover effect on editorial rail buttons');
+assertNotIncludes(articleButtonBlock, 'box-shadow', 'raised article action buttons');
+assertNotIncludes(articleButtonBlock, 'transform:', 'lifted article action buttons');
 
 console.log('reading-actions-editorial-subtle.test.cjs passed');

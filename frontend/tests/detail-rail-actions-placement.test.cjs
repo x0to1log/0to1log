@@ -24,7 +24,8 @@ const handbookEn = read('frontend/src/pages/en/handbook/[slug].astro');
 const handbookKo = read('frontend/src/pages/ko/handbook/[slug].astro');
 const css = read('frontend/src/styles/global.css');
 
-assertIncludes(readingActionsRail, 'placement?:', 'reading actions placement prop');
+// The rail placement (ReadingActionsRail, blog only) was removed with blog post A (2026-10-17).
+if (readingActionsRail.includes('placement')) throw new Error('reading actions have no rail placement prop');
 
 assertIncludes(newsLayout, 'showStickyActions?: boolean;', 'news layout sticky action visibility prop');
 assertIncludes(newsLayout, 'showStickyActions = true', 'news layout sticky action default');
@@ -46,9 +47,9 @@ if (handbookKo.includes('<ReadingActionsRail')) throw new Error('handbook KO has
 assertIncludes(handbookEn, '<StickyReadingActions', 'handbook EN inline term actions');
 assertIncludes(handbookKo, '<StickyReadingActions', 'handbook KO inline term actions');
 
-assertIncludes(css, '.reading-actions--rail-placement {', 'desktop rail placement action styles');
+if (css.includes('.reading-actions--rail-placement')) throw new Error('rail placement action styles removed');
 assertIncludes(css, '.newsprint-rail-stack {', 'newsprint rail stack wrapper styles');
-assertIncludes(css, '.blog-rail {', 'blog rail wrapper styles');
-assertIncludes(css, '.blog-rail .blog-toc {', 'blog TOC inside unified rail styles');
+if (css.includes('.blog-rail')) throw new Error('blog rail wrapper styles removed');
+if (css.includes('.blog-toc')) throw new Error('blog rail TOC styles removed');
 
 console.log('detail-rail-actions-placement.test.cjs passed');

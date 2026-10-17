@@ -17,8 +17,8 @@ assert.ok(
   'Desktop blog rails must anchor below the shared header offset',
 );
 assert.ok(
-  css.includes('width: 15.25rem;') && css.includes('flex: 0 0 15.25rem;'),
-  'Desktop blog action and TOC rail should widen slightly to support a single-row action toolbar',
+  !css.includes('.blog-rail'),
+  'The blog action and TOC rail is removed (blog post A: inline actions + contents in the column)',
 );
 assert.ok(
   css.includes('height: calc(100vh - var(--blog-shell-header-offset) - (var(--blog-shell-rail-gap) * 2));'),
@@ -57,8 +57,8 @@ assert.ok(
   'Blog sidebar cleanup must define explicit line-icon styles for categories',
 );
 assert.ok(
-  css.includes('.blog-toc {') && css.includes('top: calc(var(--blog-shell-header-offset) + var(--blog-shell-rail-gap));'),
-  'Blog TOC must align with the shared rail offset',
+  !css.includes('.blog-toc'),
+  'The right-rail blog TOC is removed (blog post A uses details.blog-post-toc)',
 );
 assert.ok(
   !css.includes('padding-top: 4rem;'),

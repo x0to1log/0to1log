@@ -123,4 +123,18 @@ assert(/\.blog-post-pager-link--next\s*\{[^}]*grid-column:\s*auto/.test(mobile),
 assert(css.includes('  .reading-actions-layout--article {\n    display: grid;\n    grid-template-columns: minmax(0, 1fr) 72px;'), 'shared desktop action column');
 assert(!/\.blog-[\w-]*\s+\.reading-actions-layout/.test(css), 'no blog-only action layout override');
 
+// removed with the rail (Task 3): blog-detail-only components, the rail placement and their CSS
+for (const file of ['components/blog/BlogTOC.astro', 'components/blog/BlogBreadcrumb.astro', 'components/common/ReadingActionsRail.astro']) {
+  assert(!fs.existsSync(path.join(src, file)), `${file} deleted`);
+}
+assert(!read('components/common/StickyReadingActions.astro').includes('placement'), 'StickyReadingActions: no rail placement');
+for (const gone of ['.blog-toc', '.blog-rail', '.blog-breadcrumb', '.blog-article-meta', '.blog-article-category', '.reading-actions-rail', '.reading-actions--rail-placement', '.newsprint-article-nav', '.newsprint-nav-']) {
+  assert(!css.includes(gone), `unused CSS removed: ${gone}`);
+}
+// still used elsewhere: category pages (toolbar), news/handbook layouts and handbook-popup.ts (persona float)
+for (const kept of ['.blog-mobile-toolbar {', '.persona-float {', '.persona-float--back', '.blog-article-title {', '.blog-article-header {', '.blog-shell .newsprint-comments-title {']) {
+  assert(css.includes(kept), `CSS kept: ${kept}`);
+}
+assert(!read('i18n/index.ts').includes("'blog.onThisPage'"), 'unused i18n key removed');
+
 console.log('blog-post-column.test.cjs passed');

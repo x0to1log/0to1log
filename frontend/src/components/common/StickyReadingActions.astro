@@ -2,7 +2,6 @@
 interface Props {
   locale: 'en' | 'ko';
   variant: 'news' | 'blog' | 'term';
-  placement?: 'inline' | 'rail';
   title: string;
   shareUrl: string;
   itemId?: string;
@@ -20,7 +19,6 @@ interface Props {
 const {
   locale,
   variant,
-  placement = 'inline',
   title,
   shareUrl,
   itemId,
@@ -54,13 +52,11 @@ const copy = locale === 'ko'
       copyUrl: 'Copy URL',
       copied: 'Copied',
     };
-
-const placementClass = placement === 'rail' ? 'reading-actions--rail-placement' : '';
 ---
 
 {variant === 'term' ? (
   <aside
-    class={`reading-actions reading-actions--term reading-actions--article ${placementClass}`.trim()}
+    class="reading-actions reading-actions--term reading-actions--article"
     aria-label={locale === 'ko' ? '용어 액션' : 'Term actions'}
     data-locale={locale}
   >
@@ -123,7 +119,7 @@ const placementClass = placement === 'rail' ? 'reading-actions--rail-placement' 
     </div>
   </aside>
 ) : (
-  <aside class={`reading-actions reading-actions--article ${placementClass}`.trim()} aria-label={locale === 'ko' ? '글 액션' : 'Reading actions'}>
+  <aside class="reading-actions reading-actions--article" aria-label={locale === 'ko' ? '글 액션' : 'Reading actions'}>
     <div class="reading-progress-bar" aria-hidden="true"><div class="reading-progress__fill"></div></div>
     <div class="reading-actions__items reading-actions__items--article">
       <div class="reading-actions__group reading-actions__group--primary">

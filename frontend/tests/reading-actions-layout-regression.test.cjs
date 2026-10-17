@@ -33,16 +33,12 @@ assertIncludes(
   'desktop article layout owning the body and right-rail grid'
 );
 
-assertIncludes(
+// The rail placement (ReadingActionsRail, blog only) was removed with blog post A (2026-10-17):
+// every detail page uses the inline article actions above.
+assertNotIncludes(
   css,
-  '.reading-actions--rail-placement .reading-actions__button:hover {',
-  'desktop rail action hover feedback'
-);
-
-assertIncludes(
-  css,
-  '.reading-actions--rail-placement .reading-actions__button:focus-visible {',
-  'desktop rail action focus-visible feedback'
+  '.reading-actions--rail-placement',
+  'removed rail placement action styles'
 );
 
 console.log('reading-actions-layout-regression.test.cjs passed');
