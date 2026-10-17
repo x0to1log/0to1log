@@ -1,9 +1,13 @@
 ---
+// Product detail as a review page (A): crumb → head + facts box → editor's take → pros/cons →
+// scenarios (first three, the rest in "show more") → features / use cases → pricing → getting started →
+// about → Korean note → resources → related news → similar tools (ProductRow) → FAQ → verified / admin / slot.
+// The like button lives once, in the facts box; on phones its action row is pinned to the bottom (CSS only).
 import type { ProductDetailData, ProductCardData, RelatedNewsItem } from '../../lib/pageData/productsPage';
 import { t } from '../../i18n/index';
 import MediaGallery from './MediaGallery.astro';
-import ProductCard from './ProductCard.astro';
-import { DIFFICULTY_LABELS } from '../../lib/productCatalog.js';
+import ProductRow from './ProductRow.astro';
+import { DIFFICULTY_LABELS, jumpLabel } from '../../lib/productCatalog.js';
 
 interface Props {
   product: ProductDetailData;
@@ -18,32 +22,102 @@ interface Props {
 
 const { product, htmlDescription, htmlPricingDetail = '', locale, alternatives, relatedNews, isLiked = false, isAdmin = false } = Astro.props;
 const tr = t[locale];
+const ko = locale === 'ko';
 
 const pricingLabel: Record<string, string> = {
-  free: locale === 'ko' ? '무료' : 'Free',
+  free: ko ? '무료' : 'Free',
   freemium: 'Freemium',
-  paid: locale === 'ko' ? '유료' : 'Paid',
-  enterprise: locale === 'ko' ? '기업용' : 'Enterprise',
+  paid: ko ? '유료' : 'Paid',
+  enterprise: ko ? '기업용' : 'Enterprise',
 };
 
 const platformLabels: Record<string, string> = {
   web: 'Web', ios: 'iOS', android: 'Android', api: 'API', desktop: 'Desktop',
 };
 
-const features = locale === 'ko' && product.features_ko.length > 0
+const features = ko && product.features_ko.length > 0
   ? product.features_ko : product.features;
-const useCases = locale === 'ko' && product.use_cases_ko.length > 0
+const useCases = ko && product.use_cases_ko.length > 0
   ? product.use_cases_ko : product.use_cases;
-const gettingStarted = locale === 'ko' && product.getting_started_ko.length > 0
+const gettingStarted = ko && product.getting_started_ko.length > 0
   ? product.getting_started_ko : product.getting_started;
-const scenarios = locale === 'ko' && product.scenarios_ko?.length > 0
+const scenarios = ko && product.scenarios_ko?.length > 0
   ? product.scenarios_ko : (product.scenarios ?? []);
-const prosCons = locale === 'ko' && product.pros_cons_ko
+const prosCons = ko && product.pros_cons_ko
   ? product.pros_cons_ko : product.pros_cons;
-const editorNote = locale === 'ko' ? (product.editor_note_ko || product.editor_note) : product.editor_note;
+const pros = prosCons?.pros ?? [];
+const cons = prosCons?.cons ?? [];
+const editorNote = ko ? (product.editor_note_ko || product.editor_note) : product.editor_note;
 const resources = product.official_resources ?? [];
 const displayTags = product.display_tags ?? product.tags ?? [];
 const difficultyLabels: Record<string, { en: string; ko: string }> = DIFFICULTY_LABELS;
+const platforms = (product.platform ?? []).map((p) => platformLabels[p] ?? p);
+const secondaryCategories = (product.secondary_categories ?? []).filter((c) => c && c !== product.primary_category);
+const categoryHref = (id: string) => `/${locale}/products/?cat=${id}`;
+
+// Scenarios: the first three stay visible, the rest continue the numbering inside <details>.
+const SCENARIOS_SHOWN = 3;
+const scenariosShown = scenarios.slice(0, SCENARIOS_SHOWN);
+const scenariosMore = scenarios.slice(SCENARIOS_SHOWN);
+
+const copy = ko
+  ? {
+      crumb: '제품 위치',
+      back: '← AI 제품군',
+      facts: '제품 정보',
+      price: '가격',
+      difficulty: '난이도',
+      platforms: '플랫폼',
+      korean: '한국어',
+      notListed: '정보 없음',
+      supported: '지원',
+      notSupported: '미지원',
+      verdict: '에디터 한마디',
+      prosCons: '장단점',
+      pros: '좋은 점',
+      cons: '아쉬운 점',
+      scenarios: '이렇게 써보세요',
+      more: (n: number) => `${n}개 더 보기`,
+      features: '주요 기능',
+      useCases: '이런 상황에 추천',
+      pricing: '가격',
+      gettingStarted: '시작하는 법',
+      about: '소개',
+      koreanNote: '한국어 사용 경험',
+      resources: '참고 자료',
+      news: '관련 뉴스',
+      similar: '비슷한 도구',
+      verified: '최종 확인일',
+    }
+  : {
+      crumb: 'Product location',
+      back: '← AI Products',
+      facts: 'Product facts',
+      price: 'Price',
+      difficulty: 'Difficulty',
+      platforms: 'Platforms',
+      korean: 'Korean',
+      notListed: 'Not listed',
+      supported: 'Supported',
+      notSupported: 'Not supported',
+      verdict: "Editor's take",
+      prosCons: 'Pros and cons',
+      pros: 'What works',
+      cons: 'What to watch',
+      scenarios: 'Try It Like This',
+      more: (n: number) => `Show ${n} more`,
+      features: 'Key Features',
+      useCases: 'Use Cases',
+      pricing: 'Pricing',
+      gettingStarted: 'Getting Started',
+      about: 'About',
+      koreanNote: 'Korean Language Experience',
+      resources: 'Resources',
+      news: 'Related News',
+      similar: 'Similar Tools',
+      verified: 'Last verified',
+    };
+
 const editHref = `/admin/products/edit/${product.slug}`;
 const unpublishApi = '/api/admin/products/status';
 const adminActionCopy = locale === 'ko'
@@ -61,279 +135,267 @@ const adminActionCopy = locale === 'ko'
 
 <article class="product-detail" id="products-top">
 
-  <!-- ① Hero -->
-  <header class="product-detail-hero">
-    <!-- Logo + Title row -->
-    <div class="product-detail-hero-identity">
-      {product.logo_url ? (
-        <img
-          src={product.logo_url}
-          alt={product.name_original}
-          class="product-detail-logo"
-          width="72"
-          height="72"
-          loading="eager"
-        />
-      ) : (
-        <div class="product-detail-logo-fallback">
-          {product.name_original.charAt(0)}
+  <nav class="product-detail-crumb" aria-label={copy.crumb}>
+    <a href={`/${locale}/products/`}>{copy.back}</a>
+    {product.primary_category && (
+      <>
+        <span class="product-detail-crumb-sep" aria-hidden="true">·</span>
+        <a href={categoryHref(product.primary_category)}>{jumpLabel(locale, product.primary_category, product.primary_category)}</a>
+      </>
+    )}
+  </nav>
+
+  <header class="product-detail-head">
+    <div class="product-detail-head-main">
+      <div class="product-detail-identity">
+        {product.logo_url ? (
+          <img
+            src={product.logo_url}
+            alt=""
+            class="product-detail-logo"
+            width="52"
+            height="52"
+            loading="eager"
+          />
+        ) : (
+          <span class="product-detail-logo-fallback" aria-hidden="true">
+            {product.name_original.charAt(0)}
+          </span>
+        )}
+        <div class="product-detail-title">
+          <h1 class="product-detail-name">{product.name_original}</h1>
+          {ko && product.name_ko && product.name_ko !== product.name_original && (
+            <span class="product-detail-name-ko">{product.name_ko}</span>
+          )}
+        </div>
+      </div>
+
+      {product.tagline && (
+        <p class="product-detail-tagline">{product.tagline}</p>
+      )}
+
+      {(product.primary_category || secondaryCategories.length > 0 || displayTags.length > 0) && (
+        <div class="product-detail-tags-row">
+          {product.primary_category && (
+            <a href={categoryHref(product.primary_category)} class="product-detail-tag-cat">
+              {jumpLabel(locale, product.primary_category, product.primary_category)}
+            </a>
+          )}
+          {secondaryCategories.map((cat) => (
+            <a href={categoryHref(cat)} class="product-detail-tag-cat product-detail-tag-cat--secondary">
+              {jumpLabel(locale, cat, cat)}
+            </a>
+          ))}
+          {displayTags.map((tag) => (
+            <span class="product-detail-tag">#{tag}</span>
+          ))}
         </div>
       )}
-      <div class="product-detail-hero-text">
-        <h1 class="product-detail-name">{product.name_original}</h1>
-        {locale === 'ko' && product.name_ko && product.name_ko !== product.name_original && (
-          <span class="product-detail-name-ko">{product.name_ko}</span>
+    </div>
+
+    <aside class="product-detail-spec" aria-label={copy.facts}>
+      <dl class="product-detail-spec-list">
+        <div>
+          <dt>{copy.price}</dt>
+          <dd>
+            {product.pricing ? (
+              <span class="product-pricing-badge" data-pricing={product.pricing}>
+                {pricingLabel[product.pricing] ?? product.pricing}
+              </span>
+            ) : copy.notListed}
+          </dd>
+        </div>
+        {product.difficulty && (
+          <div>
+            <dt>{copy.difficulty}</dt>
+            <dd>
+              <span class="product-difficulty-badge" data-difficulty={product.difficulty}>
+                {difficultyLabels[product.difficulty]?.[locale] ?? product.difficulty}
+              </span>
+            </dd>
+          </div>
         )}
+        {platforms.length > 0 && (
+          <div>
+            <dt>{copy.platforms}</dt>
+            <dd>{platforms.join(' · ')}</dd>
+          </div>
+        )}
+        <div>
+          <dt>{copy.korean}</dt>
+          <dd>{product.korean_support ? copy.supported : copy.notSupported}</dd>
+        </div>
+        {/* 조회수: 트래픽 충분해지면 다시 활성화 (product.view_count) */}
+      </dl>
+
+      <div class="product-detail-actions">
+        <a
+          href={product.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="product-visit-btn"
+        >
+          {tr['products.visitSite']} ↗
+        </a>
+        <button
+          id="product-like-btn"
+          class:list={['product-like-btn', { 'product-like-btn--active': isLiked }]}
+          data-product-id={product.id}
+          data-liked={isLiked ? 'true' : 'false'}
+          aria-label={ko ? '찜하기' : 'Like'}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span id="like-label">{ko ? (isLiked ? '찜됨' : '찜하기') : (isLiked ? 'Liked' : 'Like')}</span>
+          <span id="like-count">{product.like_count.toLocaleString()}</span>
+        </button>
       </div>
-    </div>
-
-    {product.tagline && (
-      <p class="product-detail-tagline">{product.tagline}</p>
-    )}
-
-    <!-- Meta: platform · korean · views -->
-    <div class="product-detail-hero-meta">
-      {product.pricing && (
-        <span class="product-pricing-badge" data-pricing={product.pricing}>
-          {pricingLabel[product.pricing] ?? product.pricing}
-        </span>
-      )}
-      {product.difficulty && (
-        <span class="product-difficulty-badge" data-difficulty={product.difficulty}>
-          {difficultyLabels[product.difficulty]?.[locale] ?? product.difficulty}
-        </span>
-      )}
-      {product.korean_support && (
-        <span class="product-detail-chip product-detail-chip--accent">
-          ✓ {locale === 'ko' ? '한국어' : 'Korean'}
-        </span>
-      )}
-      {(product.platform && product.platform.length > 0) && (
-        <span class="product-detail-hero-platform-text">
-          {product.platform.map((p) => platformLabels[p] ?? p).join(' · ')}
-        </span>
-      )}
-      {/* 조회수: 트래픽 충분해지면 다시 활성화
-      <span class="product-detail-hero-stat">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        {product.view_count.toLocaleString()}
-      </span>
-      */}
-    </div>
-
-    <!-- Actions: visit + like -->
-    <div class="product-detail-hero-actions">
-      <a
-        href={product.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        class="product-visit-btn"
-      >
-        {tr['products.visitSite']} ↗
-      </a>
-      <button
-        id="product-like-btn"
-        class:list={['product-like-btn', { 'product-like-btn--active': isLiked }]}
-        data-product-id={product.id}
-        data-liked={isLiked ? 'true' : 'false'}
-        aria-label={locale === 'ko' ? '찜하기' : 'Like'}
-      >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        <span id="like-label">{locale === 'ko' ? (isLiked ? '찜됨' : '찜하기') : (isLiked ? 'Liked' : 'Like')}</span>
-        <span id="like-count">{product.like_count.toLocaleString()}</span>
-      </button>
-    </div>
+    </aside>
   </header>
 
-  <!-- ② Tags 행: primary + secondary + tags -->
-  {(product.primary_category || (product.secondary_categories && product.secondary_categories.length > 0) || displayTags.length > 0) && (
-    <div class="product-detail-tags-row">
-      {product.primary_category && (
-        <a href={`/${locale}/products/?cat=${product.primary_category}`} class="product-detail-chip product-detail-chip--category">
-          {product.primary_category}
-        </a>
-      )}
-      {product.secondary_categories && product.secondary_categories
-        .filter((c) => c && c !== product.primary_category)
-        .map((cat) => (
-          <a href={`/${locale}/products/?cat=${cat}`} class="product-detail-chip product-detail-chip--category-secondary">
-            {cat}
-          </a>
-        ))}
-      {displayTags.map((tag) => (
-        <span class="product-detail-chip product-detail-chip--tag">#{tag}</span>
-      ))}
-    </div>
-  )}
-
-  <!-- ③ Media Gallery (Hero 아래, 있을 때만) -->
   {product.demo_media.length > 0 && (
     <MediaGallery media={product.demo_media} />
   )}
 
-  <!-- ④–⑧ Main content sections -->
-  <div class="product-detail-content">
+  {editorNote && (
+    <section class="product-detail-verdict" aria-labelledby="product-verdict-title">
+      <h2 class="product-detail-verdict-label" id="product-verdict-title">{copy.verdict}</h2>
+      <blockquote class="product-detail-verdict-quote">
+        <p>{editorNote}</p>
+      </blockquote>
+    </section>
+  )}
 
-    <!-- ④ About -->
-    {htmlDescription && (
-      <section class="product-detail-section">
-        <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '소개' : 'About'}
-        </h2>
-        <div class="product-detail-description prose">
-          <Fragment set:html={htmlDescription} />
-        </div>
-      </section>
-    )}
+  {(pros.length > 0 || cons.length > 0) && (
+    <section class="product-detail-section">
+      <h2 class="product-detail-section-title">{copy.prosCons}</h2>
+      <div class="product-detail-pros-cons">
+        {pros.length > 0 && (
+          <div class="product-detail-pros">
+            <h3 class="product-detail-pros-title">{copy.pros}</h3>
+            <ul>
+              {pros.map((p) => <li>{p}</li>)}
+            </ul>
+          </div>
+        )}
+        {cons.length > 0 && (
+          <div class="product-detail-cons">
+            <h3 class="product-detail-cons-title">{copy.cons}</h3>
+            <ul>
+              {cons.map((c) => <li>{c}</li>)}
+            </ul>
+          </div>
+        )}
+      </div>
+    </section>
+  )}
 
-    <!-- Editor Note -->
-    {editorNote && (
-      <section class="product-detail-section product-detail-editor-note-section">
-        <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '에디터 한마디' : "Editor's Take"}
-        </h2>
-        <blockquote class="product-detail-editor-note">
-          <p>{editorNote}</p>
-        </blockquote>
-      </section>
-    )}
-
-    <!-- ⑤ Key Features -->
-    {features.length > 0 && (
-      <section class="product-detail-section">
-        <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '주요 기능' : 'Key Features'}
-        </h2>
-        <ul class="product-detail-feature-list">
-          {features.map((f) => <li>{f}</li>)}
-        </ul>
-      </section>
-    )}
-
-    <!-- ⑥ Use Cases -->
-    {useCases.length > 0 && (
-      <section class="product-detail-section">
-        <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '이런 상황에 추천' : 'Use Cases'}
-        </h2>
-        <ul class="product-detail-usecase-list">
-          {useCases.map((u) => <li>{u}</li>)}
-        </ul>
-      </section>
-    )}
-
-    <!-- Scenarios -->
-    {scenarios.length > 0 && (
-      <section class="product-detail-section">
-        <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '이렇게 써보세요' : 'Try It Like This'}
-        </h2>
-        <ol class="product-detail-scenarios">
-          {scenarios.map((s, i) => (
-            <li class="product-detail-scenario">
-              <span class="product-detail-scenario-num">{i + 1}</span>
-              <div>
-                <strong class="product-detail-scenario-title">{s.title}</strong>
-                <p class="product-detail-scenario-steps">{s.steps}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
-    )}
-
-    <!-- Pros & Cons -->
-    {prosCons && (prosCons.pros?.length > 0 || prosCons.cons?.length > 0) && (
-      <section class="product-detail-section">
-        <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '장단점' : 'Pros & Cons'}
-        </h2>
-        <div class="product-detail-pros-cons">
-          {prosCons.pros?.length > 0 && (
-            <div class="product-detail-pros">
-              <h3 class="product-detail-pros-title">
-                {locale === 'ko' ? '장점' : 'Pros'}
-              </h3>
-              <ul>
-                {prosCons.pros.map((p) => <li>{p}</li>)}
-              </ul>
+  {scenarios.length > 0 && (
+    <section class="product-detail-section">
+      <h2 class="product-detail-section-title">{copy.scenarios}</h2>
+      <ol class="product-detail-scenarios">
+        {scenariosShown.map((s, i) => (
+          <li class="product-detail-scenario">
+            <span class="product-detail-scenario-num">{i + 1}</span>
+            <div>
+              <strong class="product-detail-scenario-title">{s.title}</strong>
+              <p class="product-detail-scenario-steps">{s.steps}</p>
             </div>
-          )}
-          {prosCons.cons?.length > 0 && (
-            <div class="product-detail-cons">
-              <h3 class="product-detail-cons-title">
-                {locale === 'ko' ? '단점' : 'Cons'}
-              </h3>
-              <ul>
-                {prosCons.cons.map((c) => <li>{c}</li>)}
-              </ul>
-            </div>
-          )}
-        </div>
-      </section>
-    )}
+          </li>
+        ))}
+      </ol>
+      {scenariosMore.length > 0 && (
+        <details class="product-detail-more">
+          <summary>{copy.more(scenariosMore.length)}</summary>
+          <ol class="product-detail-scenarios" start={SCENARIOS_SHOWN + 1}>
+            {scenariosMore.map((s, i) => (
+              <li class="product-detail-scenario">
+                <span class="product-detail-scenario-num">{SCENARIOS_SHOWN + i + 1}</span>
+                <div>
+                  <strong class="product-detail-scenario-title">{s.title}</strong>
+                  <p class="product-detail-scenario-steps">{s.steps}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+    </section>
+  )}
 
-    <!-- ⑦ Getting Started -->
-    {gettingStarted.length > 0 && (
-      <section class="product-detail-section">
-        <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '시작하는 법' : 'Getting Started'}
-        </h2>
-        <ol class="product-detail-steps">
-          {gettingStarted.map((step, i) => (
-            <li>
-              <span class="product-detail-step-num">{i + 1}</span>
-              <span>{step}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
-    )}
+  {(features.length > 0 || useCases.length > 0) && (
+    <div class="product-detail-pair">
+      {features.length > 0 && (
+        <section class="product-detail-section">
+          <h2 class="product-detail-section-title">{copy.features}</h2>
+          <ul class="product-detail-feature-list">
+            {features.map((f) => <li>{f}</li>)}
+          </ul>
+        </section>
+      )}
+      {useCases.length > 0 && (
+        <section class="product-detail-section">
+          <h2 class="product-detail-section-title">{copy.useCases}</h2>
+          <ul class="product-detail-usecase-list">
+            {useCases.map((u) => <li>{u}</li>)}
+          </ul>
+        </section>
+      )}
+    </div>
+  )}
 
-    <!-- ⑧ Pricing 상세 -->
-    {htmlPricingDetail && (
-      <section class="product-detail-section">
-        <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '가격 정보' : 'Pricing'}
-        </h2>
-        <div class="product-detail-pricing-table prose" set:html={htmlPricingDetail} />
-      </section>
-    )}
+  {htmlPricingDetail && (
+    <section class="product-detail-section">
+      <h2 class="product-detail-section-title">{copy.pricing}</h2>
+      <div class="product-detail-pricing-table prose" set:html={htmlPricingDetail} />
+    </section>
+  )}
 
-    <!-- Korean Quality Note -->
-    {product.korean_quality_note && (
-      <section class="product-detail-section">
-        <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '한국어 사용 경험' : 'Korean Language Experience'}
-        </h2>
-        <p class="product-detail-korean-note">{product.korean_quality_note}</p>
-      </section>
-    )}
+  {gettingStarted.length > 0 && (
+    <section class="product-detail-section">
+      <h2 class="product-detail-section-title">{copy.gettingStarted}</h2>
+      <ol class="product-detail-steps">
+        {gettingStarted.map((step, i) => (
+          <li>
+            <span class="product-detail-step-num">{i + 1}</span>
+            <span>{step}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )}
 
-    <!-- Official Resources -->
-    {resources.length > 0 && (
-      <section class="product-detail-section">
-        <h2 class="product-detail-section-title">
-          {locale === 'ko' ? '참고 자료' : 'Resources'}
-        </h2>
-        <ul class="product-detail-resources">
-          {resources.map((r) => (
-            <li>
-              <a href={r.url} target="_blank" rel="noopener noreferrer">{r.label} ↗</a>
-            </li>
-          ))}
-        </ul>
-      </section>
-    )}
+  {htmlDescription && (
+    <section class="product-detail-section">
+      <h2 class="product-detail-section-title">{copy.about}</h2>
+      <div class="product-detail-description prose">
+        <Fragment set:html={htmlDescription} />
+      </div>
+    </section>
+  )}
 
-  </div>
+  {product.korean_quality_note && (
+    <section class="product-detail-section">
+      <h2 class="product-detail-section-title">{copy.koreanNote}</h2>
+      <p class="product-detail-korean-note">{product.korean_quality_note}</p>
+    </section>
+  )}
 
-  <!-- ⑨ Related News -->
+  {resources.length > 0 && (
+    <section class="product-detail-section">
+      <h2 class="product-detail-section-title">{copy.resources}</h2>
+      <ul class="product-detail-resources">
+        {resources.map((r) => (
+          <li>
+            <a href={r.url} target="_blank" rel="noopener noreferrer">{r.label} ↗</a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
   {relatedNews.length > 0 && (
     <section class="product-detail-section">
-      <h2 class="product-detail-section-title">
-        {locale === 'ko' ? '관련 뉴스' : 'Related News'}
-      </h2>
+      <h2 class="product-detail-section-title">{copy.news}</h2>
       <ul class="product-detail-news-list">
         {relatedNews.map((news) => (
           <li>
@@ -344,37 +406,17 @@ const adminActionCopy = locale === 'ko'
     </section>
   )}
 
-  <!-- ⑩ Similar Tools -->
   {alternatives.length > 0 && (
     <section class="product-detail-section product-detail-alternatives">
-      <h2 class="product-detail-section-title">
-        {locale === 'ko' ? '비슷한 도구' : 'Similar Tools'}
-      </h2>
-      <div class="product-grid product-grid--preview">
-        {alternatives.map((alt) => {
-          const firstImg = alt.demo_media?.find((m) => m.type === 'image');
-          return (
-            <ProductCard
-              href={`/${locale}/products/${alt.slug}/`}
-              name={alt.name_original ?? alt.name}
-              tagline={alt.tagline}
-              logoUrl={alt.logo_url}
-              thumbnailUrl={alt.thumbnail_url}
-              demoMediaFirst={firstImg?.url ?? null}
-              pricing={alt.pricing}
-              platform={alt.platform}
-              koreanSupport={alt.korean_support}
-              locale={locale}
-              categoryId={alt.primary_category}
-              viewCount={alt.view_count}
-            />
-          );
-        })}
-      </div>
+      <h2 class="product-detail-section-title">{copy.similar}</h2>
+      <ol class="product-detail-alts">
+        {alternatives.map((alt) => (
+          <ProductRow product={alt} locale={locale} />
+        ))}
+      </ol>
     </section>
   )}
 
-  <!-- ⑪ FAQ -->
   <section class="product-detail-section product-detail-faq">
     <h2 class="product-detail-section-title">FAQ</h2>
 
@@ -427,23 +469,11 @@ const adminActionCopy = locale === 'ko'
     </details>
   </section>
 
-  <!-- ⑫ Bottom CTA -->
   {product.verified_at && (
     <p class="product-detail-verified">
-      {locale === 'ko' ? '최종 확인일' : 'Last verified'}: {product.verified_at}
+      {copy.verified}: {product.verified_at}
     </p>
   )}
-
-  <div class="product-detail-bottom-cta">
-    <a
-      href={product.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      class="product-visit-btn product-visit-btn--large"
-    >
-      {product.name_original} {tr['products.visitSite']} ↗
-    </a>
-  </div>
 
   <div
     data-admin-only

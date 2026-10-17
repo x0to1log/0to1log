@@ -4,7 +4,6 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { getProductDetailData, fetchAlternatives, fetchRelatedNews } from '../../../lib/pageData/productsPage';
-import ProductSearchBar from '../../../components/products/ProductSearchBar.astro';
 import ProductDetail from '../../../components/products/ProductDetail.astro';
 import ContentFeedback from '../../../components/common/ContentFeedback.astro';
 
@@ -36,7 +35,6 @@ if (error) {
 >
   {product ? (
     <div class="product-detail-page">
-      <ProductSearchBar locale={locale} sticky={true} />
       <ProductDetail product={product} htmlDescription={htmlDescription} htmlPricingDetail={htmlPricingDetail} locale={locale} alternatives={alternatives} relatedNews={relatedNews} isAdmin={!!Astro.locals.isAdmin}>
         <ContentFeedback
           sourceType="product"
@@ -59,6 +57,5 @@ if (error) {
 
 <script>
   import '../../../scripts/contentFeedback';
-  import '../../../scripts/handbookSearchHints';
   import '../../../scripts/productLike';
 </script>

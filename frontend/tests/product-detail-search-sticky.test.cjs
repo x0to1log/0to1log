@@ -55,25 +55,6 @@ assert(
   'ProductSearchBar should submit back to the localized products index',
 );
 
-[
-  'src/pages/en/products/[slug].astro',
-  'src/pages/ko/products/[slug].astro',
-].forEach((file) => {
-  const source = read(file);
-  assert(
-    source.includes("import ProductSearchBar from '../../../components/products/ProductSearchBar.astro';"),
-    `${file} should import the shared product search component`,
-  );
-  assert(
-    source.includes('sticky={true}'),
-    `${file} should render the search bar in sticky detail mode`,
-  );
-  assert(
-    source.includes("import '../../../scripts/handbookSearchHints';"),
-    `${file} should initialize the rotating product search hints on detail pages`,
-  );
-});
-
 const globalCss = read('src/styles/global.css');
 const detailStickyBlock = extractBlock(
   globalCss,

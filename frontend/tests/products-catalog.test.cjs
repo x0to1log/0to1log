@@ -78,7 +78,7 @@ const data = read('lib/pageData/productsPage.ts');
 const cardColumns = data.match(/const CARD_COLUMNS =[\s\S]*?;/)[0];
 assert(/difficulty/.test(cardColumns), 'cards carry difficulty');
 assert(!/editor_note/.test(cardColumns), 'card query does not ship editor notes');
-assert(/demo_media/.test(cardColumns), 'demo_media stays (detail alternatives)');
+assert(/demo_media/.test(cardColumns), 'demo_media stays (card query unchanged)');
 assert(/const PRODUCT_CATEGORY_COLUMNS = 'id, label_en, label_ko, description_ko, description_en, sort_order';/.test(data), 'field descriptions');
 const listFn = data.slice(data.indexOf('export async function getProductsPageData'), data.indexOf('// Detail page'));
 assert(listFn.includes(".select(PICK_NOTE_COLUMNS)") && listFn.includes(".eq('featured', true)"), 'featured note query');
@@ -130,7 +130,7 @@ assert(/\.product-catalog-title\s*\{[^}]*font-size:\s*1\.7rem/.test(mobile), 'mo
 
 // one label table for the detail page too
 const detail = read('components/products/ProductDetail.astro');
-assert(detail.includes("import { DIFFICULTY_LABELS } from '../../lib/productCatalog.js';"), 'ProductDetail imports DIFFICULTY_LABELS');
+assert(detail.includes("import { DIFFICULTY_LABELS, jumpLabel } from '../../lib/productCatalog.js';"), 'ProductDetail imports DIFFICULTY_LABELS (and the short field labels)');
 assert(!detail.includes("beginner: { en: 'Beginner-friendly'"), 'no second difficulty table');
 
 // old list pieces are gone (Task 3)
