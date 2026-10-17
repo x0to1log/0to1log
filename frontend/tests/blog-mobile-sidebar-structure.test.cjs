@@ -49,10 +49,19 @@ function assertNoPageLevelToggle(relativePath) {
   );
 }
 
-assertNoPageLevelToggle('frontend/src/pages/ko/blog/index.astro');
-assertNoPageLevelToggle('frontend/src/pages/en/blog/index.astro');
+assertNoPageLevelToggle('frontend/src/pages/ko/blog/category/[slug].astro');
+assertNoPageLevelToggle('frontend/src/pages/en/blog/category/[slug].astro');
 assertNoPageLevelToggle('frontend/src/pages/ko/blog/[slug].astro');
 assertNoPageLevelToggle('frontend/src/pages/en/blog/[slug].astro');
+
+// The list page (A: serial column) has no sidebar, so no drawer toggle either.
+for (const locale of ['ko', 'en']) {
+  const index = read(`frontend/src/pages/${locale}/blog/index.astro`);
+  assert.ok(
+    index.includes('sidebar={false}') && !index.includes('data-sidebar-toggle'),
+    `${locale} blog list: no sidebar and no drawer toggle`,
+  );
+}
 
 const shell = read('frontend/src/components/blog/BlogShell.astro');
 assert.ok(

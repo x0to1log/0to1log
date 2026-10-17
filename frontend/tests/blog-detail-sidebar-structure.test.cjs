@@ -38,10 +38,16 @@ const enDetail = read('src/pages/en/blog/[slug].astro');
 assert(enDetail.includes('mode="detail"'), 'English blog detail page must render sidebar in detail mode');
 assert(enDetail.includes('currentCategory={post?.category}'), 'English blog detail page must pass the current post category to the sidebar');
 
+// The list page (A: serial column) renders without the sidebar; category pages keep it in index mode.
 const koIndex = read('src/pages/ko/blog/index.astro');
-assert(koIndex.includes('mode="index"'), 'Korean blog list page must render sidebar in index mode');
+assert(koIndex.includes('sidebar={false}') && !koIndex.includes('mode="index"'), 'Korean blog list page must render without the sidebar');
 
 const enIndex = read('src/pages/en/blog/index.astro');
-assert(enIndex.includes('mode="index"'), 'English blog list page must render sidebar in index mode');
+assert(enIndex.includes('sidebar={false}') && !enIndex.includes('mode="index"'), 'English blog list page must render without the sidebar');
+
+for (const locale of ['ko', 'en']) {
+  const categoryPage = read(`src/pages/${locale}/blog/category/[slug].astro`);
+  assert(categoryPage.includes('mode="index"') && categoryPage.includes('currentCategory={slug}'), `${locale} blog category page must keep the index-mode sidebar`);
+}
 
 console.log('blog detail sidebar structure ok');

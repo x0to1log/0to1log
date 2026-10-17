@@ -81,8 +81,9 @@ function assertNoInlineToolbar(relativePath) {
   );
 }
 
-assertNoInlineToolbar('frontend/src/pages/ko/blog/index.astro');
-assertNoInlineToolbar('frontend/src/pages/en/blog/index.astro');
+// The list page has no sidebar (and no drawer toggle); category pages keep the toolbar.
+assertNoInlineToolbar('frontend/src/pages/ko/blog/category/[slug].astro');
+assertNoInlineToolbar('frontend/src/pages/en/blog/category/[slug].astro');
 assertNoInlineToolbar('frontend/src/pages/ko/blog/[slug].astro');
 assertNoInlineToolbar('frontend/src/pages/en/blog/[slug].astro');
 

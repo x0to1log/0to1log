@@ -1,0 +1,165 @@
+---
+// frontend/src/components/blog/BlogFront.astro
+// Blog list A (serial column): byline + search, latest post, one series per main field, short notes.
+// Data comes from buildBlogFront() (lib/blogSerial.js); every date goes through formatBlogDate (KST).
+// The latest-post block has no bookmark button: the same post is also an episode row, and
+// content-status.ts applies state to the first button per id only.
+import type { BlogCategory } from '../../lib/pageData/blogCategories';
+import { formatBlogDate } from '../../lib/blogSerial.js';
+import BlogSerialItem from './BlogSerialItem.astro';
+
+interface FrontPost {
+  id: string;
+  title: string;
+  slug: string;
+  category: string | null;
+  published_at: string | null;
+  excerpt?: string | null;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  front: {
+    lead: FrontPost | null;
+    series: { category: BlogCategory; posts: FrontPost[] }[];
+    shortNotes: FrontPost[];
+    total: number;
+    latestAt: string | null;
+  };
+  categories: BlogCategory[];
+}
+
+const { locale, front, categories } = Astro.props;
+const isKo = locale === 'ko';
+const copy = isKo
+  ? { latest: '마지막 글', search: '글 검색', latestTag: '최신', seriesCount: '개의 연재', seriesAria: '연재', short: '짧은 글', empty: '일치하는 글이 없어요' }
+  : { latest: 'Latest', search: 'Search posts', latestTag: 'Latest', seriesCount: 'series', seriesAria: 'Series', short: 'Short notes', empty: 'No posts match' };
+const postsLabel = (n: number) => (isKo ? `${n}편` : `${n} post${n === 1 ? '' : 's'}`);
+
+const bySlug = new Map(categories.map((c) => [c.slug, c]));
+const labelOf = (slug: string | null) => {
+  if (!slug) return '';
+  const category = bySlug.get(slug);
+  return category ? (isKo ? category.label_ko : category.label_en) : slug;
+};
+const colorOf = (slug: string | null) => (slug && bySlug.get(slug)?.color) || 'var(--color-border)';
+
+const latest = formatBlogDate(front.latestAt, locale);
+const leadLabel = front.lead ? labelOf(front.lead.category) : '';
+---
+
+<div class="blog-front" data-blog-front>
+  <div class="blog-byline">
+    <p class="blog-byline-meta"><strong>Amy</strong> · {postsLabel(front.total)}{latest && ` · ${copy.latest} ${latest}`}</p>
+    <input type="search" id="blog-search" class="blog-search-input" placeholder={copy.search} aria-label={copy.search} autocomplete="off" />
+  </div>
+
+  {front.lead && (
+    <section class:list={['blog-lead', { 'blog-lead--solo': front.series.length === 0 }]}>
+      <div class="blog-lead-main">
+        <p class="blog-lead-kicker">
+          <span class="blog-category-badge" style={`--cat-color: ${colorOf(front.lead.category)}`}>{leadLabel ? `${leadLabel} · ${copy.latestTag}` : copy.latestTag}</span>
+        </p>
+        <h2 class="blog-lead-title"><a href={`/${locale}/blog/${front.lead.slug}/`}>{front.lead.title}</a></h2>
+        {front.lead.excerpt && <p class="blog-lead-excerpt">{front.lead.excerpt}</p>}
+        <p class="blog-lead-date">{formatBlogDate(front.lead.published_at, locale)}</p>
+      </div>
+      {front.series.length > 0 && (
+        <aside class="blog-lead-aside" aria-label={copy.seriesAria}>
+          <p class="blog-lead-count">{front.series.length}</p>
+          <p class="blog-lead-count-label">{copy.seriesCount}</p>
+          <ul class="blog-lead-series">
+            {front.series.map((s) => {
+              const label = labelOf(s.category.slug);
+              return <li>{isKo ? `${label} ${s.posts.length}편` : `${label} · ${s.posts.length}`}</li>;
+            })}
+          </ul>
+        </aside>
+      )}
+    </section>
+  )}
+
+  {front.series.length > 0 && (
+    <section class="blog-series-grid" aria-label={copy.seriesAria}>
+      {front.series.map(({ category, posts }) => {
+        const label = labelOf(category.slug);
+        const desc = isKo ? category.description_ko : category.description_en;
+        return (
+          <article class="blog-series">
+            <header class="blog-series-head">
+              <h2 class="blog-series-title"><a href={`/${locale}/blog/category/${category.slug}/`}>{label}</a></h2>
+              <span class="blog-series-count">{postsLabel(posts.length)}</span>
+            </header>
+            {desc && <p class="blog-series-desc">{desc}</p>}
+            <ol class="blog-serial-list">
+              {posts.map((post, i) => (
+                <BlogSerialItem locale={locale} post={post} episode={i + 1} />
+              ))}
+            </ol>
+          </article>
+        );
+      })}
+    </section>
+  )}
+
+  {front.shortNotes.length > 0 && (
+    <section class="blog-short-notes">
+      <h2 class="blog-short-notes-title">{copy.short}</h2>
+      <ol class="blog-serial-list">
+        {front.shortNotes.map((post) => (
+          <BlogSerialItem locale={locale} post={post} categoryLabel={labelOf(post.category)} categoryColor={colorOf(post.category)} />
+        ))}
+      </ol>
+    </section>
+  )}
+
+  <p id="blog-search-empty" class="blog-search-empty" role="status" aria-live="polite" hidden>{copy.empty}</p>
+</div>
+
+<script>
+  // Blog list search: title substring match (case-insensitive), 150ms debounce.
+  // Hides non-matching rows, series/short notes with no visible row, and the latest-post block
+  // (its post is already in the results). Clearing the query restores everything.
+  function initBlogSearch(): void {
+    const input = document.getElementById('blog-search') as HTMLInputElement | null;
+    if (!input || input.dataset.blogSearchReady === 'true') return;
+    input.dataset.blogSearchReady = 'true';
+
+    const front = input.closest<HTMLElement>('[data-blog-front]');
+    if (!front) return;
+    const lead = front.querySelector<HTMLElement>('.blog-lead');
+    const grid = front.querySelector<HTMLElement>('.blog-series-grid');
+    const empty = document.getElementById('blog-search-empty');
+    const groups = Array.from(front.querySelectorAll<HTMLElement>('.blog-series, .blog-short-notes'));
+    let timer: number | undefined;
+
+    function apply(): void {
+      const query = input!.value.trim().toLowerCase();
+      let shown = 0;
+      for (const group of groups) {
+        let visible = 0;
+        group.querySelectorAll<HTMLElement>('.blog-list-item').forEach((item) => {
+          const title = (item.querySelector('.blog-serial-title')?.textContent || '').toLowerCase();
+          const match = !query || title.includes(query);
+          item.hidden = !match;
+          if (match) visible += 1;
+        });
+        group.hidden = visible === 0;
+        shown += visible;
+      }
+      if (grid) grid.hidden = !grid.querySelector('.blog-series:not([hidden])');
+      if (lead) lead.hidden = query.length > 0;
+      if (empty) empty.hidden = !query || shown > 0;
+    }
+
+    input.addEventListener('input', () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(apply, 150);
+    });
+    // A restored value (back/forward cache, autofill) filters right away.
+    if (input.value) apply();
+  }
+
+  document.addEventListener('astro:page-load', initBlogSearch);
+  initBlogSearch();
+</script>

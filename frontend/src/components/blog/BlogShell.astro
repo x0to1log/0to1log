@@ -4,35 +4,42 @@ import type { BlogSidebarMode, SidebarPost } from '../../lib/pageData/blogSideba
 
 interface Props {
   locale: 'en' | 'ko';
-  sidebarPosts: SidebarPost[];
+  sidebarPosts?: SidebarPost[];
   currentSlug?: string;
   currentCategory?: string;
-  totalCount: number;
+  totalCount?: number;
   mode?: BlogSidebarMode;
   showTOC?: boolean;
+  /** false: no sidebar, overlay or drawer — one centred column (blog list). Category and detail pages keep the default. */
+  sidebar?: boolean;
 }
 
 const {
   locale,
-  sidebarPosts,
+  sidebarPosts = [],
   currentSlug,
   currentCategory,
-  totalCount,
+  totalCount = 0,
   mode = 'index',
   showTOC,
+  sidebar = true,
 } = Astro.props as Props;
 ---
 
-<div class="blog-shell">
-  <BlogSidebar
-    locale={locale}
-    posts={sidebarPosts}
-    currentSlug={currentSlug}
-    currentCategory={currentCategory}
-    totalCount={totalCount}
-    mode={mode}
-  />
-  <div class="blog-sidebar-overlay" data-sidebar-overlay></div>
+<div class:list={['blog-shell', { 'blog-shell--single': !sidebar }]}>
+  {sidebar && (
+    <>
+      <BlogSidebar
+        locale={locale}
+        posts={sidebarPosts}
+        currentSlug={currentSlug}
+        currentCategory={currentCategory}
+        totalCount={totalCount}
+        mode={mode}
+      />
+      <div class="blog-sidebar-overlay" data-sidebar-overlay></div>
+    </>
+  )}
   <div class="blog-main">
     <div class="blog-main-inner">
       <slot />

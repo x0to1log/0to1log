@@ -1,0 +1,54 @@
+---
+// frontend/src/components/blog/BlogSerialItem.astro
+// Blog list A: one row of a series (episode number) or of the short notes (field dot label).
+// The bookmark button must stay inside this li: content-status.ts marks the closest .blog-list-item as read.
+// Bookmark state is neutral on the server (CDN-cacheable HTML); content-status.ts hydrates it.
+import { formatBlogDate } from '../../lib/blogSerial.js';
+
+interface SerialPost {
+  id: string;
+  title: string;
+  slug: string;
+  published_at?: string | null;
+}
+
+interface Props {
+  locale: 'en' | 'ko';
+  post: SerialPost;
+  /** series row: 1-based episode number */
+  episode?: number;
+  /** short-note row: field label and DB color */
+  categoryLabel?: string;
+  categoryColor?: string;
+}
+
+const { locale, post, episode, categoryLabel, categoryColor } = Astro.props;
+const episodeLabel = episode ? (locale === 'ko' ? `${episode}화` : `Ep. ${episode}`) : '';
+const date = formatBlogDate(post.published_at, locale);
+---
+
+<li class="blog-list-item">
+  {episodeLabel ? (
+    <span class="blog-serial-ep">{episodeLabel}</span>
+  ) : (
+    <span class="blog-serial-cat">
+      {categoryLabel && (
+        <span class="blog-category-badge" style={`--cat-color: ${categoryColor || 'var(--color-border)'}`}>{categoryLabel}</span>
+      )}
+    </span>
+  )}
+  <a class="blog-serial-title" href={`/${locale}/blog/${post.slug}/`}>{post.title}</a>
+  <span class="blog-serial-date">{date}</span>
+  <button
+    type="button"
+    class="newsprint-bookmark-icon"
+    data-item-id={post.id}
+    data-item-type="blog"
+    data-bookmarked="false"
+    aria-label="Add bookmark"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+    </svg>
+  </button>
+</li>
