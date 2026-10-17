@@ -19,7 +19,7 @@ mustInclude(head, 'IBM+Plex+Sans', 'IBM Plex Sans font import');
 mustNotInclude(head, 'IBM+Plex+Serif', 'IBM Plex Serif font import');
 mustInclude(css, "--font-blog-heading: 'IBM Plex Sans', 'IBM Plex Sans KR', sans-serif;", 'blog heading token');
 
-const selectors = ['.blog-featured-card-title', '.blog-list-item-title', '.blog-article-title'];
+const selectors = ['.blog-list-item-title', '.blog-serial-title', '.blog-article-title'];
 for (const selector of selectors) {
   const escaped = selector.replace('.', '\\.');
   const match = css.match(new RegExp(`${escaped}\\s*\\{([\\s\\S]*?)\\n\\}`));

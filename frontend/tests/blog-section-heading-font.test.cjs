@@ -13,13 +13,20 @@ function assertIncludes(haystack, needle, label) {
   }
 }
 
+// Blog list A (2026-10-17): the old .blog-section-header ("추천 글"/"전체 글") is gone.
+// Section headings are now the latest post, series and short-notes h2s: Hahmlet 700.
 const css = read('frontend/src/styles/global.css');
-const match = css.match(/\.blog-section-header\s*\{([\s\S]*?)\n\}/);
-if (!match) {
-  throw new Error('Missing blog section header rule block');
+for (const selector of ['.blog-lead-title', '.blog-series-title', '.blog-short-notes-title']) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = css.match(new RegExp(`(?:^|\\n)${escaped}\\s*\\{([\\s\\S]*?)\\n\\}`));
+  if (!match) {
+    throw new Error(`Missing ${selector} rule block`);
+  }
+  assertIncludes(match[1], 'font-family: var(--font-blog-heading);', `${selector} heading font`);
+  assertIncludes(match[1], 'font-weight: 700;', `${selector} weight`);
 }
-
-const block = match[1];
-assertIncludes(block, 'font-family: var(--font-blog-masthead);', 'blog section header masthead font');
+if (css.includes('.blog-section-header')) {
+  throw new Error('Unexpected legacy .blog-section-header rule');
+}
 
 console.log('blog-section-heading-font.test.cjs passed');

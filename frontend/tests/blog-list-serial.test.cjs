@@ -118,4 +118,13 @@ assert(/\.blog-search-input\s*\{[^}]*width:\s*100%/.test(mobile), 'mobile: searc
 assert(/\.blog-lead\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/.test(mobile), 'mobile: lead one column');
 assert(/\.blog-series-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/.test(mobile), 'mobile: series one column');
 
+// unused CSS removed (Task 3): featured cards, list-page tabs and section headers were list-only
+for (const gone of ['.blog-featured-', '.blog-category-tab', '.blog-section-header', 'Blog Masthead Tagline + Category Tabs']) {
+  assert(!css.includes(gone), `unused CSS removed: ${gone}`);
+}
+// still used by the category pages / article layout
+for (const kept of ['.blog-list-batch[hidden] {', '.blog-scroll-sentinel {', '.blog-mobile-toolbar {', '.blog-list-section {', '.blog-mono-tag {', '.blog-category-badge {', '.blog-masthead-tagline {']) {
+  assert(css.includes(kept), `CSS kept: ${kept}`);
+}
+
 console.log('blog-list-serial.test.cjs passed');
