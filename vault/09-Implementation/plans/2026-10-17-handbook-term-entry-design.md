@@ -1,6 +1,6 @@
 # 용어 상세 재설계 (A 사전 표제어 + B 개념 지도) — Design Spec
 
-**Status:** approved (2026-10-17)
+**Status:** implemented (2026-10-17) — [[2026-10-17-handbook-term-entry]]
 **Mockup:** `.superpowers/brainstorm/term/term-v1.html` (A안 + B안 개념 지도)
 **관련:** [[2026-10-16-news-article-briefing-design]], [[2026-10-17-handbook-index-shelves-design]]
 

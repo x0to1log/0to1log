@@ -1,5 +1,7 @@
 # 용어 상세 A+B(사전 표제어 + 개념 지도) Implementation Plan
 
+**Status:** done (2026-10-17) — 실행 결과는 문서 끝 참조.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Status:** ready (2026-10-17)
@@ -2005,3 +2007,13 @@ git commit -m "chore: remove handbook TOC and rail search CSS"
   git add vault/09-Implementation/plans/2026-10-17-handbook-term-entry-design.md vault/09-Implementation/plans/2026-10-17-handbook-term-entry.md vault/09-Implementation/plans/ACTIVE_SPRINT.md
   git commit -m "docs: record handbook term entry redesign"
   ```
+
+---
+
+## 실행 결과 (2026-10-17)
+
+- 커밋: `aefdee45` 라벨·개념 지도 계산, `40d68023` facet 컬럼·연관 순서·최신 뉴스 채우기 제거, `7ab1c1b8` 표제어·함께 볼 말·개념 지도·인라인 액션, `647deae5` 목차·레일 검색 CSS 삭제, `92b4b367` 한글명이 표제어와 같으면 숨김(브라우저 검증 중 발견: BM25 BM25).
+- 테스트: 실패 목록이 기준선과 이름 기준 동일, 신규 FAIL 0. 빌드 성공. 계획 단계에서 scratch 복사본 + 운영 데이터 렌더로 사전 검증.
+- 브라우저 클릭 검증(/ko/handbook/rrf/): 기초→심화 본문 교체, 용어 팝업(BM25), 저장 버튼 1개, 공유 메뉴 열림, 개념 지도 노드 4개 링크·aria-label, 함께 볼 말이 편집 순서(하이브리드 검색·BM25·벡터 검색·리랭킹). 레일·목차 없음.
+- 매트릭스: 종이·순백·다크 × 1100px·375px × ko/en, 대상 rrf·recurrent-mechanism(연관·유형·뉴스 없음 → 품사 줄 없음, 같은 분야)·bm25(뉴스 1건) — 가로 넘침 0, 대비 미달 0, 개념 지도 텍스트 잘림 0.
+- 데이터 사실: 발행 114개 중 related_term_slugs가 있는 용어는 16개 → 대부분 "같은 분야" 지도.
