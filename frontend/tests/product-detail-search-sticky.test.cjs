@@ -55,16 +55,6 @@ assert(
   'ProductSearchBar should submit back to the localized products index',
 );
 
-const filterBar = read('src/components/products/ProductFilterBar.astro');
-assert(
-  filterBar.includes("import ProductSearchBar from './ProductSearchBar.astro';"),
-  'ProductFilterBar should reuse the shared ProductSearchBar component',
-);
-assert(
-  filterBar.includes('<ProductSearchBar locale={locale} />'),
-  'ProductFilterBar should render the extracted ProductSearchBar',
-);
-
 [
   'src/pages/en/products/[slug].astro',
   'src/pages/ko/products/[slug].astro',

@@ -127,4 +127,18 @@ const detail = read('components/products/ProductDetail.astro');
 assert(detail.includes("import { DIFFICULTY_LABELS } from '../../lib/productCatalog.js';"), 'ProductDetail imports DIFFICULTY_LABELS');
 assert(!detail.includes("beginner: { en: 'Beginner-friendly'"), 'no second difficulty table');
 
+// old list pieces are gone (Task 3)
+for (const gone of ['components/products/ProductCategoryTile.astro', 'components/products/ProductFilterBar.astro', 'components/products/ProductSpotlight.astro', 'lib/productCategoryIcons.ts']) {
+  assert(!fs.existsSync(path.join(src, gone)), `deleted: ${gone}`);
+}
+for (const gone of ['.product-category-grid', '.product-category-preview', '.product-category-see-all', '.product-cat-tile', '.product-cat-row', '.product-cat-tag', '.products-back-all', '.product-filter-bar', '.product-filter-tab', '.product-outro-cta']) {
+  assert(!css.includes(gone), `unused CSS removed: ${gone}`);
+}
+assert(css.includes('.product-filter-search {') && css.includes('.product-pricing-badge,') && css.includes('.product-card {'), 'shared product styles stay');
+const i18n = read('i18n/index.ts');
+for (const key of ['products.categoryAll', 'products.heroTitle', 'products.outroCta']) {
+  assert(!i18n.includes(`'${key}'`), `unused i18n key removed: ${key}`);
+}
+assert(i18n.includes("'products.heroSubtitle'") && i18n.includes("'products.outroTitle'"), 'used product keys stay');
+
 console.log('products-catalog.test.cjs passed');
