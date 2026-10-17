@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** ready
+**Status:** done (2026-10-17) — 실행 결과는 문서 끝 참조.
 
 **Goal:** `/ko|en/blog/{slug}/`를 세 칸(폴더 트리 · 본문 · 액션+목차 레일)에서 목록과 같은 한 단(최대 820px)으로 바꾼다. 위에서부터 "경로 줄(← IT 블로그 · 분야 · n화) → 제목 → 요약 → 바이라인(Amy · 연도 포함 날짜 · 읽기 시간 / 분야 · N편 중 n화) → 이 글의 차례(접히는 `details`) → 본문 + 공용 인라인 액션 → 태그 · 관리자 · 피드백 → 이전·다음(같은 연재의 앞·뒤 회차) → 연재 목록 → 댓글(h2)"이다. "다음 글"이 거꾸로 가던 버그(더 이른 글로 이동)도 함께 사라진다.
 
@@ -2390,3 +2390,14 @@ git commit -m "chore: remove blog rail, old TOC, breadcrumb and rail placement"
   git commit -m "docs: record blog post column redesign"
   ```
   (Task 5에서 고친 다른 vault 노트가 있으면 그 경로도 `git add`에 더한다.)
+
+---
+
+## 실행 결과 (2026-10-17)
+
+- 커밋: `793afbba` 연재 위치 계산(locatePost·toSerialProps·연도 포함 날짜), `fd393dc4` 글 상세를 한 단 칼럼으로(경로 줄·바이라인·차례·인라인 액션·이전/다음·연재 목록, 다음 글 쿼리 제거), `d4fcb440` 레일·옛 목차·경로·레일 배치 삭제.
+- 테스트: PASS 82 / FAIL 19, 기준선과 실패 이름·첫 오류 동일. 변화는 `blog-post-column` 추가, `blog-toc-structure` 삭제뿐. 빌드 성공(Task 2·3 후 각각). 계획 단계에서 scratch 복사본 + 운영 데이터 렌더로 사전 검증.
+- 브라우저 클릭 검증(/ko/blog/rag-ai-retrieval-augmented-generation/): 차례 6개 링크·4번째 클릭 시 해당 제목으로 이동, 저장 버튼 1개, 공유 메뉴(X·LinkedIn·URL 복사) 열림, 용어 팝업 열림, 이전·다음 "← 1화 / 3화 →", 연재 목록 5편(2화 aria-current), 끝 블록 순서 태그 → reading-end → 이전·다음 → 연재 → 댓글, 댓글 제목 h2, 레일·사이드바 없음.
+- 매트릭스: 종이·순백·다크 × 1100px·375px, 대상 2화·1화(이전 없음 → "2화 →"만)·5화(다음 없음 → "← 4화"만)·짧은 글(연재 없음, "← 이전 글") — 가로 넘침 0. 차례는 1100px 펼침·375px 접힘. 대비 스캔의 `reading-actions__count` 2.6~2.8은 스캐너가 `color(srgb …)` 배경을 잘못 읽은 오탐(실제 #5A544B on #EFEAE0 ≈ 6.5:1), 그 외 미달 0.
+- 회귀: 분야 페이지(사이드바·모바일 토글 유지, 5건), 뉴스 상세 액션 막대(본문 오른쪽 72px, 저장 버튼 1개) 변화 없음. EN은 글 0편이라 상세는 Not Found 안내.
+- 알려진 한계: 본문 마크다운의 `# 제목` 때문에 일부 글에 h1이 2개(콘텐츠 문제, 범위 밖). `BlogShell`의 `showTOC`/`toc` 슬롯은 사용처 없음(후속 정리 후보).

@@ -1,6 +1,6 @@
 # 블로그 글 상세 재설계 (A 칼럼 한 편) — Design Spec
 
-**Status:** approved (2026-10-17)
+**Status:** implemented (2026-10-17) — [[2026-10-17-blog-post-column]]
 **Mockup:** `.superpowers/brainstorm/blogpost/post-v1.html` (A안)
 **관련:** [[2026-10-17-blog-list-serial-design]], [[2026-10-16-news-article-briefing-design]], [[2026-10-17-handbook-term-entry-design]]
 
