@@ -111,4 +111,18 @@ assert(scenarioLine && scenarioLine.includes('background: var(--color-bg-seconda
 const prosCons = css.slice(css.indexOf('Pros & Cons'), css.indexOf('Korean Note'));
 assert(prosCons.length > 0 && prosCons.includes('var(--color-success)') && prosCons.includes('var(--color-error)'), 'pros/cons colours from tokens');
 
+// removed pieces (Task 3)
+const searchBar = read('components/products/ProductSearchBar.astro');
+assert(!searchBar.includes('sticky') && searchBar.includes('class="product-filter-search"'), 'ProductSearchBar: no sticky detail mode');
+assert(searchBar.includes('id="product-search"') && searchBar.includes('data-placeholder-hints') && searchBar.includes('action={`/${locale}/products/`}'), 'ProductSearchBar keeps the list search (id, hints, action)');
+for (const gone of ['.product-detail-search', '.product-grid--preview', '.product-detail-chip', '.product-detail-hero', '.product-detail-content', '.product-detail-editor-note', '.product-detail-bottom-cta', '.product-visit-btn--large']) {
+  assert(!css.includes(gone), `unused CSS removed: ${gone}`);
+}
+assert(!/@media \(max-width: 639px\) \{\s*\n\s*\.product-detail/.test(css), 'no 639px product detail query (767px only)');
+assert(/padding-top:\s*1\.5rem/.test(rule('.product-detail-page')), 'page wrapper spacing stays');
+assert(css.includes('.handbook-search-sticky {') && css.includes('.product-filter-search {') && css.includes('.product-card {'), 'shared styles stay');
+for (const gone of ['product-detail-search-sticky.test.cjs', 'product-detail-search-spacing.test.cjs']) {
+  assert(!fs.existsSync(path.join(__dirname, gone)), `deleted: tests/${gone}`);
+}
+
 console.log('product-detail-review.test.cjs passed');

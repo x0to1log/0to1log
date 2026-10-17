@@ -3,10 +3,9 @@ import { t } from '../../i18n/index';
 
 interface Props {
   locale: 'en' | 'ko';
-  sticky?: boolean;
 }
 
-const { locale, sticky = false } = Astro.props;
+const { locale } = Astro.props;
 const tr = t[locale];
 
 const placeholderHints = locale === 'ko'
@@ -15,9 +14,7 @@ const placeholderHints = locale === 'ko'
 ---
 
 <form
-  class:list={[
-    sticky ? 'product-detail-search handbook-search-sticky' : 'product-filter-search',
-  ]}
+  class="product-filter-search"
   action={`/${locale}/products/`}
   method="get"
   data-product-search-form
