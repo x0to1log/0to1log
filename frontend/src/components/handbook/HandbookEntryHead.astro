@@ -23,12 +23,16 @@ const isKo = locale === 'ko';
 const label = isKo ? '표제어' : 'Entry';
 const grammar = entryGrammar(locale, term);
 const fullName = term.term_full && term.term_full !== term.term ? term.term_full : '';
+// Skip the Korean name when it just repeats the headword (e.g. BM25 / BM25).
+const koreanName = isKo && term.korean_name && term.korean_name.trim().toLowerCase() !== term.term.trim().toLowerCase()
+  ? term.korean_name
+  : '';
 ---
 
 <header class="handbook-entry">
   <p class="handbook-entry-label">{label}</p>
   <h1 class="handbook-detail-title">
-    {term.term}{isKo && term.korean_name && <span class="handbook-detail-korean">{term.korean_name}</span>}
+    {term.term}{koreanName && <span class="handbook-detail-korean">{koreanName}</span>}
   </h1>
   {fullName && <p class="handbook-detail-subtitle">{fullName}</p>}
   {grammar && <p class="handbook-entry-gram">{grammar}</p>}

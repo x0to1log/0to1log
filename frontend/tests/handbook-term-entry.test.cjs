@@ -96,6 +96,7 @@ function rule(selector) {
   return all[all.length - 1];
 }
 assert(/font-size:\s*3rem/.test(rule('.handbook-entry .handbook-detail-title')), 'headword ~3rem');
+assert(/term\.korean_name\.trim\(\)\.toLowerCase\(\) !== term\.term\.trim\(\)\.toLowerCase\(\)/.test(read('components/handbook/HandbookEntryHead.astro')), 'Korean name hidden when it repeats the headword');
 assert(/font-weight:\s*600/.test(rule('.handbook-entry .handbook-detail-korean')) && rule('.handbook-entry .handbook-detail-korean').includes('var(--font-heading)'), 'Korean name in Hahmlet 600');
 assert(rule('.handbook-entry .handbook-detail-subtitle').includes('var(--font-masthead)'), 'full name in Newsreader');
 assert(/border-bottom:\s*2px solid var\(--color-text-primary\)/.test(rule('.handbook-entry')), 'entry closes with a 2px ink rule');
