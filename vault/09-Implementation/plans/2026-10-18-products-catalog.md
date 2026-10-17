@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** ready
+**Status:** done (2026-10-18) — 실행 결과는 문서 끝 참조.
 
 **Goal:** `/ko|en/products/`를 "분야 타일 10개가 각자 안에서 스크롤"하는 3열 격자에서 가운데 한 단(최대 1040px) 카탈로그로 바꾼다. 위에서부터 "제목 줄(`h1` AI 제품군 · AI 도구 N개 · C개 분야 + 검색) → 분야 바로가기 → 편집자 추천 5칸(편집자 노트 첫 문장) → 분야 섹션(머리 · 첫 문장 · 3열 목록 6줄 + "n개 모두 보기 →") → 맺음말 · 상표 고지"이다. 같은 제품을 두 번 렌더하던 `#filtered-grid`를 없애고, 분야 모두 보기(`?cat=`)와 검색(`?q=`)은 한 번 렌더한 줄을 보이기·숨기기만 한다.
 
@@ -2339,3 +2339,14 @@ git commit -m "chore: remove product tiles, filter bar, spotlight and old list C
   git commit -m "docs: record products catalog redesign"
   ```
   (Task 5에서 고친 다른 vault 노트가 있으면 그 경로도 `git add`에 더한다.)
+
+---
+
+## 실행 결과 (2026-10-18)
+
+- 커밋: `267a792d` 카탈로그 순수 함수(productCatalog.js), `ee88786e` 분야 카탈로그 + 편집자 추천(데이터·페이지·스크립트·CSS, 상세가 DIFFICULTY_LABELS 공유), `996d6c37` 타일·필터 바·스포트라이트·아이콘·옛 CSS·미사용 i18n 삭제.
+- 테스트: PASS 83 / FAIL 19, 기준선과 실패 이름·첫 오류 동일. 변화는 `product-catalog`·`products-catalog` 추가, `product-filter-bar-mobile-sticky` 삭제뿐. 빌드 성공(Task 2·3 후 각각). 계획 단계에서 scratch 복사본 + 운영 데이터 렌더로 사전 검증.
+- 브라우저 클릭 검증(/ko/products/): h1 1개, 분야 섹션 10개·기본 노출 59줄(분야당 최대 6), 편집자 추천 5칸(노트 첫 문장). 어시스턴트 모두 보기 → `?cat=assistant`, 28줄 + "다른 분야에서 함께 쓰이는 도구 14개", 포커스 분야 제목으로 이동, 돌아가기 후 "모두 보기" 버튼으로 복귀. 검색 "이미지" 6분야 33줄, "chatgpt" 2줄, 없는 말 → 결과 없음, 지우면 기본 복원, Enter로 새로고침 없음. `?cat=coding` 직접 진입 14줄 + 함께 쓰이는 도구 7개.
+- 매트릭스: 종이·순백·다크 × 1100px·900px·375px × ko/en(+ `?cat=coding`) — 가로 넘침 0, 대비 미달 0. 목록 3열 / 2열 / 1열, 추천 5열 / 3열 / 가로 스크롤.
+- 회귀: 제품 상세(/ko/products/chatgpt/) 난이도 "초보자 OK", sticky 검색, 대안 카드 4개, 콘솔 오류 없음.
+- 계획 단계 결정: `catalogSections`에 locale 인자 추가, 루트에 `product-catalog` 클래스(상세도 `.products-page` 사용), 스펙 외 죽은 CSS(`.product-category-preview*` 등) 추가 삭제, Enter는 capture 단계에서 막음, 노트 쿼리 `.limit(50)`.

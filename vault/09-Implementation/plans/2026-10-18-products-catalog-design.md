@@ -1,6 +1,6 @@
 # AI 제품군 목록 재설계 (A 분야 카탈로그) — Design Spec
 
-**Status:** approved (2026-10-18)
+**Status:** implemented (2026-10-18) — [[2026-10-18-products-catalog]]
 **Mockup:** `.superpowers/brainstorm/products/products-v1.html` (A안)
 **관련:** [[2026-10-16-news-list-desks-design]], [[2026-10-17-handbook-index-shelves-design]]
 
