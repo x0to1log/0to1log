@@ -40,21 +40,9 @@ assert(!/color-mix\(in srgb, #22c55e/.test(css), 'old green pill tint removed');
 // Pros / cons without red-green
 assert(!/#16a34a|#dc2626/.test(css.slice(css.indexOf('Pros & Cons'), css.indexOf('Korean Note'))), 'pros/cons not red/green');
 
-// Cards: no lift on hover, filter bar without shadow
+// Cards: no lift on hover
 assert(!rules('.product-card:hover').some((r) => /transform/.test(r)), 'product card does not lift on hover');
 assert(!/border-radius|box-shadow/.test(rule('.product-card')), 'product card is not a boxed card');
-assert(!/box-shadow/.test(rule('.product-filter-bar')), 'filter bar has no shadow');
-
-// Mobile: tiles don't scroll inside the page; a "see all" button opens the category
-const tile = fs.readFileSync(path.join(__dirname, '..', 'src', 'components', 'products', 'ProductCategoryTile.astro'), 'utf8');
-assert(tile.includes('class="product-cat-tile-more"') && tile.includes('data-category={categoryId}'), 'tile has a see-all button');
-assert(/\.product-cat-tile\s*\{\s*height:\s*auto;/.test(css), 'phone tiles are not fixed height');
-assert(/\.product-cat-row:nth-child\(n \+ 5\)\s*\{\s*display:\s*none;/.test(css), 'phone tiles show the first four rows');
-for (const loc of ['ko', 'en']) {
-  const page = fs.readFileSync(path.join(__dirname, '..', 'src', 'pages', loc, 'products', 'index.astro'), 'utf8');
-  assert(page.includes("'.product-cat-tile-header, .product-cat-tile-more'"), `${loc}: see-all shares the header click handler`);
-}
-assert(!/border-bottom/.test(rule('.product-filter-bar')), 'no rule under the search bar (tiles carry their own top rule)');
 
 // Mobile nav labels never wrap
 assert(/grid-template-columns:\s*repeat\(5,\s*auto\)/.test(css), 'mobile nav columns follow label width');

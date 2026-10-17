@@ -15,7 +15,7 @@ for (const locale of ['ko', 'en']) {
 
   const productsPage = read(`src/pages/${locale}/products/index.astro`);
   assert.doesNotMatch(productsPage, /search_corpus/, `${locale} product search must use compact card fields`);
-  assert.match(productsPage, /demoMediaFirst/, `${locale} product cards must preserve rendered demo image fallback`);
+  assert.doesNotMatch(productsPage, /demoMediaFirst|demo_media/, `${locale} catalog rows render logos only (no demo images on the list)`);
 }
 
 const handbook = read('src/lib/pageData/handbookPage.ts');

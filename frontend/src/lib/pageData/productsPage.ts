@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { getPublicSupabase } from './shared';
 import { renderMarkdown } from '../markdown';
 import { resolveLocalizedProductTags } from '../productTags';
+import { orderPicks } from '../productCatalog.js';
 
 // =============================================================================
 // Types
@@ -39,6 +40,13 @@ export interface ProductCardData {
   tags: string[] | null;
   tags_ko: string[] | null;
   display_tags: string[] | null;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced' | null;
+}
+
+/** Featured product on the catalog page, with the editor note for its one-line pitch. */
+export interface ProductPick extends ProductCardData {
+  editor_note: string | null;
+  editor_note_ko: string | null;
 }
 
 export interface ProductDetailData {
@@ -89,7 +97,7 @@ export interface ProductDetailData {
 
 export interface ProductsPageData {
   categories: ProductCategory[];
-  spotlightProduct: ProductCardData | null;
+  picks: ProductPick[];
   allProducts: ProductCardData[];
   productsByCategory: Record<string, ProductCardData[]>;
   totalProducts: number;
@@ -131,16 +139,18 @@ export const PRODUCT_DETAIL_PUBLIC_COLUMNS = [
 // List page
 // =============================================================================
 
-const PRODUCT_CATEGORY_COLUMNS = 'id, label_en, label_ko, sort_order';
+const PRODUCT_CATEGORY_COLUMNS = 'id, label_en, label_ko, description_ko, description_en, sort_order';
 const CARD_COLUMNS =
-  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, secondary_categories, featured, featured_order, demo_media, view_count, sort_order, tags, tags_ko';
+  'id, slug, name, name_ko, tagline, tagline_ko, logo_url, thumbnail_url, pricing, platform, korean_support, primary_category, secondary_categories, featured, featured_order, demo_media, view_count, sort_order, tags, tags_ko, difficulty';
+// Editor notes ship only for the featured rows (the picks), not on every card.
+const PICK_NOTE_COLUMNS = 'id, editor_note, editor_note_ko';
 
 export async function getProductsPageData(locale: 'en' | 'ko'): Promise<ProductsPageData> {
   if (!supabase) {
-    return { categories: [], spotlightProduct: null, allProducts: [], productsByCategory: {}, totalProducts: 0, error: null };
+    return { categories: [], picks: [], allProducts: [], productsByCategory: {}, totalProducts: 0, error: null };
   }
 
-  const [categoriesRes, productsRes] = await Promise.all([
+  const [categoriesRes, productsRes, notesRes] = await Promise.all([
     supabase.from('ai_product_categories').select(PRODUCT_CATEGORY_COLUMNS).order('sort_order'),
     supabase
       .from('ai_products')
@@ -150,11 +160,18 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
       .order('sort_order')
       .order('name')
       .limit(200),
+    supabase
+      .from('ai_products')
+      .select(PICK_NOTE_COLUMNS)
+      .eq('is_published', true)
+      .eq('archived', false)
+      .eq('featured', true)
+      .limit(50),
   ]);
 
   if (categoriesRes.error || productsRes.error) {
     const message = categoriesRes.error?.message || productsRes.error?.message || 'Product list lookup failed.';
-    return { categories: [], spotlightProduct: null, allProducts: [], productsByCategory: {}, totalProducts: 0, error: message };
+    return { categories: [], picks: [], allProducts: [], productsByCategory: {}, totalProducts: 0, error: message };
   }
 
   const categories = (categoriesRes.data ?? []) as unknown as ProductCategory[];
@@ -190,10 +207,15 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
     return a.name.localeCompare(b.name);
   });
 
-  // Spotlight: 가장 높은 featured_order를 가진 featured 제품 1개
-  const spotlightProduct = resolvedProducts
-    .filter((p) => p.featured)
-    .sort((a, b) => (a.featured_order ?? 99) - (b.featured_order ?? 99))[0] ?? null;
+  // Editor's picks: featured rows in pick order + their editor notes.
+  // A failed note query only drops the notes (cards fall back to the tagline); the page stays 200.
+  const notesById = new Map<string, { editor_note: string | null; editor_note_ko: string | null }>(
+    ((notesRes.error ? [] : notesRes.data) ?? []).map((row: any) => [row.id, row]),
+  );
+  const picks: ProductPick[] = (orderPicks(resolvedProducts) as ProductCardData[]).map((p) => {
+    const note = notesById.get(p.id);
+    return { ...p, editor_note: note?.editor_note ?? null, editor_note_ko: note?.editor_note_ko ?? null };
+  });
 
   // Group by category for preview mode
   const productsByCategory: Record<string, ProductCardData[]> = {};
@@ -201,7 +223,7 @@ export async function getProductsPageData(locale: 'en' | 'ko'): Promise<Products
     productsByCategory[cat.id] = resolvedProducts.filter((p) => p.primary_category === cat.id);
   }
 
-  return { categories, spotlightProduct, allProducts: resolvedProducts, productsByCategory, totalProducts: resolvedProducts.length, error: null };
+  return { categories, picks, allProducts: resolvedProducts, productsByCategory, totalProducts: resolvedProducts.length, error: null };
 }
 
 // =============================================================================

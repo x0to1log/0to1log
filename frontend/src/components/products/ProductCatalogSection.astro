@@ -1,0 +1,87 @@
+---
+// One field section of the products catalog (catalogSections in lib/productCatalog.js).
+// Every product of the field is rendered; rows after the sixth carry data-overflow and stay hidden
+// until the section is expanded (?cat= or search). The page script only shows/hides rows.
+import type { ProductCardData, ProductCategory } from '../../lib/pageData/productsPage';
+import { t } from '../../i18n/index';
+import { difficultyLabel } from '../../lib/productCatalog.js';
+
+interface Props {
+  section: { category: ProductCategory; products: ProductCardData[]; lede: string; desc: string };
+  locale: 'en' | 'ko';
+  searchTexts: Record<string, string>;
+}
+
+const PREVIEW_ROWS = 6;
+
+const { section, locale, searchTexts } = Astro.props;
+const { category, products, lede, desc } = section;
+const ko = locale === 'ko';
+const tr = t[locale] as Record<string, string>;
+const label = (ko ? category.label_ko : category.label_en) || category.id;
+const total = products.length;
+const titleId = `cat-${category.id}-title`;
+const pricingLabel = (value: string) => tr[`products.${value}`] ?? value;
+---
+
+<section class="product-cat" id={`cat-${category.id}`} data-category={category.id} aria-labelledby={titleId}>
+  <div class="product-cat-head">
+    <h2 class="product-cat-title" id={titleId} tabindex="-1">
+      {label}
+      <span class="product-cat-count">{ko ? `${total}개` : `${total}`}</span>
+    </h2>
+    {total > PREVIEW_ROWS && (
+      <button type="button" class="product-cat-all" data-category={category.id}>
+        {ko ? `${total}개 모두 보기 →` : `See all ${total} →`}
+      </button>
+    )}
+  </div>
+  {lede && <p class="product-cat-lede">{lede}</p>}
+  {desc && <p class="product-cat-desc" hidden>{desc}</p>}
+
+  <ol class="product-cat-list">
+    {products.map((product, index) => {
+      const name = product.name_original ?? product.name;
+      return (
+        <li
+          class="product-row"
+          data-search-text={searchTexts[product.id] ?? ''}
+          data-category={product.primary_category}
+          data-secondary-categories={(product.secondary_categories ?? []).join(',')}
+          data-overflow={index >= PREVIEW_ROWS ? '' : undefined}
+        >
+          <a href={`/${locale}/products/${product.slug}/`}>
+            <span class="product-catalog-logo">
+              {product.logo_url ? (
+                <img src={product.logo_url} alt="" width="30" height="30" loading="lazy" />
+              ) : (
+                <span class="product-catalog-logo-initial" data-category={product.primary_category}>{(name ?? '?').charAt(0)}</span>
+              )}
+            </span>
+            <span class="product-row-text">
+              <span class="product-row-name">{name}</span>
+              {product.tagline && <span class="product-row-tagline">{product.tagline}</span>}
+              {(product.pricing || product.difficulty) && (
+                <span class="product-row-meta">
+                  {product.pricing && (
+                    <span class="product-pricing-badge" data-pricing={product.pricing}>{pricingLabel(product.pricing)}</span>
+                  )}
+                  {product.difficulty && (
+                    <span class="product-difficulty-badge" data-difficulty={product.difficulty}>
+                      {difficultyLabel(locale, product.difficulty) || product.difficulty}
+                    </span>
+                  )}
+                </span>
+              )}
+            </span>
+          </a>
+        </li>
+      );
+    })}
+  </ol>
+
+  <div class="product-cat-also" hidden>
+    <h3 class="product-cat-also-title"></h3>
+    <ol class="product-cat-also-list"></ol>
+  </div>
+</section>

@@ -3,6 +3,7 @@ import type { ProductDetailData, ProductCardData, RelatedNewsItem } from '../../
 import { t } from '../../i18n/index';
 import MediaGallery from './MediaGallery.astro';
 import ProductCard from './ProductCard.astro';
+import { DIFFICULTY_LABELS } from '../../lib/productCatalog.js';
 
 interface Props {
   product: ProductDetailData;
@@ -42,11 +43,7 @@ const prosCons = locale === 'ko' && product.pros_cons_ko
 const editorNote = locale === 'ko' ? (product.editor_note_ko || product.editor_note) : product.editor_note;
 const resources = product.official_resources ?? [];
 const displayTags = product.display_tags ?? product.tags ?? [];
-const difficultyLabels: Record<string, { en: string; ko: string }> = {
-  beginner: { en: 'Beginner-friendly', ko: '초보자 OK' },
-  intermediate: { en: 'Some setup needed', ko: '약간의 설정 필요' },
-  advanced: { en: 'Technical setup', ko: '기술 설정 필요' },
-};
+const difficultyLabels: Record<string, { en: string; ko: string }> = DIFFICULTY_LABELS;
 const editHref = `/admin/products/edit/${product.slug}`;
 const unpublishApi = '/api/admin/products/status';
 const adminActionCopy = locale === 'ko'

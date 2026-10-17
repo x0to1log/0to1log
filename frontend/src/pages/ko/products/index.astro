@@ -4,25 +4,24 @@ export const prerender = false;
 import MainLayout from '../../../layouts/MainLayout.astro';
 import { t } from '../../../i18n/index';
 import { getProductsPageData } from '../../../lib/pageData/productsPage';
-import ProductFilterBar from '../../../components/products/ProductFilterBar.astro';
-import ProductCategoryTile from '../../../components/products/ProductCategoryTile.astro';
-import ProductCard from '../../../components/products/ProductCard.astro';
+import { catalogSections, jumpLabel } from '../../../lib/productCatalog.js';
+import ProductSearchBar from '../../../components/products/ProductSearchBar.astro';
+import ProductPicks from '../../../components/products/ProductPicks.astro';
+import ProductCatalogSection from '../../../components/products/ProductCatalogSection.astro';
 
 const locale = 'ko';
-const { categories, allProducts, productsByCategory, error } = await getProductsPageData(locale);
+const { categories, allProducts, productsByCategory, picks, error } = await getProductsPageData(locale);
 if (error) Astro.response.status = 503;
 
-// Fixed 3 / 3 / 3 / 1 grid order. Categories render in this order regardless
-// of the order the data layer returns them in.
+// Fixed field order. Fields missing from this list follow in DB sort_order; empty fields are skipped.
 const CATEGORY_ORDER = [
   'assistant', 'image', 'video',
   'audio', 'coding', 'workflow',
   'builder', 'platform', 'research',
   'community',
 ];
-const orderedCategories = [...categories].sort(
-  (a, b) => CATEGORY_ORDER.indexOf(a.id) - CATEGORY_ORDER.indexOf(b.id),
-);
+const sections = catalogSections(categories, productsByCategory, CATEGORY_ORDER, locale);
+const shownCount = sections.reduce((sum, section) => sum + section.products.length, 0);
 
 const pricingKo: Record<string, string> = { free: '무료', freemium: '무료 프리미엄', paid: '유료', enterprise: '기업용' };
 const categoryKo: Record<string, string> = { assistant: '어시스턴트 챗봇', image: '이미지 디자인', video: '영상 비디오', audio: '오디오 음악 음성', coding: '코딩 개발 IDE', workflow: '자동화 워크플로우', builder: '앱빌더 노코드', platform: '플랫폼 API', research: '리서치 논문', community: '커뮤니티' };
@@ -43,10 +42,7 @@ const buildSearchText = (product: typeof allProducts[0]) =>
     ...((product as any).display_tags ?? []),
   ].filter(Boolean).join(' ').toLowerCase();
 
-const getFirstImageUrl = (product: typeof allProducts[0]) => {
-  const first = product.demo_media?.find((m) => m.type === 'image');
-  return first?.url ?? null;
-};
+const searchTexts = Object.fromEntries(allProducts.map((product) => [product.id, buildSearchText(product)]));
 ---
 
 <MainLayout
@@ -55,49 +51,39 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
   locale={locale}
   slug="products/"
 >
-  <div class="products-page" id="products-top">
+  <div class="products-page product-catalog" id="products-top" data-also-label="다른 분야에서 함께 쓰이는 도구 {k}개">
     {error && <p class="products-error">{t.ko['products.error']}</p>}
 
-    <ProductFilterBar locale={locale} />
+    <header class="product-catalog-head">
+      <div>
+        <h1 class="product-catalog-title">{t.ko['products.title']}</h1>
+        <p class="product-catalog-sub">AI 도구 {shownCount}개 · {sections.length}개 분야</p>
+      </div>
+      <ProductSearchBar locale={locale} />
+    </header>
 
-    <button id="products-back-all" class="products-back-all" type="button" hidden>
-      &larr; 모든 카테고리
-    </button>
+    <button type="button" class="product-catalog-back" hidden>← 모든 분야</button>
 
-    <!-- Category Grid (3 / 3 / 3 / 1 tiles, each tile scrolls its products) -->
-    <div class="product-category-grid" id="category-preview">
-      {orderedCategories.map((cat) => (
-        <ProductCategoryTile
-          categoryId={cat.id}
-          label={cat.label_ko}
-          products={productsByCategory[cat.id] ?? []}
-          locale={locale}
-        />
-      ))}
-    </div>
+    {sections.length > 0 && (
+      <nav class="product-catalog-jump" aria-label="분야 바로가기">
+        <ul class="product-catalog-jump-list">
+          {sections.map((section) => (
+            <li>
+              <a href={`#cat-${section.category.id}`}>
+                {jumpLabel(locale, section.category.id, section.category.label_ko)}
+                <span class="product-catalog-jump-count">{section.products.length}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    )}
 
-    <!-- Filtered Grid Mode (when category or search active) -->
-    <div class="product-grid" id="filtered-grid" hidden>
-      {allProducts.map((product) => (
-        <ProductCard
-          href={`/${locale}/products/${product.slug}/`}
-          name={product.name}
-          tagline={product.tagline}
-          logoUrl={product.logo_url}
-          thumbnailUrl={product.thumbnail_url}
-          demoMediaFirst={getFirstImageUrl(product)}
-          pricing={product.pricing}
-          platform={product.platform}
-          koreanSupport={product.korean_support}
-          locale={locale}
-          searchText={buildSearchText(product)}
-          categoryId={product.primary_category}
-          secondaryCategories={product.secondary_categories}
-          viewCount={product.view_count}
-          productId={product.id}
-        />
-      ))}
-    </div>
+    <ProductPicks picks={picks} locale={locale} />
+
+    {sections.map((section) => (
+      <ProductCatalogSection section={section} locale={locale} searchTexts={searchTexts} />
+    ))}
 
     <p id="product-search-no-results" class="products-search-no-results" hidden>
       {t.ko['products.searchNoResults']}
@@ -120,130 +106,5 @@ const getFirstImageUrl = (product: typeof allProducts[0]) => {
 
 <script>
   import '../../../scripts/handbookSearchHints';
-  import '../../../scripts/productLike';
-
-  document.addEventListener('astro:page-load', () => {
-    const input = document.getElementById('product-search') as HTMLInputElement | null;
-    if (!input) return;
-    const noResults = document.getElementById('product-search-no-results');
-    const grid = document.getElementById('category-preview');
-    const filtered = document.getElementById('filtered-grid');
-    const backBtn = document.getElementById('products-back-all');
-    const cards = filtered ? Array.from(filtered.querySelectorAll<HTMLElement>('.product-card')) : [];
-
-    let currentCategory = 'all';
-    let currentQuery = '';
-
-    function switchToFiltered(cat: string) {
-      currentCategory = cat;
-      if (grid) grid.hidden = true;
-      if (filtered) filtered.hidden = false;
-      if (backBtn) backBtn.hidden = false;
-      applyFilters();
-    }
-
-    function switchToPreview() {
-      currentCategory = 'all';
-      currentQuery = '';
-      if (input) input.value = '';
-      if (grid) grid.hidden = false;
-      if (filtered) filtered.hidden = true;
-      if (backBtn) backBtn.hidden = true;
-      if (noResults) noResults.hidden = true;
-
-      history.replaceState(null, '', location.pathname);
-    }
-
-    function applyFilters() {
-      const q = currentQuery.trim().toLowerCase();
-      let totalVisible = 0;
-
-      cards.forEach((card) => {
-        const text = card.dataset.searchText ?? '';
-        const cat = card.dataset.category ?? '';
-        const secondaryStr = card.dataset.secondaryCategories ?? '';
-        const secondary = secondaryStr ? secondaryStr.split(',').filter(Boolean) : [];
-
-        const matchesCategory =
-          currentCategory === 'all' ||
-          cat === currentCategory ||
-          secondary.includes(currentCategory);
-        const matchesSearch = !q || text.includes(q);
-        const visible = matchesCategory && matchesSearch;
-
-        if (visible) { card.removeAttribute('hidden'); totalVisible++; }
-        else card.setAttribute('hidden', '');
-      });
-
-      if (noResults) {
-        if (totalVisible === 0 && (q || currentCategory !== 'all')) noResults.removeAttribute('hidden');
-        else noResults.setAttribute('hidden', '');
-      }
-    }
-
-    input.addEventListener('input', () => {
-      currentQuery = input.value;
-      const url = new URL(window.location.href);
-      if (currentQuery) {
-        url.searchParams.set('q', currentQuery);
-        url.searchParams.delete('cat');
-        currentCategory = 'all';
-        if (grid) grid.hidden = true;
-        if (filtered) filtered.hidden = false;
-        if (backBtn) backBtn.hidden = false;
-      } else if (currentCategory === 'all') {
-        url.searchParams.delete('q');
-        switchToPreview();
-        return;
-      } else {
-        url.searchParams.delete('q');
-      }
-      history.replaceState(null, '', url.toString());
-      applyFilters();
-    });
-
-    // "← 모든 카테고리" — return to the category grid
-    backBtn?.addEventListener('click', () => switchToPreview());
-
-    // Category tile header / mobile "see all" → open that category's filtered view
-    document.querySelectorAll<HTMLButtonElement>('.product-cat-tile-header, .product-cat-tile-more').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const cat = btn.dataset.category ?? '';
-        const url = new URL(window.location.href);
-        url.searchParams.set('cat', cat);
-        history.replaceState(null, '', url.toString());
-        switchToFiltered(cat);
-        document.getElementById('products-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    });
-
-    // Product #hashtag → search for that tag (without following the row link)
-    document.querySelectorAll<HTMLElement>('.product-cat-tag').forEach((tag) => {
-      const trigger = (e: Event) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const term = tag.dataset.tag ?? '';
-        if (!term) return;
-        input.value = term;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        document.getElementById('products-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      };
-      tag.addEventListener('click', trigger);
-      tag.addEventListener('keydown', (e) => {
-        const k = (e as KeyboardEvent).key;
-        if (k === 'Enter' || k === ' ') trigger(e);
-      });
-    });
-
-    const params = new URLSearchParams(location.search);
-    const urlQ = params.get('q') ?? '';
-    const urlCat = params.get('cat') ?? '';
-    if (urlQ) {
-      input.value = urlQ;
-      currentQuery = urlQ;
-      switchToFiltered(urlCat || 'all');
-    } else if (urlCat) {
-      switchToFiltered(urlCat);
-    }
-  });
+  import '../../../scripts/productCatalog';
 </script>

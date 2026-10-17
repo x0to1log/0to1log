@@ -1,0 +1,49 @@
+---
+// Editor's picks row on the products catalog (featured products, see orderPicks in lib/productCatalog.js).
+// One line per pick = first sentence of the editor note (ko: ko note → en note, en: en note only), else the tagline.
+import type { ProductPick } from '../../lib/pageData/productsPage';
+import { firstSentence } from '../../lib/productCatalog.js';
+
+interface Props {
+  picks: ProductPick[];
+  locale: 'en' | 'ko';
+}
+
+const { picks, locale } = Astro.props;
+const ko = locale === 'ko';
+
+const lineOf = (pick: ProductPick) => {
+  const note = ko ? pick.editor_note_ko || pick.editor_note : pick.editor_note;
+  return firstSentence(note) || pick.tagline || '';
+};
+---
+
+{picks.length > 0 && (
+  <section class="product-picks" aria-labelledby="product-picks-title">
+    <h2 id="product-picks-title" class="sr-only">{ko ? '편집자 추천' : "Editor's picks"}</h2>
+    <ol class="product-picks-list">
+      {picks.map((pick, index) => {
+        const name = pick.name_original ?? pick.name;
+        const line = lineOf(pick);
+        return (
+          <li>
+            <a class="product-pick" href={`/${locale}/products/${pick.slug}/`}>
+              <span class="product-pick-label">{ko ? `편집자 추천 ${index + 1}` : `Pick ${index + 1}`}</span>
+              <span class="product-pick-name">
+                <span class="product-catalog-logo">
+                  {pick.logo_url ? (
+                    <img src={pick.logo_url} alt="" width="28" height="28" loading="lazy" />
+                  ) : (
+                    <span class="product-catalog-logo-initial" data-category={pick.primary_category}>{(name ?? '?').charAt(0)}</span>
+                  )}
+                </span>
+                <span>{name}</span>
+              </span>
+              {line && <span class="product-pick-line">{line}</span>}
+            </a>
+          </li>
+        );
+      })}
+    </ol>
+  </section>
+)}
