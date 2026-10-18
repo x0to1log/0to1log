@@ -6,20 +6,25 @@ import { t } from '../../../../i18n/index';
 import { getHandbookCategoryPageData } from '../../../../lib/pageData/handbookPage';
 import { getHandbookCategoryLabel, getHandbookCategories, getHandbookCategoryDescription } from '../../../../lib/handbookCategories';
 import { getHandbookCategoryIcon } from '../../../../lib/handbookCategoryIcons';
+import NewsprintNotice from '../../../../components/newsprint/NewsprintNotice.astro';
 
 const locale = 'ko';
 const slug = Astro.params.slug!;
 const categories = getHandbookCategories();
 
-// Validate slug
-const categoryLabel = getHandbookCategoryLabel(locale, slug);
-if (!categoryLabel) {
-  return Astro.redirect(`/${locale}/handbook/`);
-}
+// Unknown field: 404 rendered in the page (status + notice), like the detail pages.
+// getHandbookCategoryLabel falls back to the raw slug, so validate against the known list.
+// Never return an empty Response for the 404 (it crashes the Vercel function).
+const notFound = !(categories as string[]).includes(slug);
+if (notFound) Astro.response.status = 404;
+const categoryLabel = notFound ? '' : getHandbookCategoryLabel(locale, slug);
 
-const categoryDesc = getHandbookCategoryDescription(locale, slug);
-const { terms, totalTerms, error } = await getHandbookCategoryPageData(locale, slug);
+const categoryDesc = notFound ? null : getHandbookCategoryDescription(locale, slug);
+const { terms, totalTerms, error } = notFound
+  ? { terms: [] as any[], totalTerms: 0, error: null }
+  : await getHandbookCategoryPageData(locale, slug);
 if (error) Astro.response.status = 503;
+const pageTitle = notFound ? `찾을 수 없음 — ${t[locale]['handbook.title']}` : `${categoryLabel} — ${t[locale]['handbook.title']}`;
 
 // User bookmarks
 const bookmarkedTermIds = new Set<string>();
@@ -28,8 +33,12 @@ const readTermIds = new Set<string>();
 // page stays CDN-cacheable; the sets stay empty on the server.
 ---
 
-<MainLayout title={`${categoryLabel} — ${t[locale]['handbook.title']}`} locale={locale}>
+<MainLayout title={pageTitle} locale={locale}>
   <div class="handbook-category-page">
+    {notFound ? (
+      <NewsprintNotice variant="notfound" message="해당 분야를 찾을 수 없습니다." linkHref={`/${locale}/handbook/`} linkLabel={t[locale]['handbook.back']} />
+    ) : (
+    <>
     <!-- Back link -->
     <a href={`/${locale}/handbook/`} class="handbook-category-back">
       &larr; 용어집
@@ -118,6 +127,8 @@ const readTermIds = new Set<string>();
         </a>
       ))}
     </nav>
+    </>
+    )}
   </div>
 </MainLayout>
 
