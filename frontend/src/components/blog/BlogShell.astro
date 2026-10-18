@@ -1,49 +1,15 @@
 ---
-import BlogSidebar from './BlogSidebar.astro';
-import type { BlogSidebarMode, SidebarPost } from '../../lib/pageData/blogSidebar';
-
+// frontend/src/components/blog/BlogShell.astro
+// Blog page frame: one centred column for the list, post and field pages (the left sidebar was removed 2026-10-18).
 interface Props {
   locale: 'en' | 'ko';
-  sidebarPosts?: SidebarPost[];
-  currentSlug?: string;
-  currentCategory?: string;
-  totalCount?: number;
-  mode?: BlogSidebarMode;
-  showTOC?: boolean;
-  /** false: no sidebar, overlay or drawer — one centred column (blog list). Category and detail pages keep the default. */
-  sidebar?: boolean;
 }
-
-const {
-  locale,
-  sidebarPosts = [],
-  currentSlug,
-  currentCategory,
-  totalCount = 0,
-  mode = 'index',
-  showTOC,
-  sidebar = true,
-} = Astro.props as Props;
 ---
 
-<div class:list={['blog-shell', { 'blog-shell--single': !sidebar }]}>
-  {sidebar && (
-    <>
-      <BlogSidebar
-        locale={locale}
-        posts={sidebarPosts}
-        currentSlug={currentSlug}
-        currentCategory={currentCategory}
-        totalCount={totalCount}
-        mode={mode}
-      />
-      <div class="blog-sidebar-overlay" data-sidebar-overlay></div>
-    </>
-  )}
+<div class="blog-shell blog-shell--single">
   <div class="blog-main">
     <div class="blog-main-inner">
       <slot />
     </div>
   </div>
-  {showTOC && <slot name="toc" />}
 </div>

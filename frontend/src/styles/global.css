@@ -10157,6 +10157,168 @@ body:has(.site-header--fixed:not(.site-header--hidden)) .handbook-search-sticky 
   }
 }
 
+/* ── Blog field page A: series table of contents (crumb, title, byline, rows, other fields) ── */
+.blog-cat-crumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+  font-family: var(--font-blog-ui);
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.blog-cat-crumb a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.blog-cat-crumb a:hover {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.blog-cat-title {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-blog-heading);
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
+}
+
+.blog-cat-desc {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+}
+
+.blog-cat-byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1.5rem;
+  padding: 0.55rem 0;
+  border-top: 2px solid var(--color-text-primary);
+  border-bottom: 1px solid var(--color-text-primary);
+  margin: 1.25rem 0 0.5rem;
+}
+
+.blog-cat-byline-meta {
+  margin: 0;
+  font-family: var(--font-blog-ui);
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.blog-cat-byline-meta .blog-category-badge {
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+}
+
+.blog-cat-start {
+  font-family: var(--font-blog-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.blog-cat-start:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.blog-cat-list {
+  margin-bottom: 3rem;
+}
+
+.blog-cat-list--series > .blog-list-item:first-child .blog-serial-ep {
+  color: var(--color-accent);
+}
+
+/* Summary under the title: row 2 of the title column, so the 4-column row grid stays intact. */
+.blog-serial-excerpt {
+  grid-column: 2;
+  grid-row: 2;
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Short notes: no episode/field cell (an empty first cell would indent the title by the grid gap). */
+.blog-cat-list:not(.blog-cat-list--series) .blog-list-item {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.blog-cat-list:not(.blog-cat-list--series) .blog-serial-cat {
+  display: none;
+}
+
+.blog-cat-list:not(.blog-cat-list--series) .blog-serial-excerpt {
+  grid-column: 1;
+}
+
+.blog-cat-others {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1.25rem;
+  padding-top: 0.6rem;
+  border-top: 2px solid var(--color-text-primary);
+  margin-bottom: 3rem;
+  font-family: var(--font-blog-ui);
+  font-size: 0.85rem;
+}
+
+.blog-cat-others-label {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.blog-cat-others-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.blog-cat-others-list a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.blog-cat-others-list a:hover {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.blog-cat-others-count {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Blog field page A: mobile */
+@media (max-width: 767px) {
+  .blog-cat-title {
+    font-size: 1.9rem;
+  }
+}
+
 /* ── Category Header ── */
 .blog-category-header {
   margin-bottom: 2rem;

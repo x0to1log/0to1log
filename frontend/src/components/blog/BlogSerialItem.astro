@@ -20,9 +20,11 @@ interface Props {
   /** short-note row: field label and DB color */
   categoryLabel?: string;
   categoryColor?: string;
+  /** field page: summary under the title (grid row 2); the list page does not pass it */
+  excerpt?: string | null;
 }
 
-const { locale, post, episode, categoryLabel, categoryColor } = Astro.props;
+const { locale, post, episode, categoryLabel, categoryColor, excerpt } = Astro.props;
 const episodeLabel = episode ? (locale === 'ko' ? `${episode}화` : `Ep. ${episode}`) : '';
 const date = formatBlogDate(post.published_at, locale);
 ---
@@ -38,6 +40,7 @@ const date = formatBlogDate(post.published_at, locale);
     </span>
   )}
   <a class="blog-serial-title" href={`/${locale}/blog/${post.slug}/`}>{post.title}</a>
+  {excerpt && <p class="blog-serial-excerpt">{excerpt}</p>}
   <span class="blog-serial-date">{date}</span>
   <button
     type="button"

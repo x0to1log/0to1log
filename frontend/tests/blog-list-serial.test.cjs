@@ -7,22 +7,17 @@ const assert = require('assert');
 const src = path.join(__dirname, '..', 'src');
 const read = (p) => fs.readFileSync(path.join(src, p), 'utf8');
 
-// shell: sidebar prop (default true). The list and post pages pass false; category pages keep the sidebar.
+// shell: always one column (blog field A, 2026-10-18: the field pages lost the sidebar too, so the prop is gone)
 const shell = read('components/blog/BlogShell.astro');
-assert(shell.includes('sidebar?: boolean;') && shell.includes('sidebar = true,'), 'shell: sidebar prop defaults to true');
-assert(/\{sidebar && \(\s*<>\s*<BlogSidebar[\s\S]*?data-sidebar-overlay><\/div>\s*<\/>\s*\)\}/.test(shell), 'shell: sidebar + overlay only when sidebar');
-assert(shell.includes("class:list={['blog-shell', { 'blog-shell--single': !sidebar }]}"), 'shell: single-column modifier');
-for (const p of ['pages/ko/blog/category/[slug].astro', 'pages/en/blog/category/[slug].astro']) {
-  assert(!read(p).includes('sidebar={false}'), `${p} keeps the sidebar`);
-}
-for (const p of ['pages/ko/blog/[slug].astro', 'pages/en/blog/[slug].astro']) {
-  assert(read(p).includes('sidebar={false}'), `${p} is one column (blog post A)`);
+assert(shell.includes('<div class="blog-shell blog-shell--single">') && !shell.includes('BlogSidebar') && !shell.includes('sidebar?:'), 'shell: one column, no sidebar prop');
+for (const p of ['pages/ko/blog/[slug].astro', 'pages/en/blog/[slug].astro', 'pages/ko/blog/category/[slug].astro', 'pages/en/blog/category/[slug].astro']) {
+  assert(!read(p).includes('sidebar='), `${p}: no sidebar prop`);
 }
 
 // pages
 for (const locale of ['ko', 'en']) {
   const page = read(`pages/${locale}/blog/index.astro`);
-  assert(page.includes(`<BlogShell locale="${locale}" sidebar={false}>`), `${locale}: list renders without the sidebar`);
+  assert(page.includes(`<BlogShell locale="${locale}">`), `${locale}: list renders in the one-column shell`);
   for (const gone of ['BlogFeaturedCard', 'BlogListItem', 'data-blog-sentinel', 'blog-category-tabs', 'blog-mobile-toolbar', 'data-sidebar-toggle', 'buildBlogSidebarDataset', 'IntersectionObserver', "'blog.featured'", "'blog.allPosts'"]) {
     assert(!page.includes(gone), `${locale}: ${gone} removed`);
   }

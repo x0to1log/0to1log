@@ -10,7 +10,7 @@ const read = (p) => fs.readFileSync(path.join(src, p), 'utf8');
 // pages: one column, series position computed once via lib/blogSerial.js
 for (const locale of ['ko', 'en']) {
   const page = read(`pages/${locale}/blog/[slug].astro`);
-  assert(page.includes(`<BlogShell locale="${locale}" sidebar={false}>`), `${locale}: post renders without the sidebar`);
+  assert(page.includes(`<BlogShell locale="${locale}">`), `${locale}: post renders in the one-column shell`);
   for (const gone of ['ReadingActionsRail', 'BlogTOC', 'slot="toc"', 'showTOC', 'blog-mobile-toolbar', 'data-sidebar-toggle', 'sidebarPosts', 'nextPost', 'backLabel', 'showStickyActions={false}', 'categories={dbCategories}', 'editionLabel', 'masthead']) {
     assert(!page.includes(gone), `${locale}: ${gone} removed`);
   }
