@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** ready (2026-10-18)
+**Status:** done (2026-10-18) — 실행 결과는 문서 끝 참조. (2026-10-18)
 
 **Goal:** `/ko|en/blog/category/{slug}/`를 왼쪽 폴더 트리(`BlogSidebar`) + 제목만 있는 목록(`BlogListItem`, 최신순, 무한 스크롤)에서 목록·글 상세와 같은 가운데 한 단(820px)의 **연재 목차**로 바꾼다. 위에서부터 "경로 줄(← IT 블로그 · 연재/짧은 글) → h1 분야 이름(+설명) → 바이라인(연재 N편 · 기간 | 1화부터 읽기 →) → 목록(목록 페이지와 같은 `BlogSerialItem` 줄 + 요약 두 줄) → 다른 분야(라벨 + 개수)"이다. 연재(main 그룹)는 오래된 순 1화부터, 짧은 글(그 밖)은 최신순. 글 쿼리를 목록·상세와 같은 100편 창으로 맞춰 회차가 세 페이지에서 일치하고, 예전 `tech` 글도 학습 노트 연재에 들어간다. 마지막 사이드바 사용처가 사라지므로 `BlogShell`의 사이드바 prop과 `BlogSidebar`·`blogSidebar.ts`·`BlogCategoryHeader`·`BlogListItem`·관련 CSS·i18n 키를 지운다.
 
@@ -1386,3 +1386,13 @@ git commit -m "chore: remove blog sidebar, old field page components and unused 
   git commit -m "docs: record blog category table-of-contents redesign"
   ```
   (Task 5에서 고친 다른 vault 노트가 있으면 그 경로도 `git add`에 더한다.)
+
+---
+
+## 실행 결과 (2026-10-18)
+
+- 커밋: `04985ba2` categoryPage 순수 함수, `38030e5c` 분야 페이지를 연재 목차로(경로 줄·바이라인·1화부터 읽기·회차 목록·요약·다른 분야·빈 안내·503, BlogShell 한 단 고정), `73fe590b` 블로그 사이드바·옛 분야 컴포넌트·미사용 CSS·`blog.allPostsCount` 삭제.
+- 테스트: PASS 81 / FAIL 16(기준선 83 / 18). 변화는 `blog-category-toc` 추가, 통과하던 사이드바 테스트 3개(`blog-detail-sidebar-structure`·`blog-mobile-sidebar-structure`·`blog-detail-sidebar-behavior`)와 실패하던 2개(`blog-sidebar-categories`·`blog-sidebar-layout`) 삭제. 남은 16개 실패는 이름·첫 오류 동일, 신규 FAIL 0. 빌드 성공(Task 2·3 후). 계획 단계에서 scratch 복사본 2벌 + 운영 데이터 렌더로 사전 검증.
+- 브라우저 클릭 검증(/ko/blog/category/study/): 사이드바 없음, 경로 줄 "← IT 블로그 · 연재", 바이라인 "연재 5편 · 3월 11일 | 1화부터 읽기 →", 1~5화가 목록 페이지와 같은 순서·링크, 요약이 제목 아래(4열 격자 유지), 저장 버튼 줄당 1개(5개), 다른 분야 "프로젝트 기록 5 · 커리어 생각 0 · 작업 메모 1 · 일상 0". "1화부터 읽기" 클릭 → 1화 글, 상세 바이라인 "학습 노트 · 5편 중 1화"로 회차 일치. 없는 분야 404, 스크립트 nonce 누락 0.
+- 매트릭스: 종이·순백·다크 × 1100px·375px, 대상 study(연재 5)·work-note(짧은 글 1, "마지막 글 3월 12일")·career(0편 빈 안내)·en study(0편 빈 안내) — 가로 넘침 0, 대비 미달 0. 회귀: 목록·글 상세 폭 동일, 사이드바 없음. 글 상세 순백 테마의 `reading-actions__count` 2.60은 스캐너가 `oklab()` 배경을 못 읽은 오탐(실제 #5A544B on L 0.94 배경).
+- 계획 단계 결정: 짧은 글 줄은 3열 격자(빈 첫 칸 들여쓰기 제거), 다른 분야는 DB 순서(그룹 → sort_order), EN 단수 "1 short note", 오류 화면은 경로 줄·제목·안내만, BlogShell은 `locale` prop 유지.

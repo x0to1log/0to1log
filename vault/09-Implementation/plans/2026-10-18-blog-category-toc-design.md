@@ -1,6 +1,6 @@
 # 블로그 분야 페이지 재설계 (A 연재 목차) — Design Spec
 
-**Status:** approved (2026-10-18)
+**Status:** implemented (2026-10-18) — [[2026-10-18-blog-category-toc]]
 **Mockup:** `.superpowers/brainstorm/blog2/category-v1.html` (A안)
 **관련:** [[2026-10-17-blog-list-serial-design]], [[2026-10-17-blog-post-column-design]]
 
