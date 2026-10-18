@@ -122,6 +122,44 @@ export function toSerialProps(located, categories, locale, category) {
 }
 
 /**
+ * One field page (blog field A: series table of contents). Same posts and rules as the list page, so the
+ * episode numbers match the list and post pages. The page checks that the field exists and is visible first.
+ * @param {Array<{id?: string, title: string, slug: string, category?: string|null, published_at?: string|null, excerpt?: string|null}>} posts
+ * @param {Array<{slug: string, group_slug: string|null, sort_order?: number, is_visible: boolean}>} categories
+ * @param {string} slug
+ * @returns {{ kind: 'series'|'notes', posts: object[], range: {first: string, last: string}|null, counts: Record<string, number> }}
+ *   kind: 'series' for the 'main' group, 'notes' otherwise (sub, other groups, null, or a field missing from categories).
+ *   series posts = this field's entry of buildBlogFront().series (oldest first; episode = index + 1), [] without posts.
+ *   notes posts = posts whose normalized field is slug, newest first, undated last.
+ *   range = earliest and latest published_at among the dated posts of this field (null when none).
+ *   counts = number of loaded posts per normalized field (posts without a field are not counted).
+ */
+export function categoryPage(posts, categories, slug) {
+  const list = (Array.isArray(posts) ? posts : []).map((post) => ({ ...post, category: normalizeBlogCategory(post.category) }));
+  const cats = Array.isArray(categories) ? categories : [];
+  const category = cats.find((c) => c.slug === slug) || null;
+  const kind = category && category.group_slug === 'main' ? 'series' : 'notes';
+
+  let own;
+  if (kind === 'series') {
+    const series = buildBlogFront(list, cats).series.find((s) => s.category.slug === slug);
+    own = series ? series.posts : [];
+  } else {
+    own = list.filter((post) => post.category === slug).sort(newestFirst);
+  }
+
+  const dated = own.filter((post) => timeOf(post.published_at) !== null).sort(oldestFirst);
+  const range = dated.length > 0 ? { first: dated[0].published_at, last: dated[dated.length - 1].published_at } : null;
+
+  const counts = {};
+  for (const post of list) {
+    if (post.category) counts[post.category] = (counts[post.category] || 0) + 1;
+  }
+
+  return { kind, posts: own, range, counts };
+}
+
+/**
  * "3월 11일" / "Mar 11" in KST (the server runs in UTC). '' when undated.
  * { year: true } → "2026년 3월 11일" / "Mar 11, 2026" (blog post byline).
  */

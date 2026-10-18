@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const { buildBlogFront, normalizeBlogCategory, formatBlogDate, locatePost, toSerialProps } = await import(
+const { buildBlogFront, normalizeBlogCategory, formatBlogDate, locatePost, toSerialProps, categoryPage } = await import(
   pathToFileURL(path.join(here, '../src/lib/blogSerial.js')).href
 );
 
@@ -192,5 +192,65 @@ assert.equal(formatBlogDate('2026-03-10T18:42:39.552+00:00', 'ko', { year: true 
 assert.equal(formatBlogDate('2026-03-10T18:42:39.552+00:00', 'en', { year: true }), 'Mar 11, 2026');
 assert.equal(formatBlogDate('2025-12-31T16:00:00Z', 'en', { year: true }), 'Jan 1, 2026', 'the year rolls over in KST');
 assert.equal(formatBlogDate(null, 'ko', { year: true }), '');
+
+// --- blog field page A (series table of contents): categoryPage ---
+const FIELD_CATS = [
+  cat('study', 'main', 0),
+  cat('project', 'main', 1),
+  cat('career', 'main', 2),
+  cat('work-note', 'sub', 0),
+  cat('daily', 'sub', 1),
+  cat('odd', 'legacy', 0),
+  cat('loose', null, 0),
+];
+// created_at desc on purpose (like the query)
+const FIELD = [
+  post('w2', 'work-note', '2026-03-12T00:00:00Z'),
+  post('st3', 'study', '2026-03-11T05:12:41Z'),
+  post('w-undated', 'work-note', null),
+  post('st2', 'study', '2026-03-11T04:32:08Z'),
+  post('w1', 'work-note', '2026-03-05T00:00:00Z'),
+  post('st1', 'tech', '2026-03-10T18:42:39Z'),
+  post('p1', 'project', '2026-03-10T09:37:44Z'),
+  post('o1', 'odd', '2026-03-09T00:00:00Z'),
+  post('l1', 'loose', '2026-03-08T00:00:00Z'),
+  post('nocat', null, '2026-03-07T00:00:00Z'),
+];
+// counted over every loaded post by normalized field (tech → study); posts without a field are not counted
+const COUNTS = { 'work-note': 3, study: 3, project: 1, odd: 1, loose: 1 };
+
+// series: the study entry of buildBlogFront (oldest first, legacy tech included), so episode = index + 1 matches the list page
+const study = categoryPage(FIELD, FIELD_CATS, 'study');
+assert.equal(study.kind, 'series');
+assert.deepEqual(titles(study.posts), ['st1', 'st2', 'st3']);
+assert.deepEqual(study.posts, buildBlogFront(FIELD, FIELD_CATS).series.find((s) => s.category.slug === 'study').posts, 'same episodes as the list page');
+assert.equal(study.posts[0].category, 'study', 'legacy tech post is normalized into the study series');
+assert.deepEqual(study.range, { first: '2026-03-10T18:42:39Z', last: '2026-03-11T05:12:41Z' });
+assert.deepEqual(study.counts, COUNTS);
+assert.equal(FIELD[5].category, 'tech', 'input posts are not mutated');
+
+// main field without posts: still a series, empty list, no range
+assert.deepEqual(categoryPage(FIELD, FIELD_CATS, 'career'), { kind: 'series', posts: [], range: null, counts: COUNTS });
+
+// sub field: short notes, newest first, undated last
+const workNotes = categoryPage(FIELD, FIELD_CATS, 'work-note');
+assert.equal(workNotes.kind, 'notes');
+assert.deepEqual(titles(workNotes.posts), ['w2', 'w1', 'w-undated']);
+assert.deepEqual(workNotes.range, { first: '2026-03-05T00:00:00Z', last: '2026-03-12T00:00:00Z' }, 'range skips undated posts');
+assert.deepEqual(categoryPage(FIELD, FIELD_CATS, 'daily'), { kind: 'notes', posts: [], range: null, counts: COUNTS });
+
+// groups other than main (unknown or null): short notes
+const odd = categoryPage(FIELD, FIELD_CATS, 'odd');
+assert.deepEqual([odd.kind, titles(odd.posts)], ['notes', ['o1']]);
+const loose = categoryPage(FIELD, FIELD_CATS, 'loose');
+assert.deepEqual([loose.kind, titles(loose.posts)], ['notes', ['l1']]);
+
+// range: one dated post → first = last; only undated posts → null
+assert.deepEqual(categoryPage([post('a', 'work-note', '2026-03-01T00:00:00Z')], FIELD_CATS, 'work-note').range, { first: '2026-03-01T00:00:00Z', last: '2026-03-01T00:00:00Z' });
+const undatedSeries = categoryPage([post('u', 'study', null)], FIELD_CATS, 'study');
+assert.deepEqual([undatedSeries.kind, titles(undatedSeries.posts), undatedSeries.range], ['series', ['u'], null]);
+
+// empty input
+assert.deepEqual(categoryPage(null, null, 'study'), { kind: 'notes', posts: [], range: null, counts: {} });
 
 console.log('blog-serial.test.mjs passed');
