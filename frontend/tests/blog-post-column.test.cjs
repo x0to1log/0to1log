@@ -131,8 +131,8 @@ assert(!read('components/common/StickyReadingActions.astro').includes('placement
 for (const gone of ['.blog-toc', '.blog-rail', '.blog-breadcrumb', '.blog-article-meta', '.blog-article-category', '.reading-actions-rail', '.reading-actions--rail-placement', '.newsprint-article-nav', '.newsprint-nav-']) {
   assert(!css.includes(gone), `unused CSS removed: ${gone}`);
 }
-// still used elsewhere: category pages (toolbar), news/handbook layouts and handbook-popup.ts (persona float)
-for (const kept of ['.blog-mobile-toolbar {', '.persona-float {', '.persona-float--back', '.blog-article-title {', '.blog-article-header {', '.blog-shell .newsprint-comments-title {']) {
+// still used elsewhere: news/handbook layouts and handbook-popup.ts (persona float)
+for (const kept of ['.persona-float {', '.persona-float--back', '.blog-article-title {', '.blog-article-header {', '.blog-shell .newsprint-comments-title {']) {
   assert(css.includes(kept), `CSS kept: ${kept}`);
 }
 assert(!read('i18n/index.ts').includes("'blog.onThisPage'"), 'unused i18n key removed');

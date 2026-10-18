@@ -31,7 +31,7 @@ for (const locale of ['ko', 'en']) {
 assert(read('pages/ko/blog/index.astro').includes('<h2>준비 중</h2>') && read('pages/en/blog/index.astro').includes('<h2>Coming Soon</h2>'), 'empty state copy kept');
 assert(!fs.existsSync(path.join(src, 'components/blog/BlogFeaturedCard.astro')), 'BlogFeaturedCard deleted');
 const i18n = read('i18n/index.ts');
-assert(!i18n.includes("'blog.featured'") && !i18n.includes("'blog.allPosts'") && i18n.includes("'blog.allPostsCount'"), 'unused i18n keys removed (sidebar count key kept)');
+assert(!i18n.includes("'blog.featured'") && !i18n.includes("'blog.allPosts'") && !i18n.includes("'blog.allPostsCount'"), 'unused i18n keys removed');
 
 // front: byline, lead, series, short notes, search
 const front = read('components/blog/BlogFront.astro');
@@ -120,8 +120,8 @@ assert(/\.blog-series-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/.t
 for (const gone of ['.blog-featured-', '.blog-category-tab', '.blog-section-header', 'Blog Masthead Tagline + Category Tabs']) {
   assert(!css.includes(gone), `unused CSS removed: ${gone}`);
 }
-// still used by the category pages / article layout
-for (const kept of ['.blog-list-batch[hidden] {', '.blog-scroll-sentinel {', '.blog-mobile-toolbar {', '.blog-list-section {', '.blog-mono-tag {', '.blog-category-badge {', '.blog-masthead-tagline {']) {
+// still used by the article layout and field pages (the old field page CSS is checked in blog-category-toc.test.cjs)
+for (const kept of ['.blog-mono-tag {', '.blog-category-badge {', '.blog-masthead-tagline {']) {
   assert(css.includes(kept), `CSS kept: ${kept}`);
 }
 

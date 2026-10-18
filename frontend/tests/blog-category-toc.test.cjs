@@ -108,4 +108,19 @@ for (const kept of ['.blog-list-item {', '.blog-list-item:hover {', '.blog-list-
   assert(css.includes(kept), `CSS kept: ${kept}`);
 }
 
+// removed with the sidebar (Task 3): components, the sidebar helper, their CSS and i18n key
+for (const file of ['components/blog/BlogSidebar.astro', 'lib/pageData/blogSidebar.ts', 'components/blog/BlogCategoryHeader.astro', 'components/blog/BlogListItem.astro']) {
+  assert(!fs.existsSync(path.join(src, file)), `${file} deleted`);
+}
+for (const gone of ['.blog-sidebar', '.blog-folder', '.blog-mobile-toolbar', '.blog-mobile-toggle', '.blog-category-header', '.blog-category-banner', '.blog-category-title', '.blog-category-icon', '.blog-category-description', '.blog-category-count', '.blog-list-section', '.blog-list-batch', '.blog-scroll-sentinel', '--blog-shell-rail-gap', '--blog-shell-panel-radius']) {
+  assert(!css.includes(gone), `unused CSS removed: ${gone}`);
+}
+assert(!/\.blog-list-item-[a-z]/.test(css), 'unused CSS removed: BlogListItem parts (.blog-list-item-title, -meta, …; .blog-list-item--read stays)');
+assert(css.includes('--blog-shell-header-offset: 5rem;'), 'header offset kept (BlogArticleLayout reads it)');
+assert(/@media \(max-width: 1023px\) \{\n  \.blog-shell \{\n    display: block;\n    min-height: auto;\n  \}\n\}/.test(css), '1023px block keeps only the shared shell rule');
+assert(!read('i18n/index.ts').includes("'blog.allPostsCount'"), 'sidebar-only i18n key removed');
+for (const gone of ['blog-detail-sidebar-behavior.test.mjs', 'blog-detail-sidebar-structure.test.cjs', 'blog-mobile-sidebar-structure.test.cjs', 'blog-sidebar-categories.test.cjs', 'blog-sidebar-layout.test.cjs']) {
+  assert(!fs.existsSync(path.join(__dirname, gone)), `deleted: tests/${gone}`);
+}
+
 console.log('blog-category-toc.test.cjs passed');
