@@ -31,7 +31,11 @@ for (const locale of ['ko', 'en']) {
   }
   // access: redirect without slug/DB, 404 for a missing or hidden field (no admin branch: shared-cache path)
   assert(page.includes(`return Astro.redirect('/${locale}/blog/');`), `${locale}: redirect without slug or DB`);
-  assert(page.includes('if (!category || !category.is_visible) {\n  return new Response(null, { status: 404 });'), `${locale}: missing or hidden field → 404`);
+  // 404 is rendered in the page (status + notice): an empty `new Response(null, …)` crashes the Vercel function (500)
+  assert(page.includes('const notFound = !category || !category.is_visible;\nif (notFound) Astro.response.status = 404;'), `${locale}: missing or hidden field → 404 status`);
+  assert(!page.includes('new Response(null'), `${locale}: no empty Response for the 404`);
+  assert(page.includes('<NewsprintNotice variant="notfound"') && page.includes(`linkHref="/${locale}/blog/" linkLabel={t.${locale}['blog.back']}`), `${locale}: not-found notice links back to the blog`);
+  assert(/const \[postsRes, dbCategories\] = notFound\s*\?/.test(page), `${locale}: no posts query for a missing field`);
   // data: same posts query as the list and post pages
   const queryAt = page.indexOf(".from('blog_posts')");
   const query = page.slice(queryAt, page.indexOf('.limit(100)', queryAt) + '.limit(100)'.length);

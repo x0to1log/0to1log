@@ -17,23 +17,26 @@ if (!slug || !supabase) {
   return Astro.redirect('/en/blog/');
 }
 
-// Missing or hidden field: 404 for everyone. This path is in the shared-cache zone (no session), so there is no admin branch.
+// Missing or hidden field: 404 for everyone, rendered in the page (status + notice) like the detail pages.
+// Returning an empty Response object for the 404 crashes the Vercel function (500).
+// This path is in the shared-cache zone (no session), so there is no admin branch.
 const category = await fetchCategoryBySlug(supabase, slug);
-if (!category || !category.is_visible) {
-  return new Response(null, { status: 404 });
-}
+const notFound = !category || !category.is_visible;
+if (notFound) Astro.response.status = 404;
 
 // Same posts query as the list and post pages (100 newest by created_at), so episode numbers match.
-const [postsRes, dbCategories] = await Promise.all([
-  supabase
-    .from('blog_posts')
-    .select('id, title, slug, category, published_at, excerpt')
-    .eq('status', 'published')
-    .eq('locale', locale)
-    .order('created_at', { ascending: false })
-    .limit(100),
-  fetchCategories(supabase),
-]);
+const [postsRes, dbCategories] = notFound
+  ? [{ data: [] as any[], error: null }, [] as Awaited<ReturnType<typeof fetchCategories>>]
+  : await Promise.all([
+      supabase
+        .from('blog_posts')
+        .select('id, title, slug, category, published_at, excerpt')
+        .eq('status', 'published')
+        .eq('locale', locale)
+        .order('created_at', { ascending: false })
+        .limit(100),
+      fetchCategories(supabase),
+    ]);
 
 let fetchError: string | null = null;
 if (postsRes.error) {
@@ -50,10 +53,10 @@ const lastDate = formatBlogDate(page.range?.last, locale);
 const period = firstDate && firstDate !== lastDate ? `${firstDate} ~ ${lastDate}` : lastDate;
 const others = dbCategories.filter((c) => c.is_visible && c.slug !== slug);
 
-const categoryLabel = category.label_en;
-const categoryDesc = category.description_en;
-const pageTitle = `${categoryLabel} | ${t.en['blog.title']}`;
-const pageDescription = category.description_en || `Posts in the ${categoryLabel} category`;
+const categoryLabel = category?.label_en ?? '';
+const categoryDesc = category?.description_en;
+const pageTitle = notFound ? `Not Found | ${t.en['blog.title']}` : `${categoryLabel} | ${t.en['blog.title']}`;
+const pageDescription = categoryDesc || `Posts in the ${categoryLabel} category`;
 ---
 
 <MainLayout
@@ -63,6 +66,10 @@ const pageDescription = category.description_en || `Posts in the ${categoryLabel
   description={pageDescription}
 >
   <BlogShell locale="en">
+    {notFound ? (
+      <NewsprintNotice variant="notfound" message="This field could not be found." linkHref="/en/blog/" linkLabel={t.en['blog.back']} />
+    ) : (
+    <>
     <nav class="blog-cat-crumb" aria-label="Field location">
       <a href="/en/blog/">← IT Blog</a>
       <span aria-hidden="true">·</span>
@@ -81,7 +88,7 @@ const pageDescription = category.description_en || `Posts in the ${categoryLabel
             <div class="blog-cat-byline">
               {isSeries ? (
                 <p class="blog-cat-byline-meta">
-                  <span class="blog-category-badge" style={`--cat-color: ${category.color || 'var(--color-border)'}`}>{count}-part series</span>{period && ` · ${period}`}
+                  <span class="blog-category-badge" style={`--cat-color: ${category?.color || 'var(--color-border)'}`}>{count}-part series</span>{period && ` · ${period}`}
                 </p>
               ) : (
                 <p class="blog-cat-byline-meta">{count} short note{count === 1 ? '' : 's'}{lastDate && ` · Latest ${lastDate}`}</p>
@@ -118,6 +125,8 @@ const pageDescription = category.description_en || `Posts in the ${categoryLabel
           </nav>
         )}
       </>
+    )}
+    </>
     )}
   </BlogShell>
 </MainLayout>
