@@ -390,6 +390,23 @@
 **롤백:** 전환 커밋 revert + push (reasoning=gpt-5-mini, threshold=85 동시 복구, 12/11 전까지 유효). 급하면 Railway에 `OPENAI_MODEL_REASONING=gpt-5-mini`, `AUTO_PUBLISH_THRESHOLD=85`를 추가해도 같은 효과 (나중에 삭제).
 **관찰 기간:** 3~5일 → 이상 없으면 main/light/nano 전환 (Task 1.5).
 
+### Task 1.5 사전 A/B (2026-10-19, 현재 운영 구성 기준)
+`prod` (gpt-5 / gpt-5-mini / gpt-5-nano / judge sol) vs `B` (gpt-6.1-sol / gpt-6-luna / gpt-6-luna / judge sol), 10-16~10-18 checkpoint, 각 1회, $3.6.
+
+| 날짜·글 | prod | B |
+|---|---|---|
+| 10-16 business | 72 (cap) | 89 |
+| 10-16 research | 77 | 92 |
+| 10-17 business | 85 | 95 |
+| 10-17 research | 93 | 92 |
+| 10-18 business | 76 | 84 (cap, 오판) |
+| 10-18 research | 85 | 91 |
+
+- 평균 81.3 → **90.5**, gate 통과 5/6 = 5/6, 비용 평균 $0.637 → **$0.543 (-15%)**, 빈 응답·실패 0
+- 퀴즈 (B는 luna 생성): kept 38 / answer_fixed 2 / rejected 2 / dropped 0 — prod (mini) kept 40 / 2 / 3 / 0과 동등 → luna 퀴즈 위험은 검증 단계로 해소
+- B 차단 1건 오판: "deal terms remain undisclosed" ↔ Reuters "The terms of the deal were not disclosed." (단어 형태 차이로 겹침 점수 낮음)
+- 한계: classify/rank (light) 미측정 (checkpoint 재사용), **weekly writer(main) 미측정** → 전환 후 첫 월요일 weekly로 확인, 3일 × 1회
+
 ### Task 1.5: Cutover
 - 선행 조건: Task 1.6 (퀴즈 검증) 배포 ✅, Task 1.7 (gate) 배포 ✅, advisor 처리 결정 ✅, Task 1.5a (reasoning 선전환) 관찰 완료
 - [ ] `core/config.py` 기본값 + `.env.example` 갱신 (위 "역할별 목표 모델" 표 기준)
