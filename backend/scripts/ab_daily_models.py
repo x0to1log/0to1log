@@ -60,6 +60,13 @@ ARMS: dict[str, dict[str, str]] = {
         "openai_model_nano": "gpt-5-nano",
         "openai_model_reasoning": "gpt-5-mini",
     },
+    # prod: production since the 2026-10-15 reasoning cutover (gpt-5 writer, sol judge)
+    "prod": {
+        "openai_model_main": "gpt-5",
+        "openai_model_light": "gpt-5-mini",
+        "openai_model_nano": "gpt-5-nano",
+        "openai_model_reasoning": "gpt-6.1-sol",
+    },
     # A: mid model writes, small model does everything else (cheapest)
     "A": {
         "openai_model_main": "gpt-6.1-sol",
