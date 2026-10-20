@@ -130,7 +130,7 @@
 | DEP-CLEAN-01 | todo | 미사용 `pydantic-ai` 의존성 제거 검토 |
 | PERSONA-PARALLEL-01 | todo (10-26 이후) | 카테고리 안 expert/learner/beginner 작성 순차 → 병렬 (작성 구간 ~1/3, 10-15 research learner 490s). flex 동시 6건 거절률 측정 필요 |
 | QUIZ-PARTIAL-01 | done (`e0086ab0`) | 퀴즈 일부 누락(10-18 business KO expert, 5/6) 발행 시 어드민 health 카드에 "부분 누락" 표시 — [[2026-10-20-quiz-partial-health]]. 테스트 11/11, build 통과, 로컬 어드민 375px·1280px 확인 |
-| RECOVERY-STALE-01 | todo | 09:00 write 복구의 75분 stale 판정: 원래 run이 아직 작성 중이면 중복 작성 가능 (기존 동작) |
+| RECOVERY-STALE-01 | done (`a7d04878`) | 09:00 write 복구의 75분 stale 판정: 원래 run이 아직 작성 중이면 중복 작성 가능 → 마지막 활동 기준 75분 무활동으로 변경 + 09:00 이후 끝난 cron run은 스스로 승격 — [[2026-10-20-daily-run-recovery]]. 테스트 977 통과 |
 
 ### 뉴스 파이프라인 rolling 백로그 (HB-QM에서 이관)
 
