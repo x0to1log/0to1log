@@ -1441,6 +1441,8 @@ async def _check_digest_quality(
         failed_usage: dict[str, Any] = {}
         for _, _, _, call_usage in results:
             failed_usage = merge_usage_metrics(failed_usage, call_usage)
+        # Judge calls that returned before the failure were still billed.
+        cumulative_usage.update(merge_usage_metrics(cumulative_usage, failed_usage))
         message = "Quality evaluation unavailable: " + ", ".join(
             item["scope"] for item in failed_evaluations
         )
@@ -1552,6 +1554,8 @@ async def _check_digest_quality(
     merged_quality_usage = merge_usage_metrics(expert_usage, learner_usage) if learner_usage else expert_usage
     merged_quality_usage = merge_usage_metrics(merged_quality_usage, beginner_usage) if beginner_usage else merged_quality_usage
     merged_quality_usage = merge_usage_metrics(merged_quality_usage, frontload_usage) if frontload_usage else merged_quality_usage
+    # Same contract as _check_weekly_quality: the caller's run total includes QC.
+    cumulative_usage.update(merge_usage_metrics(cumulative_usage, merged_quality_usage))
 
     result = {
         "score": final_score,

@@ -692,6 +692,69 @@ async def test_check_digest_quality_gives_every_judge_call_the_kst_digest_date()
         assert "not a future date" in prompt
 
 
+def _single_expert_personas() -> dict[str, PersonaOutput]:
+    url = "https://example.com/source"
+    return {
+        "expert": PersonaOutput(
+            en=f"## One-Line Summary\nA release. [1]({url})\n\n## Big Tech\n\n### Release\n\nBody. [1]({url})\n",
+            ko=f"## 한 줄 요약\n출시. [1]({url})\n\n## Big Tech\n\n### 출시\n\n본문. [1]({url})\n",
+        ),
+    }
+
+
+async def _run_quality_with_responses(responses: list, cumulative_usage: dict) -> None:
+    from services.pipeline import _check_digest_quality
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=responses)
+    with patch("services.pipeline_quality.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_quality._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality.settings") as mock_settings:
+        mock_settings.openai_model_reasoning = "gpt-6.1-sol"
+        await _check_digest_quality(
+            personas=_single_expert_personas(),
+            digest_type="business",
+            classified=[],
+            community_summary_map={},
+            supabase=MagicMock(),
+            run_id="run-1",
+            cumulative_usage=cumulative_usage,
+            frontload={"headline": "Release", "excerpt": "A release."},
+            batch_date="2026-10-20",
+        )
+
+
+@pytest.mark.asyncio
+async def test_check_digest_quality_adds_judge_usage_to_the_run_total():
+    # COST-QC-01: the daily run summary was missing every QC judge call
+    # (~$0.10/run with gpt-6.1-sol) because the usage never reached the
+    # caller's cumulative_usage. Weekly QC already merged it.
+    cumulative_usage = {"input_tokens": 500, "output_tokens": 50, "cost_usd": 1.0}
+    await _run_quality_with_responses(
+        [
+            _mock_openai_response({"score": 95, "issues": []}),
+            _mock_openai_response({"score": 95, "issues": []}),
+        ],
+        cumulative_usage,
+    )
+
+    assert cumulative_usage["input_tokens"] == 500 + 2 * 1000  # body + frontload judges
+    assert cumulative_usage["cost_usd"] > 1.0
+
+
+@pytest.mark.asyncio
+async def test_check_digest_quality_counts_billed_judge_calls_when_evaluation_fails():
+    empty = _mock_openai_response({})
+    empty.choices[0].message.content = ""
+    cumulative_usage: dict = {}
+
+    with pytest.raises(RuntimeError, match="Quality evaluation unavailable"):
+        await _run_quality_with_responses([empty, empty, empty, empty], cumulative_usage)
+
+    assert cumulative_usage["input_tokens"] == 4 * 1000  # 2 judges x 2 attempts
+    assert cumulative_usage["cost_usd"] > 0
+
+
 @pytest.mark.asyncio
 async def test_check_digest_quality_uses_ko_and_frontload_and_applies_cap():
     from services.pipeline import _check_digest_quality
