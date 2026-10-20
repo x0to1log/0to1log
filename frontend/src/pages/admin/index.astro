@@ -94,7 +94,8 @@ try {
     // Blog: count queries instead of full fetch
     sb.from('blog_posts').select('id', { count: 'exact', head: true }),
     sb.from('blog_posts').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
-    sb.from('pipeline_logs').select('cost_usd, tokens_used').gte('created_at', thirtyDaysAgo),
+    // 'summary' rows repeat the run's stage totals — counting them doubles daily cost
+    sb.from('pipeline_logs').select('cost_usd, tokens_used').gte('created_at', thirtyDaysAgo).neq('pipeline_type', 'summary'),
     sb.from('pipeline_runs')
       .select('id, run_key, status, started_at, last_error')
       .like('run_key', 'handbook-extract-%')
@@ -102,7 +103,7 @@ try {
       .limit(1)
       .maybeSingle(),
     // Pipeline detail: eagerly fetch (filter client-side by run_id)
-    sb.from('pipeline_logs').select('cost_usd, tokens_used, run_id').order('created_at', { ascending: false }).limit(100),
+    sb.from('pipeline_logs').select('cost_usd, tokens_used, run_id').neq('pipeline_type', 'summary').order('created_at', { ascending: false }).limit(100),
     sb.from('news_candidates').select('status, batch_id').order('created_at', { ascending: false }).limit(200),
     sb.from('admin_settings').select('value').eq('key', 'handbook_auto_extract').maybeSingle(),
     sb.from('admin_settings').select('value').eq('key', 'weekly_enabled').maybeSingle(),
