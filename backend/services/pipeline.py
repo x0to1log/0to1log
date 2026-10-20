@@ -1684,10 +1684,14 @@ async def run_daily_pipeline(
     skip_handbook: bool = False,
     force_fresh: bool = False,
     auto_publish: bool = False,
+    promote_when_late: bool = True,
 ) -> PipelineResult:
     """Run the full daily AI news pipeline.
 
     Flow: collect → rank → (react + extract + personas) × 2 → save drafts.
+    A cron run (auto_publish) that finishes after the 09:00 KST promote cron
+    promotes its own drafts; callers that promote afterwards pass
+    promote_when_late=False to avoid duplicate draft alerts.
     """
     if batch_id is None:
         batch_id = target_date or today_kst()
@@ -2172,6 +2176,9 @@ async def run_daily_pipeline(
         usage=cumulative_usage,
     )
     logger.info("News pipeline complete: %d posts, %d errors", total_posts, len(all_errors))
+
+    if auto_publish and promote_when_late and total_posts > 0:
+        await _promote_if_late(batch_id)
 
     # Auto-trigger handbook extraction as a separate run (non-blocking)
     expected_posts = 4  # research(en,ko) + business(en,ko)
@@ -3117,6 +3124,63 @@ def _decide_daily_recovery(
     return "full_run", f"run died before rank (status={run_status}, stale={stale})"
 
 
+def _parse_timestamp(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _last_run_activity(supabase, run_id: str, started_at: Any) -> datetime | None:
+    """Latest of the run start and its newest log row.
+
+    A live run logs at the end of every stage. The longest silent stretch is one
+    persona writer stage (3 attempts x 1200s timeout = 60 min), which the 75-minute
+    stale window covers.
+    """
+    rows = (
+        supabase.table("pipeline_logs")
+        .select("created_at")
+        .eq("run_id", run_id)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    stamps = [_parse_timestamp(started_at), *(_parse_timestamp(r.get("created_at")) for r in rows)]
+    stamps = [s for s in stamps if s]
+    return max(stamps) if stamps else None
+
+
+def _past_promote_time(batch_id: str, now: datetime | None = None) -> bool:
+    """True once the 09:00 KST promote cron (00:00 UTC on the batch date) has fired."""
+    try:
+        promote_at = datetime.strptime(batch_id, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return False
+    return (now or datetime.now(timezone.utc)) >= promote_at
+
+
+async def _promote_if_late(batch_id: str, now: datetime | None = None) -> dict[str, Any] | None:
+    """Promote a cron run's drafts when it finished after the 09:00 KST promote cron.
+
+    That cron leaves a still-active run alone; without this the run's drafts
+    would wait for a manual publish. Never raises.
+    """
+    if not _past_promote_time(batch_id, now):
+        return None
+    try:
+        promotion = await promote_drafts(batch_id=batch_id)
+    except Exception as e:
+        logger.warning("Late self-promotion failed for %s: %s", batch_id, e)
+        return None
+    logger.info("Late run %s promoted its own drafts: %s", batch_id, promotion)
+    return promotion
+
+
 def _full_run_recovery_attempted(supabase, run_id: str) -> bool:
     rows = (
         supabase.table("pipeline_logs")
@@ -3173,6 +3237,8 @@ async def _run_full_daily_recovery(
             batch_id=batch_id,
             skip_handbook=True,
             auto_publish=auto_publish,
+            # Promotion is done below or by the promote cron that called us.
+            promote_when_late=False,
         )
     except Exception as e:
         errors.append(f"full rerun crashed: {e}")
@@ -3238,13 +3304,11 @@ async def recover_incomplete_daily_batch(
 
     stale = False
     if run and run.get("status") == "running":
-        started_at = run.get("started_at")
-        if started_at:
-            try:
-                started = datetime.fromisoformat(str(started_at).replace("Z", "+00:00"))
-                stale = (datetime.now(timezone.utc) - started).total_seconds() >= stale_after_minutes * 60
-            except ValueError:
-                stale = False
+        # Judge by the last sign of life, not the start: a slow flex day can still
+        # be writing at 09:00, and treating it as dead wrote the same digest twice.
+        last_activity = _last_run_activity(supabase, run_id, run.get("started_at"))
+        if last_activity:
+            stale = (datetime.now(timezone.utc) - last_activity).total_seconds() >= stale_after_minutes * 60
 
     rank_checkpoint = _load_checkpoint(supabase, run_id, "rank") if run_id else None
     existing_rows = _fetch_daily_digest_rows_from_db(supabase, batch_id)
@@ -3275,7 +3339,7 @@ async def recover_incomplete_daily_batch(
                 "finished_at": datetime.now(timezone.utc).isoformat(),
                 "last_error": (
                     f"Marked stale by incomplete daily recovery "
-                    f"(>{stale_after_minutes} minutes)"
+                    f"(no activity for >{stale_after_minutes} minutes)"
                 ),
             })
             .eq("id", run_id)

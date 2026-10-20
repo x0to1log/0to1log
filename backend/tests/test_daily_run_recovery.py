@@ -2,6 +2,7 @@
 
 All Supabase access is faked — these tests must never reach the real DB.
 """
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -11,6 +12,8 @@ from services.pipeline import (
     ADMIN_CANCEL_ERROR,
     RECOVERY_STAGE,
     _decide_daily_recovery,
+    _past_promote_time,
+    _promote_if_late,
     recover_incomplete_daily_batch,
 )
 
@@ -89,6 +92,9 @@ class _FakeTable:
     def eq(self, *args, **kwargs):
         return self
 
+    def order(self, *args, **kwargs):
+        return self
+
     def limit(self, *args, **kwargs):
         return self
 
@@ -133,7 +139,9 @@ async def test_missing_run_gets_one_full_rerun_and_promotion():
         result = await recover_incomplete_daily_batch(TODAY, auto_publish=True)
 
     assert result["recovered"] == ["full_run"]
-    run_mock.assert_awaited_once_with(batch_id=TODAY, skip_handbook=True, auto_publish=True)
+    run_mock.assert_awaited_once_with(
+        batch_id=TODAY, skip_handbook=True, auto_publish=True, promote_when_late=False,
+    )
     rerun_mock.assert_not_awaited()
     promote_mock.assert_awaited_once_with(batch_id=TODAY)
 
@@ -214,3 +222,68 @@ async def test_full_rerun_crash_is_reported_not_raised():
     assert result["recovered"] == []
     assert result["errors"] == ["full rerun crashed: boom"]
     promote_mock.assert_not_awaited()
+
+
+# --- RECOVERY-STALE-01: stale = no activity, not time since start ----------
+
+def _ago(minutes: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(minutes=minutes)).isoformat()
+
+
+@pytest.mark.asyncio
+async def test_slow_run_still_logging_at_0900_is_left_alone():
+    # Started 108 minutes ago (07:12 -> 09:00) but logged 10 minutes ago: alive.
+    supabase = _FakeSupabase({
+        "pipeline_runs": [{"id": "run-1", "status": "running", "started_at": _ago(108)}],
+        "pipeline_logs": [{"created_at": _ago(10)}],
+    })
+    p_sb, p_today, p_ckpt, p_rows, p_run, p_rerun, p_promote = _patches(supabase, rank_checkpoint={"research": [{}]})
+    with p_sb, p_today, p_ckpt, p_rows, p_run as run_mock, p_rerun as rerun_mock, p_promote:
+        result = await recover_incomplete_daily_batch(TODAY, auto_publish=True)
+
+    assert result["skipped"] == ["run is still running"]
+    run_mock.assert_not_awaited()
+    rerun_mock.assert_not_awaited()
+    assert supabase.updates == []
+
+
+@pytest.mark.asyncio
+async def test_run_silent_past_the_window_is_claimed_and_recovered():
+    supabase = _FakeSupabase({
+        "pipeline_runs": [{"id": "run-1", "status": "running", "started_at": _ago(108)}],
+        "pipeline_logs": [{"created_at": _ago(100)}],
+    })
+    p_sb, p_today, p_ckpt, p_rows, p_run, p_rerun, p_promote = _patches(supabase)
+    with p_sb, p_today, p_ckpt, p_rows, p_run as run_mock, p_rerun, p_promote:
+        run_mock.return_value = PipelineResult(batch_id=TODAY, posts_created=4)
+        result = await recover_incomplete_daily_batch(
+            TODAY, auto_publish=True, promote_after_recovery=False,
+        )
+
+    assert result["recovered"] == ["full_run"]
+    claimed = [row for table, row in supabase.updates if table == "pipeline_runs"]
+    assert claimed and "no activity" in claimed[0]["last_error"]
+
+
+def test_promote_time_is_0900_kst_on_the_batch_date():
+    assert not _past_promote_time("2026-10-21", datetime(2026, 10, 20, 23, 59, tzinfo=timezone.utc))
+    assert _past_promote_time("2026-10-21", datetime(2026, 10, 21, 0, 0, tzinfo=timezone.utc))
+    assert not _past_promote_time("not-a-date")
+
+
+@pytest.mark.asyncio
+async def test_late_run_promotes_its_own_drafts_only_after_0900():
+    with patch("services.pipeline.promote_drafts", new_callable=AsyncMock) as promote_mock:
+        promote_mock.return_value = {"promoted": 4}
+        early = await _promote_if_late("2026-10-21", datetime(2026, 10, 20, 22, 30, tzinfo=timezone.utc))
+        late = await _promote_if_late("2026-10-21", datetime(2026, 10, 21, 0, 40, tzinfo=timezone.utc))
+
+    assert early is None
+    assert late == {"promoted": 4}
+    promote_mock.assert_awaited_once_with(batch_id="2026-10-21")
+
+
+@pytest.mark.asyncio
+async def test_late_self_promotion_failure_is_swallowed():
+    with patch("services.pipeline.promote_drafts", new_callable=AsyncMock, side_effect=RuntimeError("db down")):
+        assert await _promote_if_late("2026-10-21", datetime(2026, 10, 21, 1, 0, tzinfo=timezone.utc)) is None
