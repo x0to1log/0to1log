@@ -407,6 +407,13 @@
 - B 차단 1건 오판: "deal terms remain undisclosed" ↔ Reuters "The terms of the deal were not disclosed." (단어 형태 차이로 겹침 점수 낮음)
 - 한계: classify/rank (light) 미측정 (checkpoint 재사용), **weekly writer(main) 미측정** → 전환 후 첫 월요일 weekly로 확인, 3일 × 1회
 
+### 전환 후 관찰 (NP-GPT6-OBSERVE)
+
+**10-20 (첫 전체 GPT-6 daily):** 모든 단계 GPT-6 확인 (classify/merge/rank/community = luna, writer/QC = sol). 선정 research 5 / business 5 (평소 수준). 퀴즈 12개 중 1개 교정. 비용 $0.79.
+- research 93 자동 발행. business 82 + `major_source_cap_84` → draft.
+- business major: CP "(18↑)"를 "as of October 20, 2026"로 표기 → judge가 "현재 날짜는 10-19, 미래 시점 관찰"로 판정. **오판.** 원인: PROMPT-REV-01 W1이 writer에만 "Today is <batch_date> (KST)"를 주고 QC에는 날짜가 없어서, judge가 UTC 수집 시각(22:12 UTC 10-19)으로 날짜를 추정 (writer·judge 날짜 비대칭).
+- **수정 (`_qc_date_context`):** 모든 daily QC 호출(body·frontload)의 user payload 앞에 "=== DIGEST DATE === Digest date: <batch_date> (KST) … not a future date" 블록. `_check_digest_quality(batch_date=)`를 daily·quality rerun·A/B rescore에서 전달. 테스트 1개, 전체 937 passed. **재채점: 82 + cap → 91, cap 없음.**
+
 ### Task 1.5: Cutover
 - 선행 조건: Task 1.6 (퀴즈 검증) 배포 ✅, Task 1.7 (gate) 배포 ✅, advisor 처리 결정 ✅, Task 1.5a (reasoning 선전환) 관찰 완료
 - [ ] `core/config.py` 기본값 + `.env.example` 갱신 (위 "역할별 목표 모델" 표 기준)

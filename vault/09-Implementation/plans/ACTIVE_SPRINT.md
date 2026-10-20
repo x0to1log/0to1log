@@ -47,6 +47,8 @@
 - [x] **PROMPT-REV-01** — 뉴스 프롬프트 개정 (날짜 블록, EN frontload 점검, focus P2 예시 교체, KO 수량 한정어, QC 반올림 수치) — `7acbc069`, `5ec5dc70`. A/B: 차단 4/4 → 1/4
 - [x] **CONTENT-FIX** — 발행 콘텐츠 수정: 09-25 KO beginner 퀴즈 정답, 09-28 "former President" (draft)
 
+- [x] **QC-DATE-01** — QC judge에 KST digest 날짜 제공 (writer만 날짜를 받던 비대칭 → "as of" 표기가 미래 시점으로 오판, 10-20 business draft). 재채점 82+cap → 91
+
 **운영 결과 (전환 후):** 10-17·10-18 daily 4/4 자동 발행, 10-19 W42 weekly 자동 발행, 차단 cap 0건, 퀴즈 검증 2건 교정·1건 제외
 
 ### 사이트 리디자인 1단계(기반) — 2026-10-14
