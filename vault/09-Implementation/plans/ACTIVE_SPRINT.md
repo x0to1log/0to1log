@@ -123,7 +123,7 @@
 | Task | 상태 | 목표 |
 |------|------|------|
 | RERUN-GUARD-01 | todo | `rerun_pipeline_stage`가 published 보호 검사 전에 로그 삭제·run failed 처리 (작업 칩 분리됨) |
-| COST-QC-01 | todo | daily QC 사용량이 `cumulative_usage`에 합산 안 됨 → run 합계 비용 과소 |
+| COST-QC-01 | done (`2e7a4655`, `b7b32507`) | daily QC 사용량이 `cumulative_usage`에 합산 안 됨 → run 합계 비용 과소. 함께 발견: 대시보드가 `summary` 행까지 더해 daily 비용 2배 (30일 $17.53 → $9.78) — [[2026-10-20-cost-accounting-fix]]. 테스트 959 통과, 로컬 대시보드 확인. 배포 후 다음 run에서 `summary` ≈ 단계 합계 확인 |
 | QC-EVIDENCE-04 | todo | `enriched_map`이 research/business 공용 → business frontload 발췌 후보에 research 보강 자료 혼입 |
 | WEEKLY-CITE-01 | todo | W42 weekly: action 항목 저장소명 인용, 2차 보도 단정 서술, learner 약어 미설명 (sol 지적, 감점만) |
 | ENV-EXAMPLE-01 | todo | 루트 CLAUDE.md가 요구하는 `.env.example` 부재 → 생성 (모델 변수는 쓰지 않음) |
