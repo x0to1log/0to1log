@@ -1096,6 +1096,37 @@ def _map_digest_items_to_group_indexes(
 # Main digest generator
 # ---------------------------------------------------------------------------
 
+async def _log_frontload_grounding(
+    supabase,
+    run_id: str,
+    digest_type: str,
+    frontload: dict[str, Any],
+    source_text: str,
+) -> None:
+    """Record frontload numbers/names missing from the writer's sources.
+
+    FRONTLOAD-GROUND-01 Phase 1: detection only. Never raises, never changes
+    the frontload, QC, or publish eligibility.
+    """
+    t0 = time.monotonic()
+    try:
+        from services.frontload_grounding import check_frontload_grounding
+
+        report = check_frontload_grounding(frontload, source_text)
+    except Exception as exc:
+        logger.warning("Frontload grounding check failed for %s: %s", digest_type, exc)
+        return
+    await _log_stage(
+        supabase, run_id, f"digest:{digest_type}:frontload_grounding", "success", t0,
+        output_summary=(
+            f"{len(report['unsupported'])} unsupported, {len(report['weak'])} weak "
+            f"of {report['checked']} EN frontload claims"
+        ),
+        post_type=digest_type,
+        debug_meta=report,
+    )
+
+
 async def _generate_digest(
     classified: list[ClassifiedGroup],
     digest_type: str,
@@ -1811,6 +1842,9 @@ async def _generate_digest(
         "focus_items": digest_focus_items,
         "focus_items_ko": digest_focus_items_ko,
     }
+    if "expert" in target_personas:
+        # Canonical frontload comes from the expert call; skip persona-only reruns.
+        await _log_frontload_grounding(supabase, run_id, digest_type, frontload_payload, user_prompt)
 
     # Generate quizzes before QC so beginner quiz quality can be inspected.
     persona_quizzes, quiz_usage = await _generate_digest_quizzes(

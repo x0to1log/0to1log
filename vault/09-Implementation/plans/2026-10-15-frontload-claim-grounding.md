@@ -1,7 +1,7 @@
 # Frontload Claim Grounding — 작성 단계 주장 검증
 
 > 상위 계획: [[2026-10-13-news-pipeline-gpt6-upgrade]] 개선 과제 P1-3
-> 상태: 설계 (2026-10-15)
+> 상태: Phase 1 구현·배포 (2026-10-20), 1주 측정 중 → Phase 2 판단 2026-10-27~
 
 **Goal:** 기사 작성 모델이 frontload(헤드라인·요약·포인트)에 출처에 없는 수치·이름을 쓰는 것을 저장 전에 결정적으로 찾아내고, 고쳐서 draft 차단을 줄인다.
 
@@ -9,7 +9,7 @@
 
 | 날짜 | frontload 주장 | 출처 | 결과 |
 |---|---|---|---|
-| 10-15 business | "cached inputs 95% off" | 없음 (원문의 95%는 무관한 수치) | sol major → draft, Amy 수동 발행 |
+| 10-15 business | "cached inputs 95% off" | ~~없음~~ → **있음** (Google 원문: "cached input tokens at 95% off", 2026-10-20 재확인) | sol major → draft, Amy 수동 발행. **QC 오판이었음** (QC-EVIDENCE-03 발췌 예산 문제와 같은 날) |
 | 09-28 research | "63x lower scoring cost" | 확인 안 됨 | QC major (judge 회차마다 흔들림) |
 | 09-28 business | "former President Donald Trump" | 원문은 현직 | 발행 전 수동 수정 |
 
@@ -43,6 +43,19 @@
 - learner/beginner frontload (`guide_items`) — Phase 1 오탐률 확인 후 확장 검토
 - 본문(body) 주장 검증 — 길고 인용 구조가 달라 별도 설계 필요
 - 관계·해석성 과장 ("AISI가 배포 전 평가 중") — 결정적 검사로 불가, QC 담당
+
+## Phase 1 구현 (2026-10-20)
+
+- 모듈: `backend/services/frontload_grounding.py` — QC의 `_frontload_claim_tokens`는 **수정하지 않음** (GPT-6 관찰 기간 QC 점수 고정). 정규식 상수만 재사용.
+- 호출: `pipeline_digest._generate_digest`에서 frontload 확정 직후 (expert를 이번 호출에서 만든 경우만) → 로그 `digest:{type}:frontload_grounding`, `debug_meta = {checked, unsupported[], weak[], supported[]}`. 실패해도 진행 (non-blocking). 재실행 cascade(classify/merge/community/write)에 포함.
+- 판정 3단계: `unsupported` (원문에 없음) / `weak` (숫자는 있으나 frontload의 주변 단어가 원문의 그 숫자 근처 150자 안에 없음) / `supported`.
+- 오탐 방지 (실데이터 사전 점검에서 발견한 6건 → 0건):
+  - 이름 구절은 2단어까지 (3단어는 복수형 "M5 Ultra Macs", 문장 첫 동사 "Watch Bolt E4B"로 오탐)
+  - 숫자 단어가 구별되는 형태("501B", "1.27.1")면 두 단어가 원문 200자 안에 함께 있어도 근거 인정
+  - 월 약어 ↔ 전체 이름 ("Nov 30" ↔ "November 30"), 하이픈 ↔ 공백 ("Gemini-4" ↔ "Gemini 4")
+  - 약어 ↔ 머리글자 풀어쓰기 ("MoE" ↔ "Mixture-of-Experts")
+  - 단위·버전 꼬리 보존 ("Beam 501" → "Beam 501B", "OpenHands 1.27" → "1.27.1")
+- 사전 점검 (10-14~10-20 발행 글 14개, 체크포인트로 원문 근사): 주장 63개 중 unsupported 0 / weak 0. 근사 원문은 writer 입력의 상위집합이라 실제 운영 로그보다 관대할 수 있음 → 운영 로그 1주가 진짜 측정.
 
 ## 완료 기준
 - Phase 1: 테스트 (실제 사례 3건 축약: 95% / 63x / 정상 수치) + 1주 로그에서 오탐률 산출
