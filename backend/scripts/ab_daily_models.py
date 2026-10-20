@@ -391,6 +391,7 @@ async def rescore_once(judge: str, digest_type: str, qc_inputs: dict[str, Any]) 
         enriched_map=qc_inputs["enriched_map"],
         raw_content_map=qc_inputs["raw_content_map"],
         persona_quizzes=qc_inputs["quizzes"].get(digest_type, {}),
+        batch_date=qc_inputs["run_key"].removeprefix("news-"),
     )
     if not isinstance(result, dict):
         return {"judge": judge, "type": digest_type, "score": None, "error": f"non-dict QC result: {result!r}"}

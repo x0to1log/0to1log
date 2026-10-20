@@ -641,6 +641,58 @@ async def test_check_digest_quality_passes_source_evidence_to_frontload_judge():
 
 
 @pytest.mark.asyncio
+async def test_check_digest_quality_gives_every_judge_call_the_kst_digest_date():
+    # Real failure (2026-10-20): the writer, told "Today is 2026-10-20 (KST)",
+    # anchored a live vote count "as of October 20". The judge had no date,
+    # inferred October 19 from the UTC collection time, and flagged a major
+    # "future-dated observation".
+    from services.pipeline import _check_digest_quality
+
+    url = "https://example.com/source"
+    personas = {
+        "expert": PersonaOutput(
+            en=f"## One-Line Summary\nA release. [1]({url})\n\n## Big Tech\n\n### Release\n\nBody. [1]({url})\n",
+            ko=f"## 한 줄 요약\n출시. [1]({url})\n\n## Big Tech\n\n### 출시\n\n본문. [1]({url})\n",
+        ),
+    }
+    responses = [
+        _mock_openai_response({"score": 95, "issues": []}),
+        _mock_openai_response({"score": 95, "issues": []}),
+    ]
+    captured_user_prompts: list[str] = []
+
+    async def _capture_create(*args, **kwargs):
+        captured_user_prompts.append(kwargs["messages"][1]["content"])
+        return responses.pop(0)
+
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
+
+    with patch("services.pipeline_quality.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_quality._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality.settings") as mock_settings:
+        mock_settings.openai_model_reasoning = "gpt-6.1-sol"
+
+        await _check_digest_quality(
+            personas=personas,
+            digest_type="business",
+            classified=[],
+            community_summary_map={},
+            supabase=MagicMock(),
+            run_id="run-1",
+            cumulative_usage={},
+            frontload={"headline": "Release", "excerpt": "A release."},
+            batch_date="2026-10-20",
+        )
+
+    assert len(captured_user_prompts) == 2  # body + frontload
+    for prompt in captured_user_prompts:
+        assert prompt.startswith("=== DIGEST DATE ===")
+        assert "2026-10-20 (KST)" in prompt
+        assert "not a future date" in prompt
+
+
+@pytest.mark.asyncio
 async def test_check_digest_quality_uses_ko_and_frontload_and_applies_cap():
     from services.pipeline import _check_digest_quality
 

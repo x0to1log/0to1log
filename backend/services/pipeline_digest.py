@@ -1828,6 +1828,7 @@ async def _generate_digest(
         enriched_map=enriched_map,
         raw_content_map=raw_content_map,
         persona_quizzes=persona_quizzes,
+        batch_date=batch_id,
     )
     if isinstance(quality_result, dict):
         quality_score = int(quality_result.get("score", quality_result.get("quality_score", 0)) or 0)

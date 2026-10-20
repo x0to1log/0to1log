@@ -2652,6 +2652,7 @@ async def rerun_pipeline_stage(
                         frontload=frontload,
                         enriched_map=enriched_map,
                         raw_content_map=raw_content_map,
+                        batch_date=batch_id,
                     )
                 except Exception as e:
                     all_errors.append(f"Quality rescore failed for {digest_type}: {e}")

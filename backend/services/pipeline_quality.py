@@ -710,6 +710,24 @@ AUTO_PUBLISH_BLOCKING_CAPS = frozenset({
 })
 
 
+def _qc_date_context(batch_date: str | None) -> str:
+    """Date block prepended to daily QC payloads.
+
+    The pipeline runs at 22:12 UTC for the next KST date, and the writer is told
+    "Today is <batch_date> (KST)". Without the same context the judge inferred
+    the UTC date and flagged correct "as of <batch_date>" anchors as future-dated
+    (2026-10-20).
+    """
+    if not batch_date:
+        return ""
+    return (
+        "=== DIGEST DATE ===\n"
+        f"Digest date: {batch_date} (KST). Sources and community data were collected the "
+        "evening before in UTC, which is already this date in KST. Treat \"as of "
+        f"{batch_date}\" anchors as the digest date, not a future date.\n\n"
+    )
+
+
 def passes_auto_publish_gate(score: int | None, caps_applied: list[str] | None) -> bool:
     """Auto-publish only when the score clears the threshold and no blocking cap fired."""
     if score is None or score < settings.auto_publish_threshold:
@@ -1249,8 +1267,13 @@ async def _check_digest_quality(
     enriched_map: dict[str, list[dict[str, Any]]] | None = None,
     raw_content_map: dict[str, str] | None = None,
     persona_quizzes: dict[str, dict[str, dict[str, Any]]] | None = None,
+    batch_date: str | None = None,
 ) -> dict[str, Any]:
-    """Score quality of generated digest with body + frontload + deterministic checks."""
+    """Score quality of generated digest with body + frontload + deterministic checks.
+
+    `batch_date` (KST, YYYY-MM-DD) is given to every judge call so it reads
+    "as of" anchors the same way the writer was told to write them.
+    """
     t0 = time.monotonic()
     from services.agents.prompts_news_pipeline import (
         QUALITY_CHECK_RESEARCH_EXPERT, QUALITY_CHECK_RESEARCH_LEARNER,
@@ -1288,6 +1311,7 @@ async def _check_digest_quality(
     failed_evaluations: list[dict[str, Any]] = []
 
     async def _score(prompt: str, content: str, label: str, default_scope: str) -> tuple[int, dict, list[dict[str, str]], dict]:
+        content = _qc_date_context(batch_date) + content
         max_retries = 2
         service_tier = "flex"
         usage: dict[str, Any] = {}
