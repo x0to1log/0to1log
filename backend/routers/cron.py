@@ -13,6 +13,7 @@ from core.rate_limit import limiter
 from core.security import verify_cron_secret
 from services.retention import prune_pipeline_debug_data
 from services.pipeline import (
+    ADMIN_CANCEL_ERROR,
     check_existing_batch,
     cleanup_existing_batch,
     promote_drafts,
@@ -239,7 +240,7 @@ async def cancel_pipeline_run(
         supabase.table("pipeline_runs").update({
             "status": "failed",
             "finished_at": datetime.now(timezone.utc).isoformat(),
-            "last_error": "Cancelled by admin",
+            "last_error": ADMIN_CANCEL_ERROR,
         }).eq("id", body.run_id).eq("status", "running").execute()
     except Exception as e:
         logger.error("Pipeline cancel error: %s", e)

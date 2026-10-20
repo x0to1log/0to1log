@@ -3054,6 +3054,131 @@ async def rerun_pipeline_stage(
         return PipelineResult(batch_id=batch_id, status="failed", message=str(e))
 
 
+RECOVERY_STAGE = "recovery"
+ADMIN_CANCEL_ERROR = "Cancelled by admin"
+
+
+def _decide_daily_recovery(
+    run_status: str | None,
+    *,
+    stale: bool,
+    admin_cancelled: bool,
+    has_rank_checkpoint: bool,
+    has_post_rows: bool,
+    full_run_attempted: bool,
+) -> tuple[str, str]:
+    """Pick the 09:00 KST recovery action for one daily batch.
+
+    run_status: pipeline_runs.status ("running" / "success" / "failed"),
+        or None when no run row exists for the batch.
+    stale: run is "running" but started longer ago than the stale window.
+    admin_cancelled: run was stopped from the admin cancel button.
+    has_rank_checkpoint: the run saved its `rank` checkpoint.
+    has_post_rows: any daily digest row (draft or published) exists.
+    full_run_attempted: an earlier recovery already started a full rerun.
+
+    Returns (action, reason). action is one of:
+      "write"    — rerun write for missing categories from the rank checkpoint
+      "full_run" — rerun the whole daily pipeline once
+      "skip"     — do nothing; reason explains why
+    See vault plan 2026-10-20-daily-run-recovery for the decision table.
+    """
+    # Order matters: never touch a live run, and a human cancel beats any
+    # automatic recovery even when a rank checkpoint exists.
+    if run_status == "running" and not stale:
+        return "skip", "run is still running"
+    if admin_cancelled:
+        return "skip", "run was cancelled by admin"
+    if has_rank_checkpoint:
+        return "write", "rank checkpoint exists; rerun write for missing categories"
+    if full_run_attempted:
+        return "skip", "full rerun was already attempted for this batch"
+    if has_post_rows:
+        return "skip", "digest rows exist without a rank checkpoint (manual work?)"
+    if run_status is None:
+        return "full_run", "no daily run found"
+    return "full_run", f"run died before rank (status={run_status}, stale={stale})"
+
+
+def _full_run_recovery_attempted(supabase, run_id: str) -> bool:
+    rows = (
+        supabase.table("pipeline_logs")
+        .select("debug_meta")
+        .eq("run_id", run_id)
+        .eq("pipeline_type", RECOVERY_STAGE)
+        .execute()
+        .data
+        or []
+    )
+    return any((row.get("debug_meta") or {}).get("action") == "full_run" for row in rows)
+
+
+async def _run_full_daily_recovery(
+    supabase,
+    batch_id: str,
+    run: dict[str, Any] | None,
+    reason: str,
+    *,
+    auto_publish: bool,
+    promote_after_recovery: bool,
+) -> dict[str, Any]:
+    """Rerun the whole daily pipeline once for a batch that died before `rank`.
+
+    The `recovery` log row is written before the rerun starts, so a rerun that
+    itself dies still counts as the one allowed attempt.
+    """
+    t0 = time.monotonic()
+    run_id = run["id"] if run else str(uuid.uuid4())
+    if not run:
+        # run_daily_pipeline reuses an existing run row, so creating it here
+        # lets the recovery log row attach to the same run.
+        supabase.table("pipeline_runs").insert({
+            "id": run_id,
+            "run_key": f"news-{batch_id}",
+            "status": "failed",
+            "last_error": "No daily run found at recovery time",
+        }).execute()
+    await _log_stage(
+        supabase, run_id, RECOVERY_STAGE, "success", t0,
+        output_summary=f"Full daily rerun started: {reason}",
+        debug_meta={
+            "action": "full_run",
+            "reason": reason,
+            "previous_status": run.get("status") if run else None,
+        },
+    )
+
+    recovered: list[str] = []
+    skipped: list[str] = []
+    errors: list[str] = []
+    try:
+        result = await run_daily_pipeline(
+            batch_id=batch_id,
+            skip_handbook=True,
+            auto_publish=auto_publish,
+        )
+    except Exception as e:
+        errors.append(f"full rerun crashed: {e}")
+    else:
+        if result.posts_created > 0:
+            recovered.append("full_run")
+        elif not result.errors:
+            skipped.append("full rerun produced no posts")
+        errors.extend(f"full rerun: {err}" for err in result.errors)
+
+    promotion: dict[str, Any] | None = None
+    if recovered and auto_publish and promote_after_recovery:
+        promotion = await promote_drafts(batch_id=batch_id)
+
+    return {
+        "batch_id": batch_id,
+        "recovered": recovered,
+        "skipped": skipped,
+        "errors": errors,
+        "promotion": promotion,
+    }
+
+
 async def recover_incomplete_daily_batch(
     batch_id: str,
     *,
@@ -3062,12 +3187,12 @@ async def recover_incomplete_daily_batch(
     promote_after_recovery: bool = True,
     stale_after_minutes: int = 75,
 ) -> dict[str, Any]:
-    """Recover ranked-but-unsaved daily digests from checkpoints.
+    """Recover a daily batch that did not finish.
 
-    This is intentionally narrower than a full rerun: it uses the saved `rank`
-    checkpoint to identify expected digest types and only reruns `write` for
-    categories that lack both EN and KO rows. Existing published categories are
-    left untouched.
+    With a saved `rank` checkpoint, only `write` reruns for categories that lack
+    both EN and KO rows; existing published categories are left untouched.
+    Without one (no run, or the run died before `rank`), today's batch gets one
+    full rerun. `_decide_daily_recovery` picks between the two.
     """
     supabase = get_supabase()
     if not supabase:
@@ -3081,43 +3206,51 @@ async def recover_incomplete_daily_batch(
     run_key = f"news-{batch_id}"
     run_rows = (
         supabase.table("pipeline_runs")
-        .select("id,status,started_at")
+        .select("id,status,started_at,last_error")
         .eq("run_key", run_key)
         .limit(1)
         .execute()
         .data
         or []
     )
-    if not run_rows:
-        return {
-            "batch_id": batch_id,
-            "recovered": [],
-            "skipped": [f"no pipeline run found for {run_key}"],
-            "errors": [],
-        }
-
-    run = run_rows[0]
-    run_id = run["id"]
+    run = run_rows[0] if run_rows else None
+    run_id = run["id"] if run else None
     skipped: list[str] = []
     errors: list[str] = []
     recovered: list[str] = []
 
-    if run.get("status") == "running":
+    stale = False
+    if run and run.get("status") == "running":
         started_at = run.get("started_at")
-        stale = False
         if started_at:
             try:
                 started = datetime.fromisoformat(str(started_at).replace("Z", "+00:00"))
                 stale = (datetime.now(timezone.utc) - started).total_seconds() >= stale_after_minutes * 60
             except ValueError:
                 stale = False
-        if not stale:
-            return {
-                "batch_id": batch_id,
-                "recovered": [],
-                "skipped": [f"run {run_id} is still running"],
-                "errors": [],
-            }
+
+    rank_checkpoint = _load_checkpoint(supabase, run_id, "rank") if run_id else None
+    existing_rows = _fetch_daily_digest_rows_from_db(supabase, batch_id)
+    action, reason = _decide_daily_recovery(
+        run.get("status") if run else None,
+        stale=stale,
+        admin_cancelled=bool(run) and run.get("last_error") == ADMIN_CANCEL_ERROR,
+        has_rank_checkpoint=bool(rank_checkpoint),
+        has_post_rows=bool(existing_rows),
+        full_run_attempted=bool(run_id) and _full_run_recovery_attempted(supabase, run_id),
+    )
+    if action == "full_run" and batch_id != today_kst():
+        # A full rerun collects today's news; never file it under another date.
+        action, reason = "skip", f"full rerun only runs for today's batch ({reason})"
+    if action == "skip":
+        return {
+            "batch_id": batch_id,
+            "recovered": [],
+            "skipped": [reason],
+            "errors": [],
+        }
+
+    if run and run.get("status") == "running":
         claim = (
             supabase.table("pipeline_runs")
             .update({
@@ -3140,16 +3273,16 @@ async def recover_incomplete_daily_batch(
                 "errors": [],
             }
 
-    rank_checkpoint = _load_checkpoint(supabase, run_id, "rank")
-    if not rank_checkpoint:
-        return {
-            "batch_id": batch_id,
-            "recovered": [],
-            "skipped": ["missing rank checkpoint"],
-            "errors": [],
-        }
+    if action == "full_run":
+        return await _run_full_daily_recovery(
+            supabase,
+            batch_id,
+            run,
+            reason,
+            auto_publish=auto_publish,
+            promote_after_recovery=promote_after_recovery,
+        )
 
-    existing_rows = _fetch_daily_digest_rows_from_db(supabase, batch_id)
     missing_types = _find_missing_daily_digest_types(
         rank_checkpoint,
         existing_rows,
