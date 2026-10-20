@@ -122,7 +122,7 @@
 
 | Task | 상태 | 목표 |
 |------|------|------|
-| RERUN-GUARD-01 | todo | `rerun_pipeline_stage`가 published 보호 검사 전에 로그 삭제·run failed 처리 (작업 칩 분리됨) |
+| RERUN-GUARD-01 | done (`c7dd5c67`) | `rerun_pipeline_stage`가 published 보호 검사 전에 로그 삭제·run failed 처리 → 검사를 맨 앞으로, 엔드포인트 422, 화면에 거절 이유 표시 — [[2026-10-20-rerun-published-guard]]. 백엔드 963 통과, 프론트 helper 테스트·build 통과 |
 | COST-QC-01 | done (`2e7a4655`, `b7b32507`) | daily QC 사용량이 `cumulative_usage`에 합산 안 됨 → run 합계 비용 과소. 함께 발견: 대시보드가 `summary` 행까지 더해 daily 비용 2배 (30일 $17.53 → $9.78) — [[2026-10-20-cost-accounting-fix]]. 테스트 959 통과, 로컬 대시보드 확인. 배포 후 다음 run에서 `summary` ≈ 단계 합계 확인 |
 | QC-EVIDENCE-04 | todo | `enriched_map`이 research/business 공용 → business frontload 발췌 후보에 research 보강 자료 혼입 |
 | WEEKLY-CITE-01 | todo | W42 weekly: action 항목 저장소명 인용, 2차 보도 단정 서술, learner 약어 미설명 (sol 지적, 감점만) |
