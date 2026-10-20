@@ -84,7 +84,7 @@ try {
   const [postsRes, termsRes, profilesRes, likesRes, pipelineRes, notifsRes,
          blogTotalRes, blogDraftRes, monthlyLogsRes, handbookRunRes,
          pipelineLogsRes, candidatesRes, settingsRes, weeklySettingsRes, productsRes,
-         newsQualityRes, hbQualityRes, dauRes, mauRes, healthRunsRes] = await Promise.all([
+         newsQualityRes, hbQualityRes, dauRes, mauRes, healthRunsRes, quizHealthRes] = await Promise.all([
     sb.from('news_posts').select('title, slug, status, updated_at, quality_score, locale').order('updated_at', { ascending: false }),
     sb.from('handbook_terms').select('term, slug, status, updated_at, source').order('updated_at', { ascending: false }),
     sb.from('profiles').select('id', { count: 'exact', head: true }),
@@ -129,10 +129,23 @@ try {
     sb.from('pipeline_runs')
       .select('run_key, status, started_at, last_error')
       .gte('started_at', new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()),
+    // Published daily posts: quiz question text only per persona (no bodies)
+    sb.from('news_posts')
+      .select(
+        'pipeline_batch_id, post_type, locale, '
+        + 'quiz_expert:guide_items->quiz_poll_expert->>question, '
+        + 'quiz_learner:guide_items->quiz_poll_learner->>question, '
+        + 'quiz_beginner:guide_items->quiz_poll_beginner->>question',
+      )
+      .eq('status', 'published')
+      .in('post_type', ['research', 'business'])
+      .gte('published_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
   ]);
 
   if (!healthRunsRes.error) {
-    pipelineHealth = summarizePipelineHealth(healthRunsRes.data ?? [], new Date());
+    pipelineHealth = summarizePipelineHealth(healthRunsRes.data ?? [], new Date(), {
+      quizPosts: quizHealthRes.error ? [] : quizHealthRes.data ?? [],
+    });
   }
 
   const posts = postsRes.data ?? [];

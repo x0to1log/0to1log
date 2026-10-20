@@ -5,6 +5,7 @@ import {
   classifyPipelineFailure,
   expectedDailyBatchId,
   expectedWeeklyRunKey,
+  findMissingDailyQuizzes,
   summarizePipelineHealth,
 } from './pipelineHealth.js';
 
@@ -91,4 +92,52 @@ test('latest failed daily run is critical and names the cause', () => {
   assert.ok(failure);
   assert.equal(failure.cause, 'openai_credits');
   assert.equal(failure.consecutive, 3);
+});
+
+function quizPost(batch, postType, locale, missing = []) {
+  const post = { pipeline_batch_id: batch, post_type: postType, locale };
+  for (const persona of ['expert', 'learner', 'beginner']) {
+    post[`quiz_${persona}`] = missing.includes(persona) ? null : `${persona} question?`;
+  }
+  return post;
+}
+
+test('published posts with every persona quiz add no issue', () => {
+  const now = at('2026-10-14T23:00:00Z');
+  const runs = [...healthyRuns('2026-10-15', 14), { run_key: 'weekly-2026-W41', status: 'success', started_at: '2026-10-13T01:10:00Z' }];
+  const quizPosts = [quizPost('2026-10-15', 'business', 'en'), quizPost('2026-10-15', 'business', 'ko')];
+  const health = summarizePipelineHealth(runs, now, { quizPosts });
+  assert.equal(health.level, 'ok');
+  assert.deepEqual(health.quizGaps, []);
+});
+
+test('a dropped persona quiz is a warning naming date, category, locale, persona', () => {
+  const now = at('2026-10-14T23:00:00Z');
+  const runs = [...healthyRuns('2026-10-15', 14), { run_key: 'weekly-2026-W41', status: 'success', started_at: '2026-10-13T01:10:00Z' }];
+  const quizPosts = [
+    quizPost('2026-10-12', 'research', 'en', ['beginner']),
+    quizPost('2026-10-14', 'business', 'ko', ['expert']),
+    quizPost('2026-10-14', 'business', 'en'),
+  ];
+  const health = summarizePipelineHealth(runs, now, { quizPosts });
+  assert.equal(health.level, 'warning');
+  const issue = health.issues.find((i) => i.code === 'daily_quiz_missing');
+  assert.equal(
+    issue.message,
+    'Quiz missing on published posts: 2026-10-14 business KO (expert); 2026-10-12 research EN (beginner).',
+  );
+});
+
+test('blank quiz text counts as missing', () => {
+  assert.deepEqual(findMissingDailyQuizzes([{ ...quizPost('2026-10-14', 'research', 'ko'), quiz_learner: '  ' }]), [
+    { batch: '2026-10-14', postType: 'research', locale: 'ko', personas: ['learner'] },
+  ]);
+});
+
+test('quiz gaps sit next to schedule issues without changing their level', () => {
+  const now = at('2026-10-14T23:00:00Z');
+  const runs = healthyRuns('2026-10-14', 14); // today's run missing -> critical
+  const health = summarizePipelineHealth(runs, now, { quizPosts: [quizPost('2026-10-14', 'business', 'ko', ['expert'])] });
+  assert.equal(health.level, 'critical');
+  assert.deepEqual(health.issues.map((i) => i.code).sort(), ['daily_quiz_missing', 'latest_daily_missing', 'weekly_missing']);
 });

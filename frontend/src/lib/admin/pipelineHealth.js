@@ -55,11 +55,32 @@ const CAUSE_LABELS = {
   other: 'See the run error',
 };
 
+const QUIZ_PERSONAS = ['expert', 'learner', 'beginner'];
+
+/**
+ * Published daily posts whose persona quizzes are missing. A quiz that fails
+ * answer verification three times is dropped and the post still publishes
+ * (10-18 business KO expert), so the run log alone is easy to miss.
+ * Each post carries `quiz_<persona>`: the quiz question text, or null.
+ *
+ * @param {Array<{pipeline_batch_id: string, post_type: string, locale: string} & Record<string, unknown>>} posts
+ */
+export function findMissingDailyQuizzes(posts) {
+  const gaps = [];
+  for (const post of posts) {
+    const personas = QUIZ_PERSONAS.filter((p) => !String(post[`quiz_${p}`] ?? '').trim());
+    if (personas.length) {
+      gaps.push({ batch: post.pipeline_batch_id, postType: post.post_type, locale: post.locale, personas });
+    }
+  }
+  return gaps.sort((a, b) => (a.batch < b.batch ? 1 : a.batch > b.batch ? -1 : 0));
+}
+
 /**
  * @param {Array<{run_key: string, status: string, started_at: string, last_error?: string|null}>} runs
  * @param {Date} now
  */
-export function summarizePipelineHealth(runs, now, { windowDays = 14 } = {}) {
+export function summarizePipelineHealth(runs, now, { windowDays = 14, quizPosts = [] } = {}) {
   const issues = [];
   const latestDailyByBatch = new Map();
   for (const run of runs) {
@@ -113,6 +134,14 @@ export function summarizePipelineHealth(runs, now, { windowDays = 14 } = {}) {
     issues.push({ level: 'warning', code: 'weekly_missing', message: `No ${expectedWeekly} run (cron Monday 10:00 KST).` });
   }
 
+  const quizGaps = findMissingDailyQuizzes(quizPosts);
+  if (quizGaps.length) {
+    const list = quizGaps
+      .map((g) => `${g.batch} ${g.postType} ${String(g.locale).toUpperCase()} (${g.personas.join(', ')})`)
+      .join('; ');
+    issues.push({ level: 'warning', code: 'daily_quiz_missing', message: `Quiz missing on published posts: ${list}.` });
+  }
+
   const level = issues.some((i) => i.level === 'critical') ? 'critical' : issues.length ? 'warning' : 'ok';
-  return { level, issues, missingDates, expectedBatch, expectedWeekly };
+  return { level, issues, missingDates, quizGaps, expectedBatch, expectedWeekly };
 }
