@@ -115,7 +115,7 @@
 | Task | 상태 | 목표 |
 |------|------|------|
 | NP-GPT6-CLEANUP | todo (관찰 후) | `OPENAI_MODEL_PRICING_PER_1M` gpt-5 항목, `ab_daily_models.py` baseline/prod 조합, 테스트의 gpt-5 문자열 정리. 롤백 가능성 때문에 관찰 기간에는 유지 |
-| FRONTLOAD-GROUND-01 | todo | Phase 1: frontload 수치·이름 근거 검사 (감지만, 로그) → 1주 오탐률 측정 → Phase 2 수리 — [[2026-10-15-frontload-claim-grounding]] |
+| FRONTLOAD-GROUND-01 | Phase 1 배포 (`e82d9bf9`), 측정 중 | Phase 1: frontload 수치·이름 근거 검사 (감지만, `digest:{type}:frontload_grounding` 로그) → 10-21~10-27 오탐률 측정 → Phase 2 수리 판단 — [[2026-10-15-frontload-claim-grounding]]. 사전 점검 63개 중 오탐 0. 10-15 "95% off"는 원문에 있음 = QC 오판 |
 | QC-EVIDENCE-03 | todo | 남은 QC 발췌 오판 유형: 같은 의미 다른 형태 ("undisclosed" ↔ "not disclosed"), 출처당 1,200자 예산 경쟁 ("AI Mode in Search", 10-15) |
 
 ### MEDIUM — 운영 결함 (전환 중 발견)
