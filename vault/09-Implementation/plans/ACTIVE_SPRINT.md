@@ -24,6 +24,7 @@
 | Task ID | 제목 | 상태 | 시작 | 예상 완료 |
 |---|---|---|---|---|
 | NP-GPT6-OBSERVE | 전환 관찰: daily 10-20~10-25 (자동 발행, draft 원인, luna 분류·순위 결과의 기사 수·주제, 퀴즈 검증 빈도, 비용) + 10-26 첫 sol 작성 weekly | doing | 2026-10-19 | 2026-10-26 |
+| RECOVERY-01 | 09:00 복구 확장: run 없음 / rank 이전 실패 / 뉴스 0건 → 전체 실행 1회 + 승격 — [[2026-10-20-daily-run-recovery]] | doing | 2026-10-20 | 2026-10-21 |
 
 ---
 
@@ -127,6 +128,9 @@
 | WEEKLY-CITE-01 | todo | W42 weekly: action 항목 저장소명 인용, 2차 보도 단정 서술, learner 약어 미설명 (sol 지적, 감점만) |
 | ENV-EXAMPLE-01 | todo | 루트 CLAUDE.md가 요구하는 `.env.example` 부재 → 생성 (모델 변수는 쓰지 않음) |
 | DEP-CLEAN-01 | todo | 미사용 `pydantic-ai` 의존성 제거 검토 |
+| PERSONA-PARALLEL-01 | todo (10-26 이후) | 카테고리 안 expert/learner/beginner 작성 순차 → 병렬 (작성 구간 ~1/3, 10-15 research learner 490s). flex 동시 6건 거절률 측정 필요 |
+| QUIZ-PARTIAL-01 | todo | 퀴즈 일부 누락(10-18 business KO expert, 5/6) 발행 시 어드민 health 카드에 "부분 누락" 표시 |
+| RECOVERY-STALE-01 | todo | 09:00 write 복구의 75분 stale 판정: 원래 run이 아직 작성 중이면 중복 작성 가능 (기존 동작) |
 
 ### 뉴스 파이프라인 rolling 백로그 (HB-QM에서 이관)
 
