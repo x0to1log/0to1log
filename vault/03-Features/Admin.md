@@ -16,7 +16,7 @@ source: docs/04_Frontend_Spec.md
 
 | 메뉴 | 역할 |
 |---|---|
-| **Dashboard** | 파이프라인 상태, 최근 발행, 비용 모니터링 개요 |
+| **Dashboard** | 파이프라인 상태 (Pipeline Status 카드: 실행 공백·연속 실패·weekly 누락·발행 글 퀴즈 누락), 최근 발행, 비용 모니터링 개요 (`summary` 행 제외 합산) |
 | **News** | AI NEWS 에디터 — Research/Business 관리, AI 제안 패널, 페르소나별 탭 전환 리뷰 |
 | **Blog** | IT 블로그 에디터 — 마크다운 편집 + AI 어드바이저 |
 | **Handbook** | AI 용어집 에디터 — 용어 CRUD + AI body 생성 + 일괄 발행/아카이브 |
@@ -45,6 +45,7 @@ source: docs/04_Frontend_Spec.md
   - **Created Posts**: 해당 run에서 생성된 draft 목록
   - 백필 실행 시 Hero 영역에 Backfill 배지 표시
 - 실패 시 부분 재개 (Partial Resume) 지원
+  - 발행된 글이 범위에 있으면 재실행은 시작 전에 거절되고 이유가 표시됨 ("Rerun not started: …"). quiz 재실행은 발행 글에도 허용 — [[AI-News-Pipeline-Operations#재실행 (Rerun)]]
 
 > [!note] 인증
 > Admin 페이지는 Supabase Auth 세션 쿠키 기반 인증. RLS로 `admin` 역할 검증.

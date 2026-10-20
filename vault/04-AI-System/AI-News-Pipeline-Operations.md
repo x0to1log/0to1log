@@ -7,8 +7,60 @@
 
 ## 발행 정책
 
-- 모든 포스트는 **draft**로 저장 → admin 확인 후 발행
-- 매일 자동 생성되지만 사람의 검토를 거쳐 발행
+- 파이프라인은 항상 **draft**로 저장하고, cron 실행분에만 `fact_pack.auto_publish_eligible=true`를 붙인다 (어드민 수동 실행은 자동 발행 대상 아님).
+- **09:00 KST promote 크론**(`/api/cron/promote-drafts`, Vercel `0 0 * * *` UTC)이 eligible draft 중 게이트 통과분을 발행: `AUTO_PUBLISH_BLOCKING_CAPS`(major source / frontload overclaim / locale quality cap)가 없고 점수 ≥ `settings.auto_publish_threshold` (`passes_auto_publish_gate`). 값은 `backend/core/config.py`가 단일 출처.
+- 게이트 미통과 draft는 남겨두고 경고 메일 → Amy가 확인 후 수동 발행/수정.
+- 09:00 이후에 끝난 cron 실행은 스스로 승격한다 (`_promote_if_late`) — 아래 자동 복구 참고.
+
+---
+
+## 일일 스케줄 & 자동 복구
+
+| 시각 (KST) | 동작 |
+|---|---|
+| 07:12 | daily 실행 (Vercel cron 22:00 UTC → Railway `BackgroundTasks`) |
+| 09:00 | promote 크론: ① 미완료 복구 → ② 승격 → ③ retention prune |
+
+**09:00 복구 판단** (`_decide_daily_recovery`, 위에서부터 먼저 맞는 것):
+
+| 상태 | 동작 |
+|---|---|
+| 아직 실행 중 (멈춤 아님) | 건너뜀 |
+| 어드민이 취소한 run | 건너뜀 |
+| `rank` 체크포인트 있음 | write 복구 — EN/KO 행이 없는 카테고리만 재작성 |
+| 이미 전체 재실행을 시도함 | 건너뜀 (`recovery` 로그로 1회 제한) |
+| 이 날짜의 글 행이 있음 | 건너뜀 (수동 작업 흔적) |
+| 그 외 (run 없음 / 실패 / 멈춤 / 뉴스 0건 성공) | **전체 재실행 1회** → 승격 (오늘 batch만) |
+
+- **멈춤 판정:** run 시작과 최신 로그 중 늦은 시각부터 **75분 무활동**. 살아 있는 run의 최장 무로그 구간은 페르소나 작성 1단계(3회 × 1200s = 60분).
+- 07:45 KST 이후에 죽은 run은 09:00에 아직 멈춤이 아니라 자동 복구되지 않음 → health 카드에서 확인 후 수동 처리.
+- 판단 사유는 promote 로그의 `skipped`/`recovered`에 남는다. 전체 재실행 시 run에 `recovery` 단계 로그(`debug_meta.action=full_run`).
+- **운영 수칙:** 07:10~07:30 KST에는 push하지 않기 (Railway 재배포가 실행 중인 파이프라인을 끊음).
+- 설계: [[2026-10-20-daily-run-recovery]]
+
+---
+
+## 재실행 (Rerun)
+
+- `/api/cron/pipeline-rerun` (어드민 run 상세의 Rerun 메뉴, 뉴스 에디터의 quality rerun).
+- **발행 보호가 먼저:** 범위 안에 published 글이 있으면 run·로그를 건드리기 전에 `422 published_protected`로 거절, 화면에 "Rerun not started: …" 표시. 카테고리 지정 시 같은 카테고리의 발행 글만 막는다.
+- **quiz 재실행은 발행 글에도 허용** — `guide_items.quiz_poll_*`만 교체 (6개 모두 새로 만들고 답 검증).
+- 허용된 재실행은 해당 단계 이후 로그를 지우고 다시 기록한다 (`summary` 포함).
+- 설계: [[2026-10-20-rerun-published-guard]]
+
+---
+
+## 모니터링 (어드민 대시보드)
+
+**Pipeline Status 카드** (`frontend/src/lib/admin/pipelineHealth.js`):
+- critical: 오늘 daily run 없음 / 최근 daily 연속 실패 (원인 분류: OpenAI 크레딧, flex 용량, DB 연결)
+- warning: 최근 14일 실행 공백 날짜, 이번 주 weekly 누락, **발행된 daily 글의 퀴즈 누락** (최근 7일, 날짜·카테고리·언어·페르소나 표시 — 다시 만들면 사라짐)
+
+**비용 집계 규칙:**
+- `summary` 행 = run의 단계 합계 (2026-10-20부터 daily QC 비용 포함). 비용을 합산하는 화면은 **`summary` 행을 빼고** 단계 행만 더한다 (대시보드 AI Cost, 마지막 실행 카드, pipeline-analytics, pipeline-runs 목록 모두).
+- 설계: [[2026-10-20-cost-accounting-fix]]
+
+**측정 로그:** `digest:{type}:frontload_grounding` — EN frontload의 수치·이름이 writer 원문에 있는지 (unsupported / weak / supported). 감지만, 발행·QC에 영향 없음. [[2026-10-15-frontload-claim-grounding]]
 
 ---
 

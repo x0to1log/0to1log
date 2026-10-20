@@ -46,7 +46,7 @@ flowchart TD
     HB -->|No| DONE["✅ 파이프라인 완료"]
     EXTRACT --> DONE
 
-    DONE --> PROMOTE["⏰ 09:00 KST promote-drafts cron\n품질 게이트 통과 시 자동 발행"]
+    DONE --> PROMOTE["⏰ 09:00 KST promote-drafts cron\n미완료 복구 → 품질 게이트 통과 시 자동 발행"]
 ```
 
 ## 다이제스트 1건 생성 상세 흐름
@@ -115,7 +115,7 @@ flowchart LR
         SCORE --> DB["news_posts\n4 rows (draft)\nauto_publish_eligible 플래그"]
     end
 
-    DB --> PROMOTE["09:00 KST promote-drafts cron\n게이트 통과 시 자동 발행"]
+    DB --> PROMOTE["09:00 KST promote-drafts cron\n미완료 복구 → 게이트 통과 시 자동 발행"]
 ```
 
 ---
@@ -218,6 +218,9 @@ flowchart LR
 | `locale` | en / ko |
 | `attempt` | 재시도 횟수 |
 | `debug_meta` | JSON — LLM 입출력, 상세 컨텍스트 |
+
+- **`summary` 행은 run 전체 합계**(비용·토큰)라서 단계 행과 함께 더하면 이중 집계된다. 비용 화면은 `summary`를 제외하고 합산 ([[AI-News-Pipeline-Operations#모니터링 (어드민 대시보드)]]).
+- 비LLM 단계 로그: `recovery` (09:00 전체 재실행 시작 기록, 1회 제한 근거), `digest:{type}:frontload_grounding` (frontload 근거 측정, 감지만).
 
 ---
 
