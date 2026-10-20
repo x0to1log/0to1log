@@ -752,6 +752,12 @@ if (batchId) {
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {
+          if (!data.ok) {
+            var detail = data.data && data.data.detail;
+            var reason = (detail && (detail.message || detail)) || data.message || data.error || 'unknown error';
+            alert('Rerun not started: ' +(typeof reason === 'string' ? reason : JSON.stringify(reason)));
+            return;
+          }
           var msg = (data.data && data.data.message) || data.message || 'Rerun queued';
           alert('Rerun started: ' + msg);
           menu.style.display = 'none';

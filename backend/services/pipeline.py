@@ -2331,6 +2331,29 @@ def _fetch_published_daily_rows(supabase, batch_id: str) -> list[dict[str, Any]]
     return result.data or []
 
 
+def published_rerun_block_message(
+    supabase,
+    batch_id: str,
+    from_stage: str,
+    category: str | None = None,
+) -> str | None:
+    """Why a rerun must not start because published posts are in scope, or None.
+
+    Quiz-only reruns are allowed on published rows: they rewrite only
+    guide_items.quiz_poll_* for live quiz fixes. Check this before claiming the
+    run or deleting logs, so a blocked rerun leaves the run's history untouched.
+    """
+    if from_stage == "quiz":
+        return None
+    blocking = _blocking_published_rows(_fetch_published_daily_rows(supabase, batch_id), category)
+    if not blocking:
+        return None
+    return (
+        f"Cannot rerun {category or 'batch'}: {len(blocking)} published "
+        f"post(s) exist for {batch_id}. Unpublish that scope first."
+    )
+
+
 async def _rerun_digest_quizzes_from_existing_posts(
     *,
     supabase,
@@ -2448,6 +2471,15 @@ async def rerun_pipeline_stage(
     supabase = get_supabase()
     run_id = source_run_id  # Reuse existing run
 
+    # Guard first: a blocked rerun must not claim the run or delete its logs.
+    try:
+        blocked = published_rerun_block_message(supabase, batch_id, from_stage, category)
+    except Exception as e:
+        return PipelineResult(batch_id=batch_id, status="failed", message=f"Failed to prepare rerun: {e}")
+    if blocked:
+        logger.error(blocked)
+        return PipelineResult(batch_id=batch_id, status="failed", errors=[blocked])
+
     # Delete logs from the rerun stage onward
     STAGE_CASCADE = {
         "classify": ["classify", "merge", "community", "community_summarize", "ranking", "enrich",
@@ -2520,25 +2552,6 @@ async def rerun_pipeline_stage(
     total_posts = 0
 
     try:
-        # Guard: prevent broad reruns from overwriting published posts.
-        # Quiz-only rerun is intentionally allowed on published rows because it
-        # updates only guide_items.quiz_poll_* for live quiz fixes.
-        published_rows = _fetch_published_daily_rows(supabase, batch_id)
-        blocking_published = _blocking_published_rows(published_rows, category)
-        if blocking_published and from_stage != "quiz":
-            scope = category or "batch"
-            msg = (
-                f"Cannot rerun {scope}: {len(blocking_published)} published "
-                f"post(s) exist for {batch_id}. Unpublish that scope first."
-            )
-            logger.error(msg)
-            supabase.table("pipeline_runs").update({
-                "status": "failed",
-                "finished_at": datetime.now(timezone.utc).isoformat(),
-                "last_error": msg,
-            }).eq("id", source_run_id).execute()
-            return PipelineResult(batch_id=batch_id, status="failed", errors=[msg])
-
         if from_stage == "quiz":
             total_posts, all_errors, cumulative_usage = await _rerun_digest_quizzes_from_existing_posts(
                 supabase=supabase,

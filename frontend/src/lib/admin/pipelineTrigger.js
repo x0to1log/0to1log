@@ -195,7 +195,11 @@ export async function handleRerunRequest(env, payload) {
       signal: AbortSignal.timeout(8000),
     });
     const data = await response.json();
-    return jsonResponse({ ok: response.ok, data }, response.ok ? 200 : 502);
+    // Pass through meaningful refusals (422 = published posts in scope)
+    const forwardStatus = response.ok ? 200
+      : [409, 422].includes(response.status) ? response.status
+      : 502;
+    return jsonResponse({ ok: response.ok, data }, forwardStatus);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return jsonResponse({ error: 'Rerun request failed', message }, 502);

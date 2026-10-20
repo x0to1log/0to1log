@@ -17,6 +17,7 @@ from services.pipeline import (
     check_existing_batch,
     cleanup_existing_batch,
     promote_drafts,
+    published_rerun_block_message,
     recover_incomplete_daily_batch,
     rerun_pipeline_stage,
     run_daily_pipeline,
@@ -269,6 +270,15 @@ async def rerun_pipeline(
         raise HTTPException(400, f"Invalid from_stage: {body.from_stage}. Must be one of {valid_stages}")
     if body.category and body.category not in ("research", "business"):
         raise HTTPException(400, "category must be 'research', 'business', or null")
+
+    # Refuse before queueing, so the admin sees why instead of a silent no-op.
+    supabase = get_supabase()
+    blocked = (
+        published_rerun_block_message(supabase, body.batch_id, body.from_stage, body.category)
+        if supabase else None
+    )
+    if blocked:
+        raise HTTPException(422, {"error": "published_protected", "message": blocked})
 
     async def _run():
         try:
