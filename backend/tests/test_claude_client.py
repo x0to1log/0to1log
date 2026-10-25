@@ -228,3 +228,54 @@ def test_schema_cleaner_keeps_supported_keywords():
     assert cleaned["properties"]["tags"] == {"type": "array", "items": {"type": "string"}, "minItems": 1}
     assert cleaned["properties"]["n"] == {"type": "integer"}
     assert cleaned["required"] == ["url", "tags", "n"] and cleaned["additionalProperties"] is False
+
+
+def test_writer_system_prompt_splits_into_cacheable_base_and_term_guides():
+    from services.agents.advisor import _writer_system_messages
+
+    base = "BASE PROMPT"
+    system = base + "\n\nCATEGORY GUIDE"
+    assert _writer_system_messages(system, base, split=True) == [
+        {"role": "system", "content": "BASE PROMPT"},
+        {"role": "system", "content": "CATEGORY GUIDE"},
+    ]
+    # OpenAI writers keep the single message they always had.
+    assert _writer_system_messages(system, base, split=False) == [{"role": "system", "content": system}]
+    assert _writer_system_messages("OTHER", base, split=True) == [{"role": "system", "content": "OTHER"}]
+
+
+def test_only_the_first_system_block_carries_the_cache_breakpoint():
+    kwargs = compat_create_kwargs(
+        "claude-sonnet-5-5",
+        messages=[
+            {"role": "system", "content": "BASE"},
+            {"role": "system", "content": "TERM GUIDES"},
+            {"role": "user", "content": "term"},
+        ],
+        max_tokens=100,
+    )
+    system = to_anthropic_request(kwargs)["system"]
+    assert system == [
+        {"type": "text", "text": "BASE", "cache_control": {"type": "ephemeral"}},
+        {"type": "text", "text": "TERM GUIDES"},
+    ]
+
+
+def test_claude_writer_guard_sets_budgets_and_code_limit_only_for_advanced():
+    from services.agents.prompts_advisor import claude_writer_guard
+
+    basic = claude_writer_guard("basic", "ko")
+    advanced = claude_writer_guard("advanced", "en")
+    assert "3,000 characters" in basic and "Code:" not in basic
+    assert "12,000 characters" in advanced and "55 non-empty lines" in advanced
+    assert "no code fence" in basic
+
+
+def test_stray_latex_backslashes_are_repaired_only_when_parsing_fails():
+    # Pilot 2026-10-26: a formula-heavy Claude draft did not parse; LaTeX like
+    # \sigma written with one backslash is an invalid JSON escape.
+    bs = "\\"
+    broken = '{"body": "' + bs + "sigma(x) + " + bs + 'sum_j", "n": 1}'
+    assert json.loads(json_payload(broken)) == {"body": bs + "sigma(x) + " + bs + "sum_j", "n": 1}
+    valid = '{"a": "line' + bs + 'n", "b": "' + bs + bs + 'alpha"}'
+    assert json_payload(valid) == valid

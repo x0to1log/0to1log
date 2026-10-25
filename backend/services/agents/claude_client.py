@@ -12,7 +12,9 @@ Vault plan 2026-10-23-handbook-seed-claude (결정 1, 2).
 
 from __future__ import annotations
 
+import json
 import logging
+import re
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
@@ -76,16 +78,19 @@ def to_anthropic_request(kwargs: dict[str, Any]) -> dict[str, Any]:
     prompt's own JSON instruction plus `json_payload` handle it.
     """
     messages = kwargs["messages"]
-    system = "\n\n".join(str(m["content"]) for m in messages if m["role"] == "system")
+    systems = [str(m["content"]) for m in messages if m["role"] == "system"]
     max_tokens = int(kwargs.get("max_completion_tokens") or kwargs.get("max_tokens") or 4096)
     request: dict[str, Any] = {
         "model": kwargs["model"],
         "max_tokens": min(max_tokens * _THINKING_HEADROOM, _CLAUDE_MAX_OUTPUT),
         "messages": [{"role": m["role"], "content": m["content"]} for m in messages if m["role"] != "system"],
     }
-    if system:
-        # The long, per-call-type system prompt is the stable prefix worth caching.
-        request["system"] = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+    if systems:
+        # Each system message becomes a block; the cache breakpoint goes on the
+        # first, the stable prompt shared across calls (callers put per-request
+        # guides in a later system message, e.g. advisor._writer_system_messages).
+        request["system"] = [{"type": "text", "text": text} for text in systems]
+        request["system"][0]["cache_control"] = {"type": "ephemeral"}
     output_config: dict[str, Any] = {}
     effort = kwargs.get("reasoning_effort")
     if effort in _EFFORTS:
@@ -116,10 +121,39 @@ def json_payload(text: str) -> str:
         if stripped.rstrip().endswith("```"):
             stripped = stripped.rstrip()[:-3]
         stripped = stripped.strip()
-    if stripped.startswith("{"):
-        return stripped
-    start, end = stripped.find("{"), stripped.rfind("}")
-    return stripped[start:end + 1] if 0 <= start < end else stripped
+    if not stripped.startswith("{"):
+        start, end = stripped.find("{"), stripped.rfind("}")
+        stripped = stripped[start:end + 1] if 0 <= start < end else stripped
+    return _repair_invalid_escapes(stripped)
+
+
+# A backslash not starting a valid JSON escape, e.g. LaTeX "\sigma" or "\sum"
+# written with one backslash inside a JSON string.
+_INVALID_ESCAPE_RE = re.compile(r'\\(?!["\\/bfnrtu])')
+
+
+def _repair_invalid_escapes(text: str) -> str:
+    """Double stray backslashes only when strict parsing fails on them.
+
+    Pilot 2026-10-26: a Claude draft for "Bradley–Terry Model" (formula-heavy)
+    failed to parse, and parse_ai_json's fence fallback then grabbed a code
+    block inside the body, hiding the original error. Valid JSON is returned
+    unchanged; so are escapes JSON accepts (\\beta still reads as \\b + "eta",
+    exactly as it does on the OpenAI path).
+    """
+    try:
+        json.loads(text)
+        return text
+    except json.JSONDecodeError as exc:
+        if "Invalid \\escape" not in str(exc):
+            return text
+    repaired = _INVALID_ESCAPE_RE.sub(r"\\\\", text)
+    try:
+        json.loads(repaired)
+    except json.JSONDecodeError:
+        return text
+    logger.warning("Repaired invalid JSON escapes in a Claude reply")
+    return repaired
 
 
 def to_completion_shape(message: Any, model: str, *, wants_json: bool) -> SimpleNamespace:

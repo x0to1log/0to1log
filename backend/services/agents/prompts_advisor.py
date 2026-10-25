@@ -2333,3 +2333,36 @@ Before outputting, re-read your term list and remove any term that:
 - Is a sub-concept that would overlap 80%+ with a broader term already in your list
 
 Respond in JSON format only."""
+
+
+# Appended to handbook writer prompts when the writer is a Claude model
+# (vault plan 2026-10-26-claude-api-migration, Phase C). Pilot 2026-10-26: with
+# the prompts unchanged, Claude wrote about twice the published length
+# (advanced KO 13-16K chars vs a published p75 of 7K), code capsules of
+# 3.5-6.5K chars, and a few unsourced sweeping claims. Budgets = published
+# p75 per body (2026-10-26) and the structural checker's compact-capsule target.
+_CLAUDE_WRITER_BUDGET = {
+    ("basic", "ko"): 3000,
+    ("basic", "en"): 6000,
+    ("advanced", "ko"): 7500,
+    ("advanced", "en"): 12000,
+}
+
+
+def claude_writer_guard(level: str, locale: str) -> str:
+    budget = _CLAUDE_WRITER_BUDGET[(level, locale)]
+    lines = [
+        "## Length, Code and Claims (strict)",
+        f"- Keep the whole {level} body (all sections together) under {budget:,} characters. "
+        "When the budget is tight, drop a secondary point instead of writing longer.",
+        "- State history, adoption or industry practice only when the provided sources say it. "
+        'No unsourced sweeping claims such as "X became the standard", "Y is no longer accepted" '
+        'or "Z grew out of W".',
+    ]
+    if level == "advanced":
+        lines.append(
+            "- Code: at most one code block, under 55 non-empty lines and 3,500 characters. "
+            "Show the core mechanism only: no input-validation scaffolding, CLI or exhaustive error handling."
+        )
+    lines.append("- Return only the JSON object, with no code fence around it and no commentary.")
+    return "\n".join(lines)

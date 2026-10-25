@@ -46,10 +46,27 @@ from services.agents.prompts_advisor import (
     GENERATE_BASIC_EN_PROMPT,
     GENERATE_ADVANCED_PROMPT,
     GENERATE_ADVANCED_EN_PROMPT,
+    claude_writer_guard,
     EXTRACT_TERMS_PROMPT,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _writer_system_messages(system: str, base: str, *, split: bool) -> list[dict[str, str]]:
+    """Handbook writer system prompt, as [fixed base prompt, per-term guides] when split.
+
+    Every writer prompt is a GENERATE_*_PROMPT constant followed by category,
+    type and term guides. Sending the constant as its own system message lets
+    Claude cache it across terms (ClaudeRoutingClient marks the first system
+    block). Only split for Claude writers so the OpenAI request stays unchanged.
+    """
+    if split and base and system.startswith(base) and len(system) > len(base):
+        return [
+            {"role": "system", "content": base},
+            {"role": "system", "content": system[len(base):].lstrip("\n")},
+        ]
+    return [{"role": "system", "content": system}]
 
 # Model + config per action
 # "prompt_fn": callable(category) -> str  for category-aware actions
@@ -4155,6 +4172,12 @@ async def _run_generate_term(
     draft_smoke_mode = bool(req.skip_self_critique and req.skip_quality_check)
     generation_max_tokens = 12000 if draft_smoke_mode else 24000
     generation_reasoning_effort = "low" if draft_smoke_mode else "high"
+    # Pilot 2026-10-26: at effort high a Claude writer cost 3.5-6x sol, mostly
+    # output (thinking) tokens. Medium for generation and regeneration.
+    writer_is_claude = is_claude_model(model)
+    if writer_is_claude and not draft_smoke_mode:
+        generation_reasoning_effort = "medium"
+    regen_reasoning_effort = "medium" if writer_is_claude else "high"
     draft_smoke_guide = """
 ## Draft Smoke Mode
 - Generate a complete but compact draft for admin review, not a polished publish candidate.
@@ -4222,6 +4245,8 @@ async def _run_generate_term(
             basic_ko_system += f"\n\n{basic_ko_focus_guide}"
     if draft_smoke_mode:
         basic_ko_system += f"\n\n{draft_smoke_guide}"
+    if writer_is_claude:
+        basic_ko_system += f"\n\n{claude_writer_guard('basic', 'ko')}"
 
     # --- Call 1: Meta + KO Basic (with retry if KO sections missing) ---
     for _call1_attempt in range(2):
@@ -4230,7 +4255,7 @@ async def _run_generate_term(
                 **compat_create_kwargs(
                     model,
                     messages=[
-                        {"role": "system", "content": basic_ko_system},
+                        *_writer_system_messages(basic_ko_system, GENERATE_BASIC_PROMPT, split=writer_is_claude),
                         {"role": "user", "content": user_prompt},
                     ],
                     response_format={"type": "json_object"},
@@ -4419,13 +4444,17 @@ async def _run_generate_term(
         adv_en_system += f"\n\n{code_contract_guide}"
     if draft_smoke_mode:
         adv_en_system += f"\n\n{draft_smoke_guide}"
+    if writer_is_claude:
+        basic_en_system += f"\n\n{claude_writer_guard('basic', 'en')}"
+        adv_ko_system += f"\n\n{claude_writer_guard('advanced', 'ko')}"
+        adv_en_system += f"\n\n{claude_writer_guard('advanced', 'en')}"
 
     async def _call2_gen():
         return await client.chat.completions.create(
             **compat_create_kwargs(
                 model,
                 messages=[
-                    {"role": "system", "content": basic_en_system},
+                    *_writer_system_messages(basic_en_system, GENERATE_BASIC_EN_PROMPT, split=writer_is_claude),
                     {"role": "user", "content": en_basic_prompt},
                 ],
                 response_format={"type": "json_object"},
@@ -4441,7 +4470,7 @@ async def _run_generate_term(
             **compat_create_kwargs(
                 model,
                 messages=[
-                    {"role": "system", "content": adv_ko_system},
+                    *_writer_system_messages(adv_ko_system, GENERATE_ADVANCED_PROMPT, split=writer_is_claude),
                     {"role": "user", "content": advanced_prompt},
                 ],
                 response_format={"type": "json_object"},
@@ -4506,7 +4535,7 @@ async def _run_generate_term(
             **compat_create_kwargs(
                 model,
                 messages=[
-                    {"role": "system", "content": adv_en_system},
+                    *_writer_system_messages(adv_en_system, GENERATE_ADVANCED_EN_PROMPT, split=writer_is_claude),
                     {"role": "user", "content": advanced_en_prompt},
                 ],
                 response_format={"type": "json_object"},
@@ -4555,13 +4584,13 @@ async def _run_generate_term(
                 **compat_create_kwargs(
                     model,
                     messages=[
-                        {"role": "system", "content": improved_ko_system},
+                        *_writer_system_messages(improved_ko_system, GENERATE_BASIC_PROMPT, split=writer_is_claude),
                         {"role": "user", "content": user_prompt},
                     ],
                     max_tokens=24000,
                     response_format={"type": "json_object"},
                     prompt_cache_key="hb-regen-basic",
-                    reasoning_effort="high",
+                    reasoning_effort=regen_reasoning_effort,
                     service_tier="flex",
                 )
             )
@@ -4582,13 +4611,13 @@ async def _run_generate_term(
                 **compat_create_kwargs(
                     model,
                     messages=[
-                        {"role": "system", "content": improved_en_system},
+                        *_writer_system_messages(improved_en_system, GENERATE_BASIC_EN_PROMPT, split=writer_is_claude),
                         {"role": "user", "content": en_basic_prompt},
                     ],
                     max_tokens=24000,
                     response_format={"type": "json_object"},
                     prompt_cache_key="hb-regen-en-basic",
-                    reasoning_effort="high",
+                    reasoning_effort=regen_reasoning_effort,
                     service_tier="flex",
                 )
             )
@@ -4635,13 +4664,13 @@ async def _run_generate_term(
                 **compat_create_kwargs(
                     model,
                     messages=[
-                        {"role": "system", "content": improved_system},
+                        *_writer_system_messages(improved_system, GENERATE_ADVANCED_PROMPT, split=writer_is_claude),
                         {"role": "user", "content": advanced_prompt},
                     ],
                     max_tokens=24000,
                     response_format={"type": "json_object"},
                     prompt_cache_key="hb-regen-advanced",
-                    reasoning_effort="high",
+                    reasoning_effort=regen_reasoning_effort,
                     service_tier="flex",
                 )
             )
@@ -4678,13 +4707,13 @@ async def _run_generate_term(
                 **compat_create_kwargs(
                     model,
                     messages=[
-                        {"role": "system", "content": improved_en_adv_system},
+                        *_writer_system_messages(improved_en_adv_system, GENERATE_ADVANCED_EN_PROMPT, split=writer_is_claude),
                         {"role": "user", "content": advanced_en_prompt},
                     ],
                     max_tokens=24000,
                     response_format={"type": "json_object"},
                     prompt_cache_key="hb-regen-en-advanced",
-                    reasoning_effort="high",
+                    reasoning_effort=regen_reasoning_effort,
                     service_tier="flex",
                 )
             )
