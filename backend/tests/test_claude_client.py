@@ -76,10 +76,22 @@ def test_max_tokens_is_capped_at_claude_output_limit():
     assert to_anthropic_request(kwargs)["max_tokens"] == 128000
 
 
-def test_json_payload_trims_prose_but_keeps_bare_and_fenced_json():
+def test_json_payload_trims_prose_and_the_outer_fence():
     assert json_payload('Here is the entry:\n{"a": {"b": 1}}\nDone.') == '{"a": {"b": 1}}'
     assert json_payload('{"a": 1}') == '{"a": 1}'
-    assert json_payload('```json\n{"a": 1}\n```').startswith("```")
+    assert json_payload('```json\n{"a": 1}\n```') == '{"a": 1}'
+
+
+def test_fenced_reply_with_code_examples_inside_parses():
+    # Pilot 2026-10-25: every Claude draft failed with "Unterminated string" —
+    # parse_ai_json's non-greedy fence regex stopped at the body's own ```python.
+    import json
+
+    from services.agents.client import parse_ai_json
+
+    body = {"body_advanced_en": "Example:\n```python\nprint(1)\n```\nDone.", "x": "y"}
+    reply = "```json\n" + json.dumps(body) + "\n```"
+    assert parse_ai_json(json_payload(reply), "test") == body
 
 
 def test_reply_is_reshaped_so_existing_usage_accounting_prices_it():
@@ -112,10 +124,33 @@ async def test_claude_models_go_to_anthropic_and_others_stay_on_openai():
 
 
 @pytest.mark.asyncio
-async def test_refusal_raises_instead_of_returning_empty_content():
-    router = ClaudeRoutingClient(MagicMock(), _anthropic(_message(text="", stop="refusal")))
-    with pytest.raises(ClaudeRefusalError):
+async def test_refusal_raises_with_its_category_instead_of_returning_empty_content():
+    message = _message(text="", stop="refusal")
+    message.stop_details = SimpleNamespace(category="cyber", explanation="")
+    router = ClaudeRoutingClient(MagicMock(), _anthropic(message))
+    with pytest.raises(ClaudeRefusalError, match="category=cyber"):
         await router.chat.completions.create(**_writer_kwargs())
+
+
+@pytest.mark.asyncio
+async def test_refused_term_is_regenerated_with_the_openai_writer():
+    from services.agents import advisor
+
+    calls = []
+
+    async def fake_run(req, client, model, **kwargs):
+        calls.append(model)
+        if model.startswith("claude-"):
+            raise ClaudeRefusalError("claude-sonnet-5-5 refused the request (category=cyber)")
+        return {"definition_en": "ok"}, {}, []
+
+    with patch.object(advisor, "_run_generate_term", side_effect=fake_run), \
+         patch.object(advisor, "get_openai_client", return_value=MagicMock()):
+        data, _ = await advisor.generate_term_content("Red Teaming", writer_model="claude-sonnet-5-5")
+
+    assert calls == ["claude-sonnet-5-5", advisor.settings.openai_model_main]
+    assert data["_writer_fallback"]["from"] == "claude-sonnet-5-5"
+    assert "category=cyber" in data["_writer_fallback"]["reason"]
 
 
 @pytest.mark.asyncio

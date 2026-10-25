@@ -63,10 +63,22 @@ def to_anthropic_request(kwargs: dict[str, Any]) -> dict[str, Any]:
 
 
 def json_payload(text: str) -> str:
-    """Trim prose around a JSON object. parse_ai_json handles bare and fenced
-    JSON but not "Here is the result: {...}"."""
+    """Return the bare JSON object from a Claude reply.
+
+    Claude often wraps the object in a ```json fence. parse_ai_json's fence
+    regex is non-greedy, so a handbook body containing its own ```python
+    example cut the JSON at that inner fence ("Unterminated string", pilot
+    2026-10-25). Strip only the outer fence here, and any prose around the
+    object ("Here is the result: {...}").
+    """
     stripped = text.strip()
-    if stripped.startswith("{") or stripped.startswith("```"):
+    if stripped.startswith("```"):
+        first_newline = stripped.find("\n")
+        stripped = stripped[first_newline + 1:] if first_newline != -1 else ""
+        if stripped.rstrip().endswith("```"):
+            stripped = stripped.rstrip()[:-3]
+        stripped = stripped.strip()
+    if stripped.startswith("{"):
         return stripped
     start, end = stripped.find("{"), stripped.rfind("}")
     return stripped[start:end + 1] if 0 <= start < end else stripped
@@ -113,7 +125,9 @@ class _RoutedCompletions:
         async with self._router.anthropic.messages.stream(**request) as stream:
             message = await stream.get_final_message()
         if message.stop_reason == "refusal":
-            raise ClaudeRefusalError(f"{model} refused the request")
+            details = getattr(message, "stop_details", None)
+            category = getattr(details, "category", None) if details else None
+            raise ClaudeRefusalError(f"{model} refused the request (category={category})")
         if message.stop_reason == "max_tokens":
             logger.warning("%s hit max_tokens=%d; output may be truncated", model, request["max_tokens"])
         wants_json = (kwargs.get("response_format") or {}).get("type") in {"json_object", "json_schema"}

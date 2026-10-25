@@ -27,7 +27,7 @@ from models.advisor import (
     GenerateTermResult,
     ExtractTermsResult,
 )
-from services.agents.claude_client import ClaudeRoutingClient, is_claude_model
+from services.agents.claude_client import ClaudeRefusalError, ClaudeRoutingClient, is_claude_model
 from services.agents.client import build_completion_kwargs, compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json, with_flex_retry
 from core.database import get_supabase
 from services.agents.prompts_advisor import (
@@ -5334,10 +5334,24 @@ async def generate_term_content(
     client = get_openai_client()
     model = writer_model or getattr(settings, "openai_model_main")
     if is_claude_model(model):
-        client = ClaudeRoutingClient(client)
-    data, usage, warnings = await _run_generate_term(
-        req, client, model, source=source, article_context=article_context, log_run_id=log_run_id,
-    )
+        try:
+            data, usage, warnings = await _run_generate_term(
+                req, ClaudeRoutingClient(client), model,
+                source=source, article_context=article_context, log_run_id=log_run_id,
+            )
+        except ClaudeRefusalError as exc:
+            # Safety classifiers decline some security terms (pilot 2026-10-25:
+            # "Red Teaming"). Regenerate that term with the OpenAI writer.
+            fallback = getattr(settings, "openai_model_main")
+            logger.warning("Handbook '%s': %s — regenerating with %s", term_name, exc, fallback)
+            data, usage, warnings = await _run_generate_term(
+                req, client, fallback, source=source, article_context=article_context, log_run_id=log_run_id,
+            )
+            data["_writer_fallback"] = {"from": model, "to": fallback, "reason": str(exc)}
+    else:
+        data, usage, warnings = await _run_generate_term(
+            req, client, model, source=source, article_context=article_context, log_run_id=log_run_id,
+        )
     if warnings:
         data["_warnings"] = warnings
     return data, usage
