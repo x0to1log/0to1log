@@ -27,6 +27,7 @@ from models.advisor import (
     GenerateTermResult,
     ExtractTermsResult,
 )
+from services.agents.claude_client import ClaudeRoutingClient, is_claude_model
 from services.agents.client import build_completion_kwargs, compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json, with_flex_retry
 from core.database import get_supabase
 from services.agents.prompts_advisor import (
@@ -5304,6 +5305,7 @@ async def generate_term_content(
     skip_self_critique: bool = False,
     skip_post_generation_checks: bool = False,
     remediate_after_generation: bool = False,
+    writer_model: str | None = None,
 ) -> tuple[dict, dict]:
     """Generate full content for a handbook term. Used by pipeline auto-creation.
 
@@ -5311,6 +5313,9 @@ async def generate_term_content(
         source: "pipeline" (auto-extraction) or "manual" (admin editor)
         article_context: source news article text for grounding (prevents hallucination)
         categories: pre-classified categories for category-aware search queries
+        writer_model: override for the generation calls only (e.g. "claude-sonnet-5-5"
+            for the seed run). Critique, judge and entity calls keep their OpenAI
+            models, so the 55/70 gate stays on the sol score scale.
 
     Returns (content_data, usage_metrics_dict).
     """
@@ -5327,7 +5332,9 @@ async def generate_term_content(
         remediate_after_generation=remediate_after_generation,
     )
     client = get_openai_client()
-    model = getattr(settings, "openai_model_main")
+    model = writer_model or getattr(settings, "openai_model_main")
+    if is_claude_model(model):
+        client = ClaudeRoutingClient(client)
     data, usage, warnings = await _run_generate_term(
         req, client, model, source=source, article_context=article_context, log_run_id=log_run_id,
     )

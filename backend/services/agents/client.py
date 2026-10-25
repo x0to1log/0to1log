@@ -80,6 +80,11 @@ OPENAI_MODEL_PRICING_PER_1M = {
     "gpt-5": {"input": Decimal("1.25"), "cached_input": Decimal("0.125"), "output": Decimal("10.00")},
     "gpt-5-mini": {"input": Decimal("0.25"), "cached_input": Decimal("0.025"), "output": Decimal("2.00")},
     "gpt-5-nano": {"input": Decimal("0.05"), "cached_input": Decimal("0.005"), "output": Decimal("0.40")},
+    # Claude (claude-api models reference, 2026-10-25), reached via ClaudeRoutingClient.
+    # cached_input = cache read. Cache writes (1.25x input) are counted as plain
+    # input, a small undercount since each system prompt is written once per 5 min.
+    "claude-opus-5-5": {"input": Decimal("4.00"), "cached_input": Decimal("0.20"), "output": Decimal("20.00")},
+    "claude-sonnet-5-5": {"input": Decimal("2.00"), "cached_input": Decimal("0.20"), "output": Decimal("10.00")},
 }
 
 

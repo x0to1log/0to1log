@@ -303,6 +303,7 @@ async def execute_seed_batch(
     term_timeout_seconds: float | None = 900,
     draft_only: bool = True,
     remediate: bool = False,
+    writer_model: str | None = None,
 ) -> SeedBatchResult:
     if not supabase:
         raise RuntimeError("Supabase is not configured; cannot execute seed batch.")
@@ -327,8 +328,12 @@ async def execute_seed_batch(
     async def _create_one(seed: SeedTerm) -> None:
         async with sem:
             try:
+                # Only forwarded when set, so injected test generators keep their signature.
+                writer_kwargs = {"writer_model": writer_model} if writer_model else {}
+
                 async def _generate_one() -> tuple[dict, dict]:
                     return await generator(
+                        **writer_kwargs,
                         term_name=seed.term,
                         korean_name="",
                         source="seed",
@@ -440,6 +445,11 @@ def parse_args() -> argparse.Namespace:
         default=900,
         help="Hard timeout per term in execute mode. Use 0 to disable.",
     )
+    parser.add_argument(
+        "--writer-model",
+        default=None,
+        help="Model for the generation calls only, e.g. claude-sonnet-5-5 (default: settings.openai_model_main).",
+    )
     quality_group = parser.add_mutually_exclusive_group()
     quality_group.add_argument(
         "--draft-only",
@@ -479,6 +489,7 @@ def main() -> int:
     print(f"term_timeout_seconds={args.term_timeout_seconds}")
     print(f"quality_mode={'draft-only' if args.draft_only else 'full-quality'}")
     print(f"remediation={'on' if args.remediate else 'off'}")
+    print(f"writer_model={args.writer_model or 'settings.openai_model_main'}")
     print()
     print(format_candidates(candidates))
 
@@ -494,6 +505,7 @@ def main() -> int:
                 term_timeout_seconds=args.term_timeout_seconds,
                 draft_only=args.draft_only,
                 remediate=args.remediate,
+                writer_model=args.writer_model,
             )
         )
         print()

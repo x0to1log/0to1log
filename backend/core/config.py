@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_service_key: str = ""
     openai_api_key: str = ""
+    # Claude Startups credits (vault plan 2026-10-23-handbook-seed-claude).
+    # Used only where a caller passes a claude-* model (handbook seed writer).
+    anthropic_api_key: str = ""
     openai_model_main: str = "gpt-6.1-sol"
     openai_model_light: str = "gpt-6-luna"
     openai_model_nano: str = "gpt-6-luna"
