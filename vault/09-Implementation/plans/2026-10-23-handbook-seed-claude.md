@@ -100,6 +100,29 @@
 - 시간: 용어당 ~8분, 동시 6개면 700개 ≈ 16시간 → 여유 있음. 병목은 레이트 리밋과 **검색 API** (Tavily/Brave/Exa 쿼터 — 731 × 3회 + 엔티티 검증).
 - 뉴스 GPT-6 관찰(~10/26)과 겹치지만 뉴스 코드는 건드리지 않음.
 
+## 시범 결과 (2026-10-25~26)
+
+**1차 (10-25): 9건 전부 실패** → 원인 3가지
+- OpenAI 크레딧 소진 (429 "no credits remaining") — Amy 충전 후 해결. 판정·비평이 sol이라 full-quality는 OpenAI 필수.
+- Claude는 JSON을 ` ```json ` 펜스로 감싸고, 본문 안의 ` ```python ` 예시에서 `parse_ai_json`의 비탐욕 정규식이 잘라 "Unterminated string" → `claude_client.json_payload`가 바깥 펜스만 벗기도록 수정.
+- "Red Teaming"을 Sonnet·Opus 모두 거절 (`stop_details.category=cyber`) → 거절 시 해당 용어만 OpenAI 작성 모델로 재생성 (`generate_term_content`, `_writer_fallback` 기록).
+
+**2차 (10-26): full-quality, 판정 sol** — `pilot/summary.md`
+
+| 모델 | 평균 adv | 평균 basic | 게이트 통과 | 용어당 비용 | 용어당 시간 |
+|---|---|---|---|---|---|
+| Claude Sonnet 5.5 | 63 | 59 | 0/3 | $1.8 | 12분 |
+| Claude Opus 5.5 | 63 | 72 | 0/3 | $3.1 | 18분 |
+| gpt-6.1-sol | 75 | 82 | 2/3 | $0.5 | 12분 |
+
+(Opus의 Red Teaming은 거절 → sol 대체 생성분)
+
+- **비용이 3.5~6배인 이유:** Claude가 길게 씀 (adv KO 13~16천 자 vs 9.8천), 비평 점수가 낮아 재생성 루프 증가 (입력 1.7배), 프롬프트 캐시 거의 미적중 (시스템 블록 끝에 용어별 카테고리·타입 가이드가 붙어 공통 접두부가 매번 다름).
+- **구조 감점:** 코드 캡슐 과대 (3~6천 자), advanced 7/8 섹션.
+- **직접 읽어 본 판단 (Bradley–Terry, sol 87 vs Opus 68; 판단자도 Claude라 편향 가능성 명시):** 내용 깊이·정확성·예시 구체성은 Opus 우위 (MLE 존재 조건, Zermelo MM, 충분통계량, 무승부 확장 인용). sol은 수준 조절·규칙 준수 우위, advanced 문장은 추상적·장황. Opus 감점 사유 = Basic에 수식·전문용어 (수준 이탈), 근거 없는 단정 2건, 코드 ~100줄 → **프롬프트로 고칠 수 있는 결함.** 점수 차(19점)는 실제 품질 차보다 큼 → sol 판정 편향 일부 가능성 (검증 안 된 가설).
+
+**결정 (2026-10-26, Amy):** Claude 방향으로 진행하되 **프롬프트 조정 후 재시범.** 그리고 교체 가능한 역할은 모두 Claude API로 옮기는 방향 → 별도 계획 [[2026-10-26-claude-api-migration]].
+
 ## 리스크
 
 | 리스크 | 완화 |
