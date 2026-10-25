@@ -4,7 +4,7 @@ import re
 from typing import Any
 from urllib.parse import urlparse
 
-from core.config import settings
+from core.config import model_for
 from models.news_pipeline import (
     ClassifiedCandidate,
     ClassifiedGroup,
@@ -489,7 +489,7 @@ async def _retranslate_quotes_ko_async(quotes_en: list[str]) -> tuple[list[str],
 
     import json as _json
     client = get_openai_client()
-    model = settings.openai_model_light
+    model = model_for("news.community", "light")
 
     system_prompt = (
         "Translate each English community forum quote into natural Korean. "
@@ -590,7 +590,7 @@ async def classify_candidates(
         )
 
     client = get_openai_client()
-    model = settings.openai_model_light  # gpt-5-mini (kept as reminder: light = mini tier, not nano)
+    model = model_for("news.classify", "light")  # gpt-5-mini (kept as reminder: light = mini tier, not nano)
     usage: dict[str, Any] = {}
 
     for attempt in range(MAX_RETRIES + 1):
@@ -713,7 +713,7 @@ async def merge_classified(
     )
 
     client = get_openai_client()
-    model = settings.openai_model_light
+    model = model_for("news.merge", "light")
     usage: dict[str, Any] = {}
     data = None
 
@@ -857,7 +857,7 @@ async def rank_classified(
     )
 
     client = get_openai_client()
-    model = settings.openai_model_light
+    model = model_for("news.rank", "light")
     data = None
     usage: dict[str, Any] = {}
 
@@ -1166,7 +1166,7 @@ async def summarize_community(
         return result, cumulative_usage
 
     client = get_openai_client()
-    model = settings.openai_model_light
+    model = model_for("news.community", "light")
 
     for group in groups:
         primary_url = group.primary_url

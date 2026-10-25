@@ -205,10 +205,7 @@ async def test_generate_digest_quizzes_adds_validation_feedback_before_retry():
     mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
 
     with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
-         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_light = "gpt-5-mini"
-
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock):
         quizzes, _usage = await _generate_digest_quizzes(
             digest_type="research",
             personas=personas,
@@ -229,13 +226,13 @@ async def test_generate_digest_quizzes_adds_validation_feedback_before_retry():
 
 
 @pytest.mark.asyncio
-async def test_generate_digest_quizzes_falls_back_to_config_default_light_model(monkeypatch):
-    from core.config import Settings
+async def test_generate_digest_quizzes_uses_the_news_quiz_feature_model(monkeypatch):
+    from core.config import settings
     from services.pipeline import _generate_digest_quizzes
 
-    # Sentinel default proves the fallback reads core/config.py instead of a
-    # hardcoded model id that goes stale on the next model migration.
-    monkeypatch.setattr(Settings.model_fields["openai_model_light"], "default", "sentinel-light-model")
+    # The quiz model comes from config (model_for), so one feature can move to
+    # another model without touching the shared light role.
+    monkeypatch.setattr(settings, "model_overrides", {"news.quiz": "sentinel-quiz-model"})
 
     personas = {
         persona: PersonaOutput(
@@ -255,10 +252,7 @@ async def test_generate_digest_quizzes_falls_back_to_config_default_light_model(
     mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
 
     with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
-         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_light = None
-
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock):
         await _generate_digest_quizzes(
             digest_type="research",
             personas=personas,
@@ -266,7 +260,7 @@ async def test_generate_digest_quizzes_falls_back_to_config_default_light_model(
             run_id="run-1",
         )
 
-    assert captured_models and set(captured_models) == {"sentinel-light-model"}
+    assert captured_models and set(captured_models) == {"sentinel-quiz-model"}
 
 
 @pytest.mark.asyncio
@@ -294,9 +288,7 @@ async def test_generate_digest_quizzes_logs_failed_status_for_partial_generation
     mock_client.chat.completions.create = AsyncMock(side_effect=_capture_create)
 
     with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
-         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock) as log_stage, \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_light = "gpt-5-mini"
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock) as log_stage:
 
         quizzes, _usage = await _generate_digest_quizzes(
             digest_type="research",
@@ -554,9 +546,7 @@ async def test_generate_digest_aborts_before_save_when_structural_blocker_found(
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
          patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
-         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock) as quality_mock, \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock) as quality_mock:
 
         posts_created, errors, _usage = await _generate_digest(
             classified=_sample_group(),
@@ -622,9 +612,7 @@ async def test_generate_digest_saves_source_urls_from_actual_citations():
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
          patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
-         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88):
 
         posts_created, errors, _usage = await _generate_digest(
             classified=_sample_group(),
@@ -721,9 +709,7 @@ async def test_generate_digest_saves_beginner_persona_fields():
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
          patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
          patch("services.pipeline_quality._check_digest_quality",
-               new_callable=AsyncMock, return_value=quality_meta), \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+               new_callable=AsyncMock, return_value=quality_meta):
 
         posts_created, errors, _usage = await _generate_digest(
             classified=_sample_group(),
@@ -802,9 +788,7 @@ async def test_generate_digest_beginner_only_preserves_existing_persona_fields()
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
          patch("services.pipeline_quality._check_digest_quality",
-               new_callable=AsyncMock, return_value=quality_meta) as quality_mock, \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+               new_callable=AsyncMock, return_value=quality_meta) as quality_mock:
 
         posts_created, errors, _usage = await _generate_digest(
             classified=_sample_group(),
@@ -913,9 +897,7 @@ async def test_generate_digest_saves_required_personas_when_beginner_fails():
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
          patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
          patch("services.pipeline_quality._check_digest_quality",
-               new_callable=AsyncMock, return_value=quality_meta), \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+               new_callable=AsyncMock, return_value=quality_meta):
 
         posts_created, errors, _usage = await _generate_digest(
             classified=_sample_group(),
@@ -979,9 +961,7 @@ async def test_generate_digest_includes_source_metadata_labels_in_writer_prompt(
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
          patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
-         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88):
 
         posts_created, errors, _usage = await _generate_digest(
             classified=_sample_group(),
@@ -1070,9 +1050,7 @@ async def test_generate_digest_saves_source_cards_with_source_metadata():
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
          patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
-         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88):
 
         posts_created, errors, _usage = await _generate_digest(
             classified=_sample_group(),
@@ -1160,9 +1138,7 @@ async def test_generate_digest_orders_primary_sources_first_in_prompt():
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
          patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
-         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88):
 
         posts_created, errors, _usage = await _generate_digest(
             classified=_sample_group(),
@@ -1245,9 +1221,7 @@ async def test_generate_digest_recovers_en_when_hangul_leaks_into_en_heading():
          patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
          patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
-         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88), \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+         patch("services.pipeline_quality._check_digest_quality", new_callable=AsyncMock, return_value=88):
 
         posts_created, errors, _usage = await _generate_digest(
             classified=_sample_group(),
@@ -1322,9 +1296,7 @@ async def test_generate_digest_surfaces_url_validation_to_fact_pack_and_forces_d
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
          patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
          patch("services.pipeline_quality._check_digest_quality",
-               new_callable=AsyncMock, return_value=quality_meta_with_failure), \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+               new_callable=AsyncMock, return_value=quality_meta_with_failure):
 
         posts_created, errors, _usage = await _generate_digest(
             classified=_sample_group(),
@@ -1395,9 +1367,7 @@ async def test_generate_digest_surfaces_url_validation_pass_state_to_fact_pack()
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
          patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
          patch("services.pipeline_quality._check_digest_quality",
-               new_callable=AsyncMock, return_value=quality_meta_clean), \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+               new_callable=AsyncMock, return_value=quality_meta_clean):
 
         posts_created, errors, _usage = await _generate_digest(
             classified=_sample_group(),
@@ -1458,10 +1428,7 @@ async def _run_quiz_generation(responses: list, verify_side_effect):
 
     with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
          patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
-         patch("services.pipeline_digest.verify_quiz", verify), \
-         patch("services.pipeline_digest.settings") as mock_settings:
-        mock_settings.openai_model_light = "gpt-6-luna"
-        mock_settings.openai_model_reasoning = "gpt-6.1-sol"
+         patch("services.pipeline_digest.verify_quiz", verify):
         quizzes, _usage = await _generate_digest_quizzes(
             digest_type="research", personas=_quiz_personas(), supabase=MagicMock(), run_id="run-1",
         )

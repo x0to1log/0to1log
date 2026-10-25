@@ -18,7 +18,7 @@ from typing import Any
 
 import openai
 
-from core.config import Settings, settings
+from core.config import model_for
 from models.news_pipeline import (
     ClassifiedGroup,
     CommunityInsight,
@@ -492,7 +492,7 @@ async def _translate_focus_items_ko(
 
     import json as _json
     client = get_openai_client()
-    model = settings.openai_model_light
+    model = model_for("news.translate", "light")
 
     system_prompt = (
         "Translate the 3 English focus_items bullets to Korean. "
@@ -715,12 +715,8 @@ async def _generate_digest_quizzes(
 
     t_quiz = time.monotonic()
     client = get_openai_client()
-    model = getattr(settings, "openai_model_light", None)
-    if not isinstance(model, str) or not model:
-        model = Settings.model_fields["openai_model_light"].default
-    verify_model = getattr(settings, "openai_model_reasoning", None)
-    if not isinstance(verify_model, str) or not verify_model:
-        verify_model = Settings.model_fields["openai_model_reasoning"].default
+    model = model_for("news.quiz", "light")
+    verify_model = model_for("news.quiz_verify", "reasoning")
 
     all_quizzes: dict[str, dict[str, dict[str, Any]]] = {}
     verification_log: list[dict[str, Any]] = []
@@ -1295,7 +1291,7 @@ async def _generate_digest(
 
     # Generate personas
     client = get_openai_client()
-    model = settings.openai_model_main
+    model = model_for("news.writer", "main")
     personas: dict[str, PersonaOutput] = {
         name: output
         for name, output in (preserved_personas or {}).items()
@@ -2114,7 +2110,7 @@ async def _generate_digest(
             "quality_score": quality_score,
             "pipeline_batch_id": batch_id,
             "published_at": f"{batch_id}T00:00:00Z",
-            "pipeline_model": settings.openai_model_main,
+            "pipeline_model": model_for("news.writer", "main"),
             "translation_group_id": translation_group_id,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         })
@@ -2246,7 +2242,7 @@ async def _generate_digest(
                 "quality_score": quality_score,
                 "quality_flags": quality_meta.get("quality_flags", []),
                 "fact_pack": merged_fact_pack,
-                "pipeline_model": settings.openai_model_main,
+                "pipeline_model": model_for("news.writer", "main"),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }
             if "expert" in target_personas and expert_content:

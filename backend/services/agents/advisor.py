@@ -10,7 +10,7 @@ import httpx
 from pydantic import ValidationError
 from tavily import TavilyClient
 
-from core.config import settings
+from core.config import model_for, settings
 from models.advisor import (
     AiAdviseRequest,
     GenerateResult,
@@ -27,7 +27,7 @@ from models.advisor import (
     GenerateTermResult,
     ExtractTermsResult,
 )
-from services.agents.claude_client import ClaudeRefusalError, ClaudeRoutingClient, is_claude_model
+from services.agents.claude_client import ClaudeRefusalError, is_claude_model
 from services.agents.client import build_completion_kwargs, compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json, with_flex_retry
 from core.database import get_supabase
 from services.agents.prompts_advisor import (
@@ -200,7 +200,7 @@ def _log_advisor_call(
 async def run_advise(req: AiAdviseRequest) -> tuple[dict, str, int]:
     """Run an advisor action. Returns (result_dict, model_name, tokens_used)."""
     config = ACTION_CONFIG[req.action]
-    model = getattr(settings, config["model_attr"])
+    model = model_for("advisor.news", config["model_attr"].removeprefix("openai_model_"))
     client = get_openai_client()
 
     user_prompt = (
@@ -277,7 +277,7 @@ async def _check_url(url: str) -> dict | None:
 async def run_deep_verify(req: AiAdviseRequest) -> tuple[dict, str, int]:
     """2-step deep verification: extract claims → search → verify."""
     client = get_openai_client()
-    model = settings.openai_model_reasoning
+    model = model_for("advisor.news", "reasoning")
     total_tokens = 0
 
     # Step 1: Extract claims
@@ -518,7 +518,7 @@ def _build_translate_user_prompt(req: HandbookAdviseRequest) -> tuple[str, str, 
 async def run_handbook_advise(req: HandbookAdviseRequest) -> tuple[dict, str, int, list[str]]:
     """Run a handbook advisor action. Returns (result, model, tokens, warnings)."""
     client = get_openai_client()
-    model = getattr(settings, "openai_model_main")
+    model = model_for("handbook.writer", "main")
 
     if req.action == "related_terms":
         data, model, tokens = await _run_related_terms(req, client, model)
@@ -993,7 +993,7 @@ async def _self_critique_advanced(
     """CoVe-style self-critique: verify claims against references + depth check."""
     from services.agents.prompts_handbook_types import COVE_CRITIQUE_PROMPT, SELF_CRITIQUE_PROMPT
 
-    reasoning_model = settings.openai_model_reasoning  # gpt-5-mini for critique
+    reasoning_model = model_for("handbook.judge", "reasoning")  # gpt-5-mini for critique
     # Use CoVe when reference context is available, fall back to legacy otherwise
     if reference_context:
         system = COVE_CRITIQUE_PROMPT.format(
@@ -2155,7 +2155,7 @@ async def remediate_handbook_draft_content(
     working = dict(data or {})
     _hydrate_existing_draft_generation_metadata(term, working)
     client = client or get_openai_client()
-    model = model or getattr(settings, "openai_model_main")
+    model = model or model_for("handbook.writer", "main")
     warnings = _apply_handbook_safety_postprocess(working)
     if apply_llm:
         usage, remediation_meta = await _run_handbook_targeted_remediation(
@@ -2471,7 +2471,7 @@ async def _check_handbook_quality(
     from services.agents.prompts_handbook_types import HANDBOOK_QUALITY_CHECK_PROMPT
 
     system = HANDBOOK_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
-    reasoning_model = settings.openai_model_reasoning  # gpt-5-mini for quality check
+    reasoning_model = model_for("handbook.judge", "reasoning")  # gpt-5-mini for quality check
     try:
         resp = await client.chat.completions.create(
             **build_completion_kwargs(
@@ -2511,7 +2511,7 @@ async def _self_critique_basic(
     """
     from services.agents.prompts_handbook_types import BASIC_SELF_CRITIQUE_PROMPT
 
-    light_model = settings.openai_model_reasoning  # gpt-5-mini for critique
+    light_model = model_for("handbook.judge", "reasoning")  # gpt-5-mini for critique
     system = BASIC_SELF_CRITIQUE_PROMPT.format(term=term, term_type=term_type)
     if reference_context:
         system += (
@@ -2568,7 +2568,7 @@ async def _check_basic_quality(
     from services.agents.prompts_handbook_types import BASIC_QUALITY_CHECK_PROMPT
 
     system = BASIC_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
-    reasoning_model = settings.openai_model_reasoning  # gpt-5-mini for quality check
+    reasoning_model = model_for("handbook.judge", "reasoning")  # gpt-5-mini for quality check
     try:
         resp = await client.chat.completions.create(
             **build_completion_kwargs(
@@ -4098,7 +4098,7 @@ async def _run_generate_term(
         categories_list,
         classification_context,
         client,
-        settings.openai_model_nano,
+        model_for("handbook.light", "nano"),
         term_type_hint=req.term_type_hint,
     )
     primary_intent = intent_list[0] if intent_list else "understand"
@@ -4822,7 +4822,7 @@ async def _run_generate_term(
         all_references = f"{tavily_context}\n{brave_context}\n{deep_context}\n{article_context}"
         try:
             novel_entities = await _extract_novel_entities(
-                all_generated, all_references, client, settings.openai_model_nano,
+                all_generated, all_references, client, model_for("handbook.light", "nano"),
             )
             if novel_entities:
                 verification_results = await _verify_entities(novel_entities)
@@ -5186,7 +5186,7 @@ async def extract_terms_from_content(content: str) -> tuple[list[dict], dict]:
     Returns (terms_list, usage_metrics_dict).
     """
     client = get_openai_client()
-    model = getattr(settings, "openai_model_nano")
+    model = model_for("handbook.light", "nano")
 
     # Truncate to first 24000 chars for extraction (gpt-5-nano supports 128K)
     preview = content[:24000]
@@ -5232,7 +5232,7 @@ async def gate_candidate_terms(
     from services.agents.prompts_advisor import TERM_GATE_PROMPT
 
     client = get_openai_client()
-    model = getattr(settings, "openai_model_nano")
+    model = model_for("handbook.light", "nano")
 
     existing_str = ", ".join(existing_terms[:500])  # cap at 500 for token budget
 
@@ -5332,26 +5332,22 @@ async def generate_term_content(
         remediate_after_generation=remediate_after_generation,
     )
     client = get_openai_client()
-    model = writer_model or getattr(settings, "openai_model_main")
-    if is_claude_model(model):
-        try:
-            data, usage, warnings = await _run_generate_term(
-                req, ClaudeRoutingClient(client), model,
-                source=source, article_context=article_context, log_run_id=log_run_id,
-            )
-        except ClaudeRefusalError as exc:
-            # Safety classifiers decline some security terms (pilot 2026-10-25:
-            # "Red Teaming"). Regenerate that term with the OpenAI writer.
-            fallback = getattr(settings, "openai_model_main")
-            logger.warning("Handbook '%s': %s — regenerating with %s", term_name, exc, fallback)
-            data, usage, warnings = await _run_generate_term(
-                req, client, fallback, source=source, article_context=article_context, log_run_id=log_run_id,
-            )
-            data["_writer_fallback"] = {"from": model, "to": fallback, "reason": str(exc)}
-    else:
+    model = writer_model or model_for("handbook.writer", "main")
+    try:
         data, usage, warnings = await _run_generate_term(
             req, client, model, source=source, article_context=article_context, log_run_id=log_run_id,
         )
+    except ClaudeRefusalError as exc:
+        # Safety classifiers decline some security terms (pilot 2026-10-25:
+        # "Red Teaming"). Regenerate that term with the OpenAI role writer.
+        fallback = settings.openai_model_main
+        if is_claude_model(fallback):
+            raise
+        logger.warning("Handbook '%s': %s — regenerating with %s", term_name, exc, fallback)
+        data, usage, warnings = await _run_generate_term(
+            req, client, fallback, source=source, article_context=article_context, log_run_id=log_run_id,
+        )
+        data["_writer_fallback"] = {"from": model, "to": fallback, "reason": str(exc)}
     if warnings:
         data["_warnings"] = warnings
     return data, usage

@@ -85,12 +85,22 @@ OPENAI_MODEL_PRICING_PER_1M = {
     # input, a small undercount since each system prompt is written once per 5 min.
     "claude-opus-5-5": {"input": Decimal("4.00"), "cached_input": Decimal("0.20"), "output": Decimal("20.00")},
     "claude-sonnet-5-5": {"input": Decimal("2.00"), "cached_input": Decimal("0.20"), "output": Decimal("10.00")},
+    # Prompts <= 100K tokens. Above that Haiku 5.5 bills $0.50/$2.50, which no
+    # current call reaches. Cache read rate is not in the models reference; 10% assumed.
+    "claude-haiku-5-5": {"input": Decimal("0.10"), "cached_input": Decimal("0.01"), "output": Decimal("0.50")},
 }
 
 
 def get_openai_client() -> AsyncOpenAI:
-    """Return a configured AsyncOpenAI client."""
-    return AsyncOpenAI(api_key=settings.openai_api_key, timeout=300.0)
+    """Return the LLM client every call site uses.
+
+    An AsyncOpenAI wrapped in ClaudeRoutingClient: calls for claude-* models
+    (chosen per feature via core.config.model_for) go to Anthropic, all others
+    to OpenAI unchanged. Vault plan 2026-10-26-claude-api-migration.
+    """
+    from services.agents.claude_client import ClaudeRoutingClient
+
+    return ClaudeRoutingClient(AsyncOpenAI(api_key=settings.openai_api_key, timeout=300.0))
 
 
 # "gpt-5-mini" -> 5, "gpt-6.1-sol" -> 6, "gpt-4o" -> 4

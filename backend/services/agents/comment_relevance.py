@@ -23,7 +23,7 @@ Fallback semantics (R3 from plan revisions):
 import logging
 from typing import Any
 
-from core.config import settings
+from core.config import model_for
 from services.agents.client import (
     build_completion_kwargs,
     extract_usage_metrics,
@@ -85,7 +85,7 @@ async def filter_relevant_comments(
 
     client = get_openai_client()
     # gpt-5-nano via openai_model_nano if defined, else openai_model_light
-    model = getattr(settings, "openai_model_nano", None) or settings.openai_model_light
+    model = model_for("news.community", "nano")
 
     numbered = "\n\n".join(f"[{i}] {c}" for i, c in enumerate(candidates))
     user_content = (

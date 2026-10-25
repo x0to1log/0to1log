@@ -45,9 +45,7 @@ async def test_write_persona_expert():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.return_value = _mock_openai_response(EXPERT_OUTPUT)
 
-    with patch("services.agents.persona_writer.get_openai_client", return_value=mock_client), \
-         patch("services.agents.persona_writer.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+    with patch("services.agents.persona_writer.get_openai_client", return_value=mock_client):
 
         from services.agents.persona_writer import write_persona
         output, usage = await write_persona(
@@ -101,9 +99,7 @@ async def test_write_persona_short_content_business_retries():
         _mock_openai_response(long_output, 2000),
     ]
 
-    with patch("services.agents.persona_writer.get_openai_client", return_value=mock_client), \
-         patch("services.agents.persona_writer.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+    with patch("services.agents.persona_writer.get_openai_client", return_value=mock_client):
 
         from services.agents.persona_writer import write_persona
         output, usage = await write_persona(
@@ -128,9 +124,7 @@ async def test_write_persona_short_content_research_no_retry():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.return_value = _mock_openai_response(short_output, 200)
 
-    with patch("services.agents.persona_writer.get_openai_client", return_value=mock_client), \
-         patch("services.agents.persona_writer.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+    with patch("services.agents.persona_writer.get_openai_client", return_value=mock_client):
 
         from services.agents.persona_writer import write_persona
         output, usage = await write_persona(
@@ -157,9 +151,7 @@ async def test_write_persona_json_error_retries():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.side_effect = [bad_resp, good_resp]
 
-    with patch("services.agents.persona_writer.get_openai_client", return_value=mock_client), \
-         patch("services.agents.persona_writer.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+    with patch("services.agents.persona_writer.get_openai_client", return_value=mock_client):
 
         from services.agents.persona_writer import write_persona
         output, usage = await write_persona(

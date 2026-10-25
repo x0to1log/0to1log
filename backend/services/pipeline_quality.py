@@ -22,7 +22,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from openai import RateLimitError
 
-from core.config import settings
+from core.config import model_for, settings
 from models.news_pipeline import ClassifiedGroup, PersonaOutput
 from services.agents.client import (
     build_completion_kwargs,
@@ -1307,7 +1307,7 @@ async def _check_digest_quality(
         beginner_prompt = QUALITY_CHECK_BUSINESS_BEGINNER
 
     client = get_openai_client()
-    quality_model = settings.openai_model_reasoning  # gpt-5-mini — nano can't score
+    quality_model = model_for("news.qc", "reasoning")  # gpt-5-mini — nano can't score
     failed_evaluations: list[dict[str, Any]] = []
 
     async def _score(prompt: str, content: str, label: str, default_scope: str) -> tuple[int, dict, list[dict[str, str]], dict]:
@@ -2087,7 +2087,7 @@ async def _check_weekly_quality(
         return {"quality_score": 0, "quality_flags": ["no_expert_content"]}
 
     client = get_openai_client()
-    model = settings.openai_model_reasoning  # gpt-5-mini — match daily quality
+    model = model_for("weekly.qc", "reasoning")  # gpt-5-mini — match daily quality
     issues_all: list[str] = []
     structured_issues: list[dict[str, str]] = []
     llm_scores: list[int] = []

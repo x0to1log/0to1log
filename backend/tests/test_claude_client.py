@@ -1,4 +1,5 @@
 """Claude routing client for handbook seed generation (no network)."""
+import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -14,12 +15,12 @@ from services.agents.claude_client import (
 from services.agents.client import compat_create_kwargs, extract_usage_metrics
 
 
-def _writer_kwargs(model="claude-sonnet-5-5", **extra):
+def _writer_kwargs(model="claude-sonnet-5-5", response_format=None, **extra):
     # Exactly what the handbook writer call sites build.
     return compat_create_kwargs(
         model,
         messages=[{"role": "system", "content": "SYSTEM PROMPT"}, {"role": "user", "content": "term: MoE"}],
-        response_format={"type": "json_object"},
+        response_format=response_format or {"type": "json_object"},
         max_tokens=24000,
         prompt_cache_key="hb-generate-basic",
         reasoning_effort="high",
@@ -154,21 +155,76 @@ async def test_refused_term_is_regenerated_with_the_openai_writer():
 
 
 @pytest.mark.asyncio
-async def test_generate_term_content_routes_only_when_writer_model_is_claude():
+async def test_generate_term_content_picks_writer_arg_then_feature_override_then_role(monkeypatch):
+    from core.config import settings
     from services.agents import advisor
 
     captured = {}
 
     async def fake_run(req, client, model, **kwargs):
-        captured["client"], captured["model"] = client, model
+        captured["model"] = model
         return {}, {}, []
 
     with patch.object(advisor, "_run_generate_term", side_effect=fake_run), \
          patch.object(advisor, "get_openai_client", return_value=MagicMock()):
+        await advisor.generate_term_content("MoE")
+        assert captured["model"] == settings.openai_model_main
+
+        monkeypatch.setattr(settings, "model_overrides", {"handbook.writer": "claude-opus-5-5"})
+        await advisor.generate_term_content("MoE")
+        assert captured["model"] == "claude-opus-5-5"
+
         await advisor.generate_term_content("MoE", writer_model="claude-sonnet-5-5")
-        assert isinstance(captured["client"], ClaudeRoutingClient)
         assert captured["model"] == "claude-sonnet-5-5"
 
-        await advisor.generate_term_content("MoE")
-        assert not isinstance(captured["client"], ClaudeRoutingClient)
-        assert captured["model"] == advisor.settings.openai_model_main
+
+def test_every_call_site_gets_a_routing_client_that_passes_embeddings_to_openai():
+    from services.agents.client import get_openai_client
+
+    client = get_openai_client()
+    assert isinstance(client, ClaudeRoutingClient)
+    assert client.embeddings is client.openai.embeddings
+
+
+def test_model_for_uses_override_then_role_default(monkeypatch):
+    from core.config import model_for, settings
+
+    monkeypatch.setattr(settings, "model_overrides", {"news.classify": "claude-haiku-5-5"})
+    assert model_for("news.classify", "light") == "claude-haiku-5-5"
+    assert model_for("news.merge", "light") == settings.openai_model_light
+    with pytest.raises(ValueError):
+        model_for("news.merge", "medium")
+
+
+def test_strict_schemas_map_to_claude_structured_outputs_without_rejected_keywords():
+    from services.agents.schemas.news_quiz import build_news_quiz_json_schema
+
+    response_format = {"type": "json_schema", "json_schema": build_news_quiz_json_schema("en")}
+    request = to_anthropic_request(_writer_kwargs(response_format=response_format))
+    fmt = request["output_config"]["format"]
+    assert fmt["type"] == "json_schema"
+    assert request["output_config"]["effort"] == "high"
+    text = json.dumps(fmt["schema"])
+    for rejected in ('"minimum"', '"maximum"', '"minLength"', '"maxItems"', '"minItems": 4'):
+        assert rejected not in text
+    assert '"additionalProperties": false' in text
+
+
+def test_schema_cleaner_keeps_supported_keywords():
+    from services.agents.claude_client import claude_json_schema
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "url": {"type": "string", "enum": ["https://a.example/X"]},
+            "tags": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "maxItems": 3},
+            "n": {"type": "integer", "minimum": 1, "maximum": 50},
+        },
+        "required": ["url", "tags", "n"],
+        "additionalProperties": False,
+    }
+    cleaned = claude_json_schema(schema)
+    assert cleaned["properties"]["url"]["enum"] == ["https://a.example/X"]
+    assert cleaned["properties"]["tags"] == {"type": "array", "items": {"type": "string"}, "minItems": 1}
+    assert cleaned["properties"]["n"] == {"type": "integer"}
+    assert cleaned["required"] == ["url", "tags", "n"] and cleaned["additionalProperties"] is False

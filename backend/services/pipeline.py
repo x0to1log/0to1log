@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from core.config import settings, today_kst
+from core.config import model_for, settings, today_kst
 from core.database import get_supabase
 from models.news_pipeline import (
     ClassifiedCandidate,
@@ -3869,7 +3869,7 @@ async def regenerate_weekly_persona(
 
         # Generate ONE persona
         client = get_openai_client()
-        model = settings.openai_model_main
+        model = model_for("weekly.writer", "main")
         result = await _generate_weekly_persona_content(
             persona=persona,
             daily_text=daily_text,
@@ -4170,7 +4170,7 @@ async def run_weekly_pipeline(
         # admin regen endpoint can reuse the exact same logic for a single persona.
         persona_results: dict[str, dict] = {}
         client = get_openai_client()
-        model = settings.openai_model_main
+        model = model_for("weekly.writer", "main")
 
         async def _gen_and_collect(persona: str) -> None:
             result = await _generate_weekly_persona_content(

@@ -6,7 +6,7 @@ import uuid
 
 from pydantic import ValidationError
 
-from core.config import settings
+from core.config import model_for
 from core.database import get_supabase
 from models.blog_advisor import (
     BlogAdviseRequest,
@@ -188,7 +188,7 @@ async def run_blog_advise(req: BlogAdviseRequest) -> tuple[dict, str, int]:
         return await run_blog_generate_bilingual(req)
 
     config = BLOG_ACTION_CONFIG[req.action]
-    model = getattr(settings, config["model_attr"])
+    model = model_for("advisor.blog", config["model_attr"].removeprefix("openai_model_"))
     client = get_openai_client()
 
     user_prompt = _build_blog_user_prompt(req)
@@ -266,8 +266,8 @@ async def run_blog_generate_bilingual(req: BlogAdviseRequest) -> tuple[dict, str
     source_lang = "English" if source_locale == "en" else "Korean"
     target_lang = "Korean" if target_locale == "ko" else "English"
 
-    model_light = getattr(settings, "openai_model_light")
-    model_main = getattr(settings, "openai_model_main")
+    model_light = model_for("advisor.blog", "light")
+    model_main = model_for("advisor.blog", "main")
     client = get_openai_client()
     user_prompt = _build_blog_user_prompt(req)
 
@@ -392,7 +392,7 @@ async def run_blog_translate(req: BlogTranslateRequest) -> tuple[dict, str, int]
 
     # Step 1: Translate via AI
     client = get_openai_client()
-    model = getattr(settings, "openai_model_main")
+    model = model_for("advisor.blog", "main")
 
     direction = f"{req.locale.upper()} → {target_locale.upper()}"
     user_prompt = (

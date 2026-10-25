@@ -60,9 +60,7 @@ async def test_extract_facts_returns_valid_fact_pack():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.return_value = _mock_openai_response(SAMPLE_FACT_PACK)
 
-    with patch("services.agents.fact_extractor.get_openai_client", return_value=mock_client), \
-         patch("services.agents.fact_extractor.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+    with patch("services.agents.fact_extractor.get_openai_client", return_value=mock_client):
 
         from services.agents.fact_extractor import extract_facts
         fact_pack, usage = await extract_facts(
@@ -84,9 +82,7 @@ async def test_extract_facts_with_empty_community():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.return_value = _mock_openai_response(SAMPLE_FACT_PACK)
 
-    with patch("services.agents.fact_extractor.get_openai_client", return_value=mock_client), \
-         patch("services.agents.fact_extractor.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+    with patch("services.agents.fact_extractor.get_openai_client", return_value=mock_client):
 
         from services.agents.fact_extractor import extract_facts
         fact_pack, usage = await extract_facts(
@@ -115,9 +111,7 @@ async def test_extract_facts_retries_on_json_error():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.side_effect = [bad_resp, good_resp]
 
-    with patch("services.agents.fact_extractor.get_openai_client", return_value=mock_client), \
-         patch("services.agents.fact_extractor.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+    with patch("services.agents.fact_extractor.get_openai_client", return_value=mock_client):
 
         from services.agents.fact_extractor import extract_facts
         fact_pack, usage = await extract_facts(
@@ -141,9 +135,7 @@ async def test_extract_facts_all_retries_fail_raises():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.return_value = bad_resp
 
-    with patch("services.agents.fact_extractor.get_openai_client", return_value=mock_client), \
-         patch("services.agents.fact_extractor.settings") as mock_settings:
-        mock_settings.openai_model_main = "gpt-4o"
+    with patch("services.agents.fact_extractor.get_openai_client", return_value=mock_client):
 
         from services.agents.fact_extractor import extract_facts
         with pytest.raises(Exception):

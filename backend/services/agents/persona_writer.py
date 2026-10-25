@@ -3,7 +3,7 @@ import asyncio
 import logging
 from typing import Any
 
-from core.config import settings
+from core.config import model_for
 from models.news_pipeline import FactPack, PersonaOutput
 from services.agents.client import (
     compat_create_kwargs,
@@ -78,7 +78,7 @@ async def write_persona(
     user_prompt = _build_fact_pack_prompt(fact_pack)
 
     client = get_openai_client()
-    model = settings.openai_model_main
+    model = model_for("legacy.persona_writer", "main")
     cumulative_usage: dict[str, Any] = {}
     length_retried = False
 

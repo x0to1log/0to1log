@@ -2,7 +2,7 @@
 import logging
 from typing import Any
 
-from core.config import settings
+from core.config import model_for
 from models.news_pipeline import FactPack
 from services.agents.client import compat_create_kwargs, extract_usage_metrics, get_openai_client, parse_ai_json
 from services.agents.prompts_news_pipeline import FACT_EXTRACTION_SYSTEM_PROMPT
@@ -32,7 +32,7 @@ async def extract_facts(
 {community_text or "(none)"}"""
 
     client = get_openai_client()
-    model = settings.openai_model_main
+    model = model_for("legacy.fact_extractor", "main")
     last_error: Exception | None = None
 
     for attempt in range(MAX_RETRIES + 1):

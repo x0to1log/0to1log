@@ -14,11 +14,12 @@ from __future__ import annotations
 
 import logging
 from types import SimpleNamespace
-from typing import Any
-
-from anthropic import AsyncAnthropic
+from typing import TYPE_CHECKING, Any
 
 from core.config import settings
+
+if TYPE_CHECKING:
+    from anthropic import AsyncAnthropic
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +39,41 @@ def is_claude_model(model: str | None) -> bool:
     return bool(model) and str(model).startswith(CLAUDE_MODEL_PREFIX)
 
 
+# JSON Schema keywords Claude structured outputs reject with a 400
+# (structured-outputs docs, 2026-10-26). The same limits are re-checked in code
+# after parsing (quiz validation/shuffle, citation substitution).
+_UNSUPPORTED_SCHEMA_KEYS = frozenset({
+    "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf",
+    "minLength", "maxLength", "maxItems", "uniqueItems",
+})
+
+
+def claude_json_schema(schema: Any) -> Any:
+    """Copy of an OpenAI strict schema with keywords Claude rejects removed.
+
+    `minItems` is supported only as 0 or 1, so larger values are dropped too.
+    """
+    if isinstance(schema, list):
+        return [claude_json_schema(item) for item in schema]
+    if not isinstance(schema, dict):
+        return schema
+    cleaned: dict[str, Any] = {}
+    for key, value in schema.items():
+        if key in _UNSUPPORTED_SCHEMA_KEYS:
+            continue
+        if key == "minItems" and isinstance(value, int) and value > 1:
+            continue
+        cleaned[key] = claude_json_schema(value)
+    return cleaned
+
+
 def to_anthropic_request(kwargs: dict[str, Any]) -> dict[str, Any]:
     """Map chat.completions kwargs to messages.stream kwargs.
 
     OpenAI-only knobs are dropped: `service_tier`, `prompt_cache_key` (Claude
-    caches the system block marked below), `response_format` (handbook prompts
-    already ask for one JSON object; see `json_payload`).
+    caches the system block marked below). `response_format` json_schema maps
+    to Claude structured outputs; json_object has no schema to send, so the
+    prompt's own JSON instruction plus `json_payload` handle it.
     """
     messages = kwargs["messages"]
     system = "\n\n".join(str(m["content"]) for m in messages if m["role"] == "system")
@@ -56,9 +86,17 @@ def to_anthropic_request(kwargs: dict[str, Any]) -> dict[str, Any]:
     if system:
         # The long, per-call-type system prompt is the stable prefix worth caching.
         request["system"] = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+    output_config: dict[str, Any] = {}
     effort = kwargs.get("reasoning_effort")
     if effort in _EFFORTS:
-        request["output_config"] = {"effort": effort}
+        output_config["effort"] = effort
+    response_format = kwargs.get("response_format") or {}
+    if response_format.get("type") == "json_schema":
+        schema = (response_format.get("json_schema") or {}).get("schema")
+        if schema:
+            output_config["format"] = {"type": "json_schema", "schema": claude_json_schema(schema)}
+    if output_config:
+        request["output_config"] = output_config
     return request
 
 
@@ -135,17 +173,30 @@ class _RoutedCompletions:
 
 
 class ClaudeRoutingClient:
-    """An AsyncOpenAI stand-in that sends claude-* models to Anthropic."""
+    """An AsyncOpenAI stand-in that sends claude-* models to Anthropic.
 
-    def __init__(self, openai_client: Any, anthropic_client: AsyncAnthropic | None = None) -> None:
+    Only `chat.completions.create` is routed; every other attribute
+    (`embeddings`, ...) is the wrapped OpenAI client's — Claude has no
+    embeddings API.
+    """
+
+    def __init__(self, openai_client: Any, anthropic_client: "AsyncAnthropic | None" = None) -> None:
         self.openai = openai_client
         self._anthropic = anthropic_client
         self.chat = SimpleNamespace(completions=_RoutedCompletions(self))
 
+    def __getattr__(self, name: str) -> Any:
+        # Called only for attributes not set above.
+        return getattr(self.openai, name)
+
     @property
-    def anthropic(self) -> AsyncAnthropic:
+    def anthropic(self) -> "AsyncAnthropic":
         if self._anthropic is None:
             if not settings.anthropic_api_key:
                 raise RuntimeError("ANTHROPIC_API_KEY is not set")
+            # Imported here so OpenAI-only calls never depend on the anthropic
+            # package: every call site goes through this client.
+            from anthropic import AsyncAnthropic
+
             self._anthropic = AsyncAnthropic(api_key=settings.anthropic_api_key, max_retries=4)
         return self._anthropic

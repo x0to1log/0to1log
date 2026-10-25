@@ -72,9 +72,7 @@ async def test_classify_candidates_returns_multiple_picks_and_prompt():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.return_value = _mock_openai_response(CLASSIFICATION_LLM_RESPONSE)
 
-    with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
-         patch("services.agents.ranking.settings") as mock_settings:
-        mock_settings.openai_model_light = "gpt-4o"
+    with patch("services.agents.ranking.get_openai_client", return_value=mock_client):
 
         from services.agents.ranking import classify_candidates
         result, usage, user_prompt = await classify_candidates(SAMPLE_CANDIDATES)
@@ -94,9 +92,7 @@ async def test_classify_candidates_prompt_includes_source_provenance():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.return_value = _mock_openai_response(CLASSIFICATION_LLM_RESPONSE)
 
-    with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
-         patch("services.agents.ranking.settings") as mock_settings:
-        mock_settings.openai_model_light = "gpt-4o"
+    with patch("services.agents.ranking.get_openai_client", return_value=mock_client):
 
         from services.agents.ranking import classify_candidates
         _, _, user_prompt = await classify_candidates(SAMPLE_CANDIDATES)
@@ -111,9 +107,7 @@ async def test_classify_candidates_prompt_groups_recent_headlines_by_category():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.return_value = _mock_openai_response(CLASSIFICATION_LLM_RESPONSE)
 
-    with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
-         patch("services.agents.ranking.settings") as mock_settings:
-        mock_settings.openai_model_light = "gpt-4o"
+    with patch("services.agents.ranking.get_openai_client", return_value=mock_client):
 
         from services.agents.ranking import classify_candidates
         _, _, user_prompt = await classify_candidates(
@@ -144,9 +138,7 @@ async def test_classify_candidates_debug_records_raw_and_invalid_url_picks():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.return_value = _mock_openai_response(response)
 
-    with patch("services.agents.ranking.get_openai_client", return_value=mock_client), \
-         patch("services.agents.ranking.settings") as mock_settings:
-        mock_settings.openai_model_light = "gpt-4o"
+    with patch("services.agents.ranking.get_openai_client", return_value=mock_client):
 
         from services.agents.ranking import classify_candidates
         result, _, _ = await classify_candidates(SAMPLE_CANDIDATES)

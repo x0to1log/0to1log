@@ -6,7 +6,7 @@ import logging
 import time
 from urllib.parse import urlparse
 
-from core.config import settings
+from core.config import model_for, settings
 from models.product_advisor import ProductGenerateRequest, ProductProfileEN, ProductProfileKO
 from services.agents.client import (
     compat_create_kwargs,
@@ -1605,7 +1605,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             sources["pricing"] = pricing_content
         facts, facts_tokens = await _extract_product_facts(
             product_name, body.url or "", sources,
-            client, settings.openai_model_nano,
+            client, model_for("advisor.product", "nano"),
         )
         total_tokens = facts_tokens
         logger.info("Facts extracted: %d specs, %d features, pricing=%s, pricing_source=%s",
@@ -1617,7 +1617,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         # Step 1: Classify product (gpt-5-nano, uses facts)
         classification = await _classify_product(
             product_name, body.url or "", facts,
-            client, settings.openai_model_nano,
+            client, model_for("advisor.product", "nano"),
         )
         total_tokens += classification.pop("_tokens", 0)
         category_guide = build_product_category_guide(classification)
@@ -1630,7 +1630,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
         try:
             en_profile, en_tokens = await _generate_en_profile(
                 facts, page_content, review_content, en_system,
-                client, settings.openai_model_main,
+                client, model_for("advisor.product", "main"),
             )
             total_tokens += en_tokens
         except Exception as e:
@@ -1638,7 +1638,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             try:
                 en_profile, en_tokens = await _generate_en_profile(
                     facts, page_content, review_content, en_system,
-                    client, settings.openai_model_light,
+                    client, model_for("advisor.product", "light"),
                 )
                 total_tokens += en_tokens
                 logger.info("EN profile recovered with gpt-5-mini fallback")
@@ -1668,11 +1668,11 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             f"Use cases: {'; '.join(en_profile.get('use_cases', []))}",
         ])
 
-        ko_task = _generate_ko_profile(en_profile, facts, category_guide, client, settings.openai_model_light)
-        enrich_task = _generate_enrichment(en_profile, facts, review_content, category_guide, client, settings.openai_model_light)
+        ko_task = _generate_ko_profile(en_profile, facts, category_guide, client, model_for("advisor.product", "light"))
+        enrich_task = _generate_enrichment(en_profile, facts, review_content, category_guide, client, model_for("advisor.product", "light"))
         corpus_task = client.chat.completions.create(
             **compat_create_kwargs(
-                settings.openai_model_light,
+                model_for("advisor.product", "light"),
                 messages=[
                     {"role": "system", "content": SEARCH_CORPUS_SYSTEM},
                     {"role": "user", "content": f"Product: {product_name}\nURL: {body.url}\n\n{corpus_context}"},
@@ -1706,7 +1706,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             logger.error("Enrichment generation failed: %s", enrich_result)
 
         if not isinstance(corpus_resp, Exception):
-            corpus_metrics = extract_usage_metrics(corpus_resp, settings.openai_model_light)
+            corpus_metrics = extract_usage_metrics(corpus_resp, model_for("advisor.product", "light"))
             total_tokens += corpus_metrics["tokens_used"]
             result["search_corpus"] = (corpus_resp.choices[0].message.content or "").strip()
         else:
@@ -1776,7 +1776,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
 
         # LLM-as-judge quality scoring (gpt-5-nano, ~$0.0001/product, non-blocking)
         quality_score, score_tokens = await _score_profile(
-            result, facts, client, settings.openai_model_nano,
+            result, facts, client, model_for("advisor.product", "nano"),
         )
         total_tokens += score_tokens
         result["_quality_score"] = quality_score
@@ -1790,7 +1790,7 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             product_slug=body.slug,
             action=body.action,
             prompt_version=PROMPT_VERSION,
-            model_used=settings.openai_model_main,
+            model_used=model_for("advisor.product", "main"),
             tokens_used=total_tokens,
             duration_ms=duration_ms,
             success=True,
@@ -1801,10 +1801,10 @@ async def run_product_generate(body: ProductGenerateRequest) -> tuple[str | dict
             quality_breakdown=quality_score if isinstance(quality_score, dict) else None,
         )
 
-        return result, settings.openai_model_main, total_tokens
+        return result, model_for("advisor.product", "main"), total_tokens
 
     if body.action == "pricing_detail":
-        model = settings.openai_model_light
+        model = model_for("advisor.product", "light")
         product_name = body.name or body.url or ""
 
         # Shared helper (also used by generate_from_url)
@@ -1850,7 +1850,7 @@ Respond with JSON only."""
         return result, metrics["model_used"], metrics["tokens_used"]
 
     if body.action == "generate_search_corpus":
-        model = settings.openai_model_light
+        model = model_for("advisor.product", "light")
         context_parts = []
         if body.name:
             context_parts.append(f"Product: {body.name}")
@@ -1875,7 +1875,7 @@ Respond with JSON only."""
         return raw.strip(), metrics["model_used"], metrics["tokens_used"]
 
     # Individual field generation
-    model = settings.openai_model_light
+    model = model_for("advisor.product", "light")
     system_map = {
         "tagline_en": TAGLINE_EN_SYSTEM,
         "tagline_ko": TAGLINE_KO_SYSTEM,
