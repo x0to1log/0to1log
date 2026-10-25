@@ -1148,6 +1148,63 @@ def cleanup_existing_batch(batch_id: str) -> dict[str, int]:
 
 
 
+HANDBOOK_VALID_CATEGORIES = frozenset({
+    "cs-fundamentals", "math-statistics", "ml-fundamentals",
+    "deep-learning", "llm-genai", "data-engineering",
+    "infra-hardware", "safety-ethics", "products-platforms",
+})
+
+# Terms that passed LLM extraction but are not handbook-worthy
+# (outcome/strategy phrases, industry names, overly generic terms)
+_HANDBOOK_TERM_BLOCKLIST = frozenset({
+    "ecosystem integration", "cross-platform ai", "dynamic content delivery",
+    "content recommendations", "photorealistic graphics", "image generation",
+    "gaming industry", "collaboration", "actionable intelligence",
+    "ai-driven efficiencies", "cost efficiency", "administrative tasks",
+    "collaborative healthcare", "precision health", "legacy infrastructure",
+    "warping operation", "self-editing context",
+    "variation operator", "verification-centric agents",
+})
+
+# Generic suffix patterns that indicate outcome/strategy phrases, not technology
+_HANDBOOK_GENERIC_SUFFIXES = (
+    " integration", " optimization", " management", " delivery",
+    " efficiencies", " operations", " intelligence", " industry",
+)
+# Allow known exceptions (e.g., "query optimization" is a real DB concept)
+_HANDBOOK_GENERIC_SUFFIX_EXCEPTIONS = frozenset({
+    "query optimization", "gradient optimization", "kernel optimization",
+    "workflow orchestration", "access management", "memory management",
+    "process management", "dependency management", "package management",
+})
+_HANDBOOK_MODIFIER_SUFFIXES = ("-powered", "-driven", "-based", "-enabled", "-oriented", "-focused", "-first")
+
+
+def handbook_term_shape_filter(term_info: dict) -> tuple[list[str] | None, str]:
+    """Code-only checks an extracted term must pass before it becomes a handbook draft.
+
+    Returns (categories, reason): categories is [primary, *valid secondaries], or
+    None with the rejection reason. Scope rules (validate_term_scope) and DB
+    duplicate checks run separately. Shared by news extraction and the seed
+    candidate miner (scripts/mine_handbook_candidates.py).
+    """
+    term_name = str(term_info.get("term", "")).strip()
+    if len(term_name.split()) > 3:
+        return None, "too many words"
+    lower = term_name.lower()
+    if any(s in lower for s in _HANDBOOK_MODIFIER_SUFFIXES):
+        return None, "adjective/modifier"
+    if lower in _HANDBOOK_TERM_BLOCKLIST:
+        return None, "blocklisted (not handbook-worthy)"
+    if any(lower.endswith(s) for s in _HANDBOOK_GENERIC_SUFFIXES) and lower not in _HANDBOOK_GENERIC_SUFFIX_EXCEPTIONS:
+        return None, "generic suffix pattern"
+    primary_cat = term_info.get("category", "")
+    if primary_cat not in HANDBOOK_VALID_CATEGORIES:
+        return None, f"invalid category '{primary_cat}'"
+    secondary = term_info.get("secondary_categories", []) or []
+    return [primary_cat] + [c for c in secondary if c in HANDBOOK_VALID_CATEGORIES and c != primary_cat], ""
+
+
 async def _extract_and_create_handbook_terms(
     article_texts: list[str],
     supabase,
@@ -1211,30 +1268,6 @@ async def _extract_and_create_handbook_terms(
         return 0, []
 
     # Step 2: Filter, dedup, and generate content for new terms (2 at a time)
-    VALID_CATEGORIES = {
-        "cs-fundamentals", "math-statistics", "ml-fundamentals",
-        "deep-learning", "llm-genai", "data-engineering",
-        "infra-hardware", "safety-ethics", "products-platforms",
-    }
-
-    # Blocklist: terms that passed LLM extraction but are not handbook-worthy
-    # (outcome/strategy phrases, industry names, overly generic terms)
-    TERM_BLOCKLIST = {
-        "ecosystem integration", "cross-platform ai", "dynamic content delivery",
-        "content recommendations", "photorealistic graphics", "image generation",
-        "gaming industry", "collaboration", "actionable intelligence",
-        "ai-driven efficiencies", "cost efficiency", "administrative tasks",
-        "collaborative healthcare", "precision health", "legacy infrastructure",
-        "warping operation", "self-editing context",
-        "variation operator", "verification-centric agents",
-    }
-
-    # Generic suffix patterns that indicate outcome/strategy phrases, not technology
-    GENERIC_SUFFIXES = (
-        " integration", " optimization", " management", " delivery",
-        " efficiencies", " operations", " intelligence", " industry",
-    )
-
     # Pre-filter terms before generation
     valid_terms: list[dict] = []
     queued_terms: list[dict] = []
@@ -1272,36 +1305,12 @@ async def _extract_and_create_handbook_terms(
                 )
             continue
 
-        if len(term_name.split()) > 3:
-            logger.info("Skipping '%s' — too many words", term_name)
+        all_cats, skip_reason = handbook_term_shape_filter(term_info)
+        if all_cats is None:
+            logger.info("Skipping '%s' — %s", term_name, skip_reason)
             continue
-        lower = term_name.lower()
-        modifier_suffixes = ("-powered", "-driven", "-based", "-enabled", "-oriented", "-focused", "-first")
-        if any(s in lower for s in modifier_suffixes):
-            logger.info("Skipping '%s' — adjective/modifier", term_name)
-            continue
-        # Blocklist check
-        if lower in TERM_BLOCKLIST:
-            logger.info("Skipping '%s' — blocklisted (not handbook-worthy)", term_name)
-            continue
-        # Generic suffix check (catches "X integration", "Y optimization" patterns)
-        if any(lower.endswith(s) for s in GENERIC_SUFFIXES):
-            # Allow known exceptions (e.g., "query optimization" is a real DB concept)
-            known_exceptions = {
-                "query optimization", "gradient optimization", "kernel optimization",
-                "workflow orchestration", "access management", "memory management",
-                "process management", "dependency management", "package management",
-            }
-            if lower not in known_exceptions:
-                logger.info("Skipping '%s' — generic suffix pattern", term_name)
-                continue
-        # Build categories list from primary + secondary
-        primary_cat = term_info.get("category", "")
-        if primary_cat not in VALID_CATEGORIES:
-            logger.info("Skipping '%s' — invalid category '%s'", term_name, primary_cat)
-            continue
+        primary_cat = all_cats[0]
         secondary = term_info.get("secondary_categories", []) or []
-        all_cats = [primary_cat] + [c for c in secondary if c in VALID_CATEGORIES and c != primary_cat]
         slug = _slugify(term_name)
         if not slug:
             continue

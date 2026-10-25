@@ -1,0 +1,283 @@
+{"term": "Open-Weight Model", "decision": "accept", "reason": "Established model-access category distinct from open-source licensing and the existing open-source LLM term."}
+{"term": "Red Teaming", "decision": "accept", "reason": "Established safety practice for probing systems and identifying weaknesses."}
+{"term": "Vision-Language-Action Model", "decision": "accept", "reason": "Established model category for systems that connect visual and language inputs to actions."}
+{"term": "Sandboxing", "decision": "accept", "reason": "Established security and containment concept not in the handbook."}
+{"term": "Multi-Token Prediction", "decision": "accept", "reason": "Established language-model training and inference technique."}
+{"term": "Mamba (SSM)", "decision": "accept", "reason": "Established state-space model architecture family."}
+{"term": "World Model", "decision": "accept", "reason": "Established concept for models that represent or predict aspects of an environment."}
+{"term": "Data Center", "decision": "accept", "reason": "Established infrastructure concept distinct from the existing AI datacentre entry."}
+{"term": "Embodied AI", "decision": "accept", "reason": "Established concept for AI systems that perceive and act in physical environments."}
+{"term": "Foundation Model", "decision": "accept", "reason": "Established model category distinct from the existing Frontier Model term."}
+{"term": "Flow Matching", "decision": "accept", "reason": "Established generative modeling technique not in the handbook."}
+{"term": "AI Accelerator", "decision": "accept", "reason": "Established hardware category for processors designed to accelerate AI workloads."}
+{"term": "Digital Watermarking", "decision": "accept", "reason": "Established technique for embedding detectable information in digital content."}
+{"term": "Formal Verification", "decision": "accept", "reason": "Established computer-science method for proving systems satisfy specifications."}
+{"term": "Human-in-the-Loop", "decision": "accept", "reason": "Established concept for incorporating human review or control into automated systems."}
+{"term": "SGLang", "decision": "accept", "reason": "Established LLM serving framework with independent developer relevance."}
+{"term": "Reward Shaping", "decision": "accept", "reason": "Established reinforcement-learning technique for modifying rewards to guide learning."}
+{"term": "Tokenization", "decision": "accept", "reason": "Established NLP and language-model concept not covered by the existing Token entry."}
+{"term": "Text-to-Speech", "decision": "accept", "reason": "Established speech-generation task with broad adoption."}
+{"term": "Agent Orchestration", "decision": "accept", "reason": "Established concept for coordinating agents and their tasks, distinct from agentic workflows."}
+{"term": "Speech Recognition", "decision": "accept", "reason": "Established AI task and technology not covered by existing handbook terms."}
+{"term": "Tokenizer", "decision": "accept", "reason": "Established NLP and language-modeling concept."}
+{"term": "Access Control", "decision": "accept", "reason": "Established security concept not already covered by agentic access management."}
+{"term": "API", "decision": "accept", "reason": "Established software interface concept with broad technical relevance."}
+{"term": "AI Red Teaming", "decision": "accept", "reason": "Established practice for probing AI-system risks and safeguards."}
+{"term": "Linear Attention", "decision": "accept", "reason": "Established attention mechanism and distinct from the existing Self-Attention entry."}
+{"term": "AI Gateway", "decision": "accept", "reason": "Established infrastructure concept for routing and managing AI model requests."}
+{"term": "Knowledge Graph", "decision": "accept", "reason": "Established data representation and knowledge-management concept."}
+{"term": "Catastrophic Forgetting", "decision": "accept", "reason": "Established machine-learning phenomenon with independent glossary value."}
+{"term": "Self-Distillation", "decision": "accept", "reason": "Established distillation technique in which a model provides supervision for itself."}
+{"term": "Diffusion Language Model", "decision": "accept", "reason": "Recognized language-model approach with a distinct generation paradigm from autoregressive models."}
+{"term": "Word Error Rate", "decision": "accept", "reason": "Established speech-recognition evaluation metric."}
+{"term": "Cloud Computing", "decision": "accept", "reason": "Established computing paradigm not covered by the existing AWS or Bedrock entries."}
+{"term": "Credit Assignment", "decision": "accept", "reason": "Established machine-learning concept, particularly relevant to reinforcement learning."}
+{"term": "Benchmark", "decision": "accept", "reason": "Established evaluation concept with independent relevance to AI and software engineering."}
+{"term": "Multimodal Learning", "decision": "accept", "reason": "Established learning paradigm distinct from the existing Multimodal Model concept."}
+{"term": "Reward Hacking", "decision": "accept", "reason": "Established alignment and reinforcement-learning concept distinct from Reward Model."}
+{"term": "C2PA", "decision": "accept", "reason": "Established content provenance standard with independent relevance to AI-generated media."}
+{"term": "Continual Learning", "decision": "accept", "reason": "Established machine-learning paradigm for updating models from sequential or ongoing data."}
+{"term": "Kubernetes", "decision": "accept", "reason": "Established platform for orchestrating containerized workloads."}
+{"term": "Application-Specific Integrated Circuit", "decision": "accept", "reason": "Established hardware concept; commonly abbreviated ASIC."}
+{"term": "Automatic Speech Recognition", "decision": "accept", "reason": "Established AI task, commonly abbreviated ASR, not in the handbook."}
+{"term": "Information Retrieval", "decision": "accept", "reason": "Established computer-science field and independently searchable concept."}
+{"term": "Diffusion Transformer", "decision": "accept", "reason": "Established model architecture concept, commonly abbreviated DiT, not in the handbook."}
+{"term": "Computer-Use Agent", "decision": "accept", "reason": "Distinct agent concept focused on operating computers; not a duplicate of the broader Computer Use capability."}
+{"term": "GRPO", "decision": "accept", "reason": "Established policy-optimization method used in LLM and agent training."}
+{"term": "AI Governance", "decision": "accept", "reason": "Established concept covering oversight and management of AI systems."}
+{"term": "Visual Question Answering", "decision": "accept", "reason": "Established multimodal task involving answering questions about visual inputs."}
+{"term": "LocalAI", "decision": "accept", "reason": "Established open-source runtime for running AI models locally."}
+{"term": "Optical Character Recognition", "decision": "accept", "reason": "Established document-processing technology"}
+{"term": "Multi-Cloud Computing", "decision": "accept", "reason": "Established infrastructure strategy with broad independent search value."}
+{"term": "Pass@k", "decision": "accept", "reason": "Established metric for evaluating generated solutions."}
+{"term": "Cosign", "decision": "accept", "reason": "Established tool for signing and verifying software artifacts."}
+{"term": "LiteLLM", "decision": "accept", "reason": "Widely used model-routing and gateway tool."}
+{"term": "Local Inference", "decision": "accept", "reason": "Established inference mode with a distinct focus on running models locally."}
+{"term": "High-Bandwidth Memory", "decision": "accept", "reason": "Established memory technology relevant to AI hardware and system performance."}
+{"term": "Sandbox", "decision": "accept", "reason": "Established security and execution-isolation concept."}
+{"term": "Text-to-Video Generation", "decision": "accept", "reason": "Established generative AI task and independently searchable concept."}
+{"term": "Point Cloud", "decision": "accept", "reason": "Established 3D data representation used across robotics, computer vision, and machine learning."}
+{"term": "NCCL", "decision": "accept", "reason": "Established library for communication between GPUs."}
+{"term": "LLM-as-a-Judge", "decision": "accept", "reason": "Established evaluation technique that uses models to assess outputs."}
+{"term": "Virtual Machine", "decision": "accept", "reason": "Established computing concept not covered by the existing infrastructure terms."}
+{"term": "Test-Time Adaptation", "decision": "accept", "reason": "Established approach for adapting models during deployment or inference."}
+{"term": "On-Policy Distillation", "decision": "accept", "reason": "Established distillation approach not covered by the existing general Model Distillation entry."}
+{"term": "Out-of-Distribution Generalization", "decision": "accept", "reason": "Established machine-learning concept not in the handbook."}
+{"term": "Vulnerability Scanning", "decision": "accept", "reason": "Established software-security practice not in the handbook."}
+{"term": "Zero-Shot Learning", "decision": "accept", "reason": "Established machine-learning paradigm not equivalent to in-context learning."}
+{"term": "Deepfake", "decision": "accept", "reason": "Established concept for synthetic or manipulated media, not covered by an existing term."}
+{"term": "Browser Automation", "decision": "accept", "reason": "Established automation concept distinct from browser agents and computer use."}
+{"term": "Self-Supervised Learning", "decision": "accept", "reason": "Established learning paradigm not duplicated by the narrower Self-Supervised Pretext Tasks entry."}
+{"term": "Computer Vision", "decision": "accept", "reason": "Established field of AI concerned with interpreting and processing visual information."}
+{"term": "TensorRT-LLM", "decision": "accept", "reason": "Established inference optimization toolkit for large language models"}
+{"term": "Edge Computing", "decision": "accept", "reason": "Established computing paradigm, distinct from edge deployment and on-device AI."}
+{"term": "Signal-to-Noise Ratio", "decision": "accept", "reason": "Established mathematical and statistical concept with broad independent search value."}
+{"term": "NVLink-C2C", "decision": "accept", "reason": "Established chip-to-chip interconnect technology with independent hardware search value."}
+{"term": "WebSocket", "decision": "accept", "reason": "Established communication protocol with broad technical relevance."}
+{"term": "Vector Quantization", "decision": "accept", "reason": "Established compression technique distinct from the broader concept of quantization."}
+{"term": "Dense Retrieval", "decision": "accept", "reason": "Established retrieval approach based on learned dense representations."}
+{"term": "Sparse Reward", "decision": "accept", "reason": "Established reinforcement-learning concept describing tasks with infrequent reward signals."}
+{"term": "Text-to-Image Generation", "decision": "accept", "reason": "Established generative task distinct from the broader diffusion model concept."}
+{"term": "Software Vulnerability", "decision": "accept", "reason": "Established software security concept relevant to AI-driven discovery and analysis."}
+{"term": "Episodic Memory", "decision": "accept", "reason": "Established memory concept used in AI and cognitive systems."}
+{"term": "Voice Cloning", "decision": "accept", "reason": "Established technique for reproducing a speaker's voice from audio samples."}
+{"term": "Neural Processing Unit", "decision": "accept", "reason": "Established hardware accelerator category with independent glossary value."}
+{"term": "JAX", "decision": "accept", "reason": "Established machine-learning framework with broad independent search interest."}
+{"term": "Bradley–Terry Model", "decision": "accept", "reason": "Established statistical model for ranking items from pairwise comparisons."}
+{"term": "Jailbreak", "decision": "accept", "reason": "Established model-safeguard bypass concept, distinct from prompt injection."}
+{"term": "Perplexity", "decision": "accept", "reason": "Established language-model metric, distinct from any existing handbook term."}
+{"term": "Private Cloud Compute", "decision": "accept", "reason": "Distinct, independently searchable Apple cloud-computing and privacy service."}
+{"term": "AI Safety Evaluation", "decision": "accept", "reason": "Established evaluation concept distinct from general and agent-specific evaluation."}
+{"term": "Optimal Transport", "decision": "accept", "reason": "Established mathematical framework with independent relevance to machine learning."}
+{"term": "Trusted Execution Environment", "decision": "accept", "reason": "Established security concept for isolating protected code and data during execution."}
+{"term": "Machine Unlearning", "decision": "accept", "reason": "Established research area concerning removal of learned information or behavior from models."}
+{"term": "Embedding Model", "decision": "accept", "reason": "Distinct from Embedding: this refers to a model that produces embeddings."}
+{"term": "Bits per Byte", "decision": "accept", "reason": "Established metric for evaluating language-model performance."}
+{"term": "Data Provenance", "decision": "accept", "reason": "Established concept for tracking the origin and history of data."}
+{"term": "GPU Kernel", "decision": "accept", "reason": "Established concept in GPU programming and performance optimization."}
+{"term": "Policy Gradient", "decision": "accept", "reason": "Established reinforcement-learning optimization method."}
+{"term": "OpenRouter", "decision": "accept", "reason": "Established model-access and routing platform."}
+{"term": "Variational Autoencoder", "decision": "accept", "reason": "Established generative-model architecture."}
+{"term": "Token Pruning", "decision": "accept", "reason": "Established model-efficiency technique not substantially covered by an existing term."}
+{"term": "Sparse Attention", "decision": "accept", "reason": "Established attention mechanism family not substantially covered by Self-Attention."}
+{"term": "CodeQL", "decision": "accept", "reason": "Established code-analysis tool with independent search value."}
+{"term": "NVLink", "decision": "accept", "reason": "Established high-bandwidth interconnect technology with independent search value."}
+{"term": "Matryoshka Representation Learning", "decision": "accept", "reason": "Established representation-learning method with a specific, independently searchable meaning."}
+{"term": "Singular Value Decomposition", "decision": "accept", "reason": "Established mathematical technique with broad independent relevance."}
+{"term": "Tensor Processing Unit", "decision": "accept", "reason": "Established name for Google's specialized machine-learning accelerator, distinct from GPU."}
+{"term": "Data Residency", "decision": "accept", "reason": "Established data-governance concept concerning where data is stored or processed."}
+{"term": "Process Reward Model", "decision": "accept", "reason": "Distinct reward-model concept focused on evaluating intermediate steps"}
+{"term": "Multi-Head Latent Attention", "decision": "accept", "reason": "Established Transformer attention variant with distinct technical meaning"}
+{"term": "3D Reconstruction", "decision": "accept", "reason": "Established computer-vision task"}
+{"term": "Object Detection", "decision": "accept", "reason": "Established computer-vision task"}
+{"term": "Zero-day vulnerability", "decision": "accept", "reason": "Established cybersecurity concept, distinct from supply chain vulnerability."}
+{"term": "Contrastive Learning", "decision": "accept", "reason": "Established machine learning training method not covered by the existing terms."}
+{"term": "Straight-Through Estimator", "decision": "accept", "reason": "Established technique for training models with discrete or non-differentiable operations."}
+{"term": "Claude Code", "decision": "accept", "reason": "Established coding tool and distinct product concept not already listed."}
+{"term": "AI Coding Agent", "decision": "accept", "reason": "Established agent specialization with independent search value, distinct from the broader AI Agent term."}
+{"term": "ROCm", "decision": "accept", "reason": "Established GPU software platform and independently searchable alternative to CUDA."}
+{"term": "End-to-End Encryption", "decision": "accept", "reason": "Established security concept with broad relevance beyond the specific article."}
+{"term": "Heterogeneous Computing", "decision": "accept", "reason": "Established computing concept describing workloads across different processor types."}
+{"term": "EU AI Act", "decision": "accept", "reason": "Established regulatory framework with substantial independent relevance to AI."}
+{"term": "Zero-Trust Security", "decision": "accept", "reason": "Established security architecture and independently searchable concept."}
+{"term": "MLX", "decision": "accept", "reason": "Established Apple machine-learning framework with independent developer relevance."}
+{"term": "Lean 4", "decision": "accept", "reason": "Established proof assistant and programming language with broad use in formal verification."}
+{"term": "Regression Testing", "decision": "accept", "reason": "Established software testing concept not in the handbook."}
+{"term": "Time-Series Forecasting", "decision": "accept", "reason": "Established forecasting task and independently searchable concept."}
+{"term": "Distributed Inference", "decision": "accept", "reason": "Established inference deployment concept not covered by the existing parallelism term."}
+{"term": "Sliding-Window Attention", "decision": "accept", "reason": "Established attention variant not in the handbook."}
+{"term": "Residual Stream", "decision": "accept", "reason": "Established transformer interpretability concept not in the handbook."}
+{"term": "Application Programming Interface", "decision": "accept", "reason": "Established, independently searchable software interface concept."}
+{"term": "Closed-Loop Control", "decision": "accept", "reason": "Established control-systems concept involving feedback from outcomes to subsequent actions."}
+{"term": "llama.cpp", "decision": "accept", "reason": "Widely used runtime for local inference with language models."}
+{"term": "Convolutional Neural Network", "decision": "accept", "reason": "Established neural-network architecture not covered by the existing terms."}
+{"term": "FinOps", "decision": "accept", "reason": "Established practice for managing and optimizing cloud and technology spending."}
+{"term": "CPU", "decision": "accept", "reason": "Established computing hardware concept not covered by the existing GPU entry."}
+{"term": "Data Lineage", "decision": "accept", "reason": "Established data-management concept for tracking data origins and transformations."}
+{"term": "ONNX", "decision": "accept", "reason": "Established model interchange format with broad adoption."}
+{"term": "Sim-to-Real Transfer", "decision": "accept", "reason": "Established robotics and machine-learning concept for transferring policies or models from simulation to real-world settings."}
+{"term": "Continued Pretraining", "decision": "accept", "reason": "Established training technique distinct from pre-training in general: further pretraining an already pretrained model."}
+{"term": "Data labeling", "decision": "accept", "reason": "Established machine-learning data preparation concept."}
+{"term": "Network Egress Filtering", "decision": "accept", "reason": "Established network-security control for restricting outbound traffic."}
+{"term": "OpenAI Agents SDK", "decision": "accept", "reason": "Recognizable developer SDK with independent relevance to building AI agents."}
+{"term": "Computational Imaging", "decision": "accept", "reason": "Established imaging field involving computation in image capture and reconstruction."}
+{"term": "Curriculum Learning", "decision": "accept", "reason": "Established machine-learning training approach."}
+{"term": "RoCE", "decision": "accept", "reason": "Established networking technology relevant to data-center and GPU-cluster systems."}
+{"term": "App Intents", "decision": "accept", "reason": "Established Apple developer framework concept for exposing app actions to system experiences."}
+{"term": "Brier Score", "decision": "accept", "reason": "Established metric for evaluating probabilistic predictions."}
+{"term": "Attention Sink", "decision": "accept", "reason": "Recognized attention-related concept in language-model inference and long-context research."}
+{"term": "CUDA Graph", "decision": "accept", "reason": "Established CUDA feature for capturing and replaying sequences of GPU operations; distinct from CUDA generally."}
+{"term": "Confidential Computing", "decision": "accept", "reason": "Established security approach for protecting data during processing."}
+{"term": "System Card", "decision": "accept", "reason": "Established documentation format for describing a model or system and its behavior."}
+{"term": "On-Policy Learning", "decision": "accept", "reason": "Established machine-learning approach not listed in the handbook."}
+{"term": "Mechanistic Interpretability", "decision": "accept", "reason": "Established research area focused on explaining internal model mechanisms."}
+{"term": "Multi-Cloud", "decision": "accept", "reason": "Established deployment architecture concept not covered by existing terms."}
+{"term": "Gemma", "decision": "accept", "reason": "The model family is a distinct broader concept from the existing Gemma 4 entry."}
+{"term": "Conformal Prediction", "decision": "accept", "reason": "Established statistical method for producing predictions with coverage guarantees."}
+{"term": "AI Watermarking", "decision": "accept", "reason": "Established approach for identifying AI-generated content."}
+{"term": "Beam Search", "decision": "accept", "reason": "Established search and decoding algorithm."}
+{"term": "Prompt Engineering", "decision": "accept", "reason": "Established method for guiding model behavior through prompts."}
+{"term": "Adversarial Attack", "decision": "accept", "reason": "Established concept in machine-learning security."}
+{"term": "3D Gaussian Splatting", "decision": "accept", "reason": "Established 3D scene representation and rendering technique."}
+{"term": "Ray", "decision": "accept", "reason": "Established distributed computing framework for AI workloads."}
+{"term": "Advantage Function", "decision": "accept", "reason": "Established reinforcement-learning concept not in the handbook."}
+{"term": "Model Weights", "decision": "accept", "reason": "Established deep-learning concept with independent relevance to open-weight models."}
+{"term": "Incident response", "decision": "accept", "reason": "Established security and operations concept not in the handbook."}
+{"term": "Recall@k", "decision": "accept", "reason": "Established retrieval-evaluation metric not in the handbook."}
+{"term": "Abstract Syntax Tree", "decision": "accept", "reason": "Established computer-science data structure with applications in code analysis and retrieval."}
+{"term": "Hypernetwork", "decision": "accept", "reason": "Established neural-network architecture concept not in the handbook."}
+{"term": "Scaling Laws", "decision": "accept", "reason": "Established concept describing relationships between model scale, compute, data, and performance."}
+{"term": "Static Analysis", "decision": "accept", "reason": "Established software-analysis concept not in the handbook."}
+{"term": "Zero-shot transfer", "decision": "accept", "reason": "Established machine-learning concept describing transfer to unseen tasks or environments without task-specific training."}
+{"term": "Data Processing Unit", "decision": "accept", "reason": "Established infrastructure-hardware concept distinct from a specific DPU product."}
+{"term": "Data Poisoning", "decision": "accept", "reason": "Established machine-learning security concept not in the handbook."}
+{"term": "Compiler", "decision": "accept", "reason": "Established computer-science concept with independent glossary value."}
+{"term": "Constrained Decoding", "decision": "accept", "reason": "Established generation technique for restricting model outputs to valid forms."}
+{"term": "AI Coding Assistant", "decision": "accept", "reason": "Established category of AI software-development tools, distinct from any one product."}
+{"term": "CLIP", "decision": "accept", "reason": "Established vision-language model and representation-learning approach."}
+{"term": "Image Inpainting", "decision": "accept", "reason": "Established image-editing task with independent glossary value."}
+{"term": "Open-Source Model", "decision": "accept", "reason": "Established model category broader than the existing open-source LLM term."}
+{"term": "KV cache compression", "decision": "accept", "reason": "Established inference optimization technique distinct from the general KV Cache concept."}
+{"term": "MLOps", "decision": "accept", "reason": "Established discipline for deploying, operating, and maintaining machine-learning systems."}
+{"term": "Instruction Tuning", "decision": "accept", "reason": "Established model-training method; related to but not identical to supervised fine-tuning."}
+{"term": "Video generation", "decision": "accept", "reason": "Established generative AI task and capability, distinct from the broader diffusion model concept."}
+{"term": "Spatial Reasoning", "decision": "accept", "reason": "Established reasoning capability with applications in navigation, localization, and planning."}
+{"term": "SARIF", "decision": "accept", "reason": "Established standardized format for exchanging static-analysis results"}
+{"term": "Self-Consistency", "decision": "accept", "reason": "Established reasoning technique with independent glossary value"}
+{"term": "Imitation Learning", "decision": "accept", "reason": "Established machine-learning paradigm"}
+{"term": "AlphaFold", "decision": "accept", "reason": "Widely recognized AI model and system for protein-structure prediction"}
+{"term": "Fréchet Inception Distance", "decision": "accept", "reason": "Established metric used to evaluate generated images"}
+{"term": "Digital twin", "decision": "accept", "reason": "Established concept in industrial monitoring and simulation"}
+{"term": "NVIDIA Dynamo", "decision": "accept", "reason": "Recognized inference-serving framework with practitioner relevance"}
+{"term": "Zero-shot classification", "decision": "accept", "reason": "Established machine-learning task and evaluation setting"}
+{"term": "Evidence Lower Bound", "decision": "accept", "reason": "Established statistical and machine-learning objective"}
+{"term": "Data Parallelism", "decision": "accept", "reason": "Established parallelism strategy, distinct from model parallelism."}
+{"term": "Distributed Training", "decision": "accept", "reason": "Established training approach with independent glossary value."}
+{"term": "Expert Parallelism", "decision": "accept", "reason": "Established strategy for distributing mixture-of-experts computation."}
+{"term": "Intermediate Representation", "decision": "accept", "reason": "Established computer science concept used in compilers and execution systems."}
+{"term": "Affordance", "decision": "accept", "reason": "Established concept in robotics and human-computer interaction."}
+{"term": "Data Lakehouse", "decision": "accept", "reason": "Established data architecture concept with independent glossary value."}
+{"term": "Hadamard Transform", "decision": "accept", "reason": "Established mathematical transform with applications in machine learning and signal processing."}
+{"term": "Multimodal Embedding", "decision": "accept", "reason": "Established concept for representing multiple modalities in an embedding space; not covered by the general Embedding entry."}
+{"term": "Shannon Capacity", "decision": "accept", "reason": "Established information-theoretic concept with independent glossary value."}
+{"term": "Microservices", "decision": "accept", "reason": "Established software architecture concept with independent glossary value."}
+{"term": "CI/CD", "decision": "accept", "reason": "Established software development and deployment practice."}
+{"term": "QLoRA", "decision": "accept", "reason": "Established parameter-efficient fine-tuning method distinct from the broader LoRA concept."}
+{"term": "promptfoo", "decision": "accept", "reason": "Established LLM evaluation and security-testing tool with independent search value."}
+{"term": "Visual Grounding", "decision": "accept", "reason": "Established multimodal task of locating image regions from language."}
+{"term": "Federated Learning", "decision": "accept", "reason": "Established approach to training across distributed data."}
+{"term": "Parameter-Efficient Fine-Tuning", "decision": "accept", "reason": "Established adaptation approach distinct from fine-tuning generally and from the specific LoRA method."}
+{"term": "Responses API", "decision": "accept", "reason": "Established API product with independent relevance to building AI applications."}
+{"term": "Chrome DevTools Protocol", "decision": "accept", "reason": "Established browser-control protocol with independent technical relevance."}
+{"term": "Vulnerability discovery", "decision": "accept", "reason": "Established cybersecurity capability and research area, distinct from supply-chain attacks and vulnerabilities."}
+{"term": "Camera Pose Estimation", "decision": "accept", "reason": "Established computer-vision task with independent search value."}
+{"term": "Speaker Diarization", "decision": "accept", "reason": "Established speech-processing task of identifying who spoke when."}
+{"term": "Directed Acyclic Graph", "decision": "accept", "reason": "Established computer-science data structure used to represent dependency relationships."}
+{"term": "Decoder-Only Transformer", "decision": "accept", "reason": "Established architecture class with a distinct, independently searchable design definition."}
+{"term": "State Space Model", "decision": "accept", "reason": "Established model architecture family with independently searchable applications in sequence modeling."}
+{"term": "GPT-5.5", "decision": "queue", "reason": "Versioned model name; manual review should confirm whether it merits an entry beyond a broader GPT model page."}
+{"term": "Kimi K3", "decision": "queue", "reason": "Specific model release; manual review is needed to confirm its canonicality and lasting relevance."}
+{"term": "Gemini 4 Argon", "decision": "queue", "reason": "Versioned model name; manual review is needed to confirm it merits a separate entry."}
+{"term": "GPT-5.6", "decision": "queue", "reason": "Versioned model label; manual review is needed to confirm it merits a standalone entry."}
+{"term": "Nemotron 3 Super", "decision": "queue", "reason": "Specific model release; manual review should confirm whether it merits a standalone page."}
+{"term": "GLM-5.2", "decision": "queue", "reason": "Versioned model name; manual review is needed to determine whether it merits an entry beyond a broader GLM model page."}
+{"term": "Model Orchestration", "decision": "queue", "reason": "Potentially useful umbrella phrase, but its boundaries and canonicality as a standalone term need review."}
+{"term": "Agentic AI", "decision": "queue", "reason": "Broad umbrella phrase; manual review is needed to confirm it merits a standalone entry"}
+{"term": "Gemini 3.5 Flash", "decision": "queue", "reason": "Versioned model variant; manual review should confirm whether it merits an entry beyond the existing Gemini term."}
+{"term": "DeepSeek V4", "decision": "queue", "reason": "Versioned model-family name; manual review should confirm canonicality and lasting glossary value."}
+{"term": "Dynamic Resolution", "decision": "queue", "reason": "Descriptive phrase for multiple visual-input approaches; canonicality as a standalone term is unclear."}
+{"term": "Mastra", "decision": "queue", "reason": "A specific agent framework; manual review should confirm its canonicality and lasting glossary value."}
+{"term": "Action Chunking", "decision": "queue", "reason": "Potentially valid technique, but its canonical scope and standalone glossary value need review."}
+{"term": "Physical AI", "decision": "queue", "reason": "Potentially useful umbrella phrase, but its scope and canonicality are not yet clear."}
+{"term": "Foundation Models Framework", "decision": "queue", "reason": "Apple-specific framework; manual review can confirm whether it merits a standalone entry."}
+{"term": "Frontier AI", "decision": "queue", "reason": "Potentially valid umbrella phrase; review whether it is canonical as a standalone handbook term."}
+{"term": "GPT-6 Astra", "decision": "queue", "reason": "Versioned model name; manual review should verify its status and whether coverage belongs under a broader model entry."}
+{"term": "Neocloud", "decision": "queue", "reason": "Emerging industry label; manual review should confirm canonicality."}
+{"term": "Fast Weights", "decision": "queue", "reason": "Valid but specialized research concept; manual review is needed to confirm it merits a standalone entry."}
+{"term": "Stable Audio 3", "decision": "queue", "reason": "Versioned product name; manual review should confirm its canonicality and coverage value."}
+{"term": "Claude Sonnet 5", "decision": "queue", "reason": "Versioned model name; manual review should confirm whether it merits an entry beyond the broader Claude term."}
+{"term": "Claude Opus 4.8", "decision": "queue", "reason": "Version-specific model name; manual review is needed to determine whether it merits an entry beyond the broader Claude term."}
+{"term": "Multimodal Retrieval", "decision": "queue", "reason": "Potentially useful umbrella phrase, but its canonical scope relative to multimodal RAG and multimodal search needs review."}
+{"term": "Activation Steering", "decision": "queue", "reason": "Potentially valid model-steering method, but its canonical terminology and broader adoption need review."}
+{"term": "Claude Opus 4.7", "decision": "queue", "reason": "Versioned model release; manual review should determine whether coverage belongs under a broader model entry."}
+{"term": "GPT-5.4", "decision": "queue", "reason": "Versioned model release; manual review should determine whether coverage belongs under a broader model entry."}
+{"term": "Mid-Fusion", "decision": "queue", "reason": "Potentially valid multimodal architecture term, but its canonical scope and standalone status need review."}
+{"term": "Phi-4-reasoning-vision-15B", "decision": "queue", "reason": "Specific versioned model; manual review should assess whether it merits an entry beyond broader model coverage."}
+{"term": "Model Routing", "decision": "reject", "reason": "Duplicate of existing Model Router; both refer to selecting models for requests or workloads."}
+{"term": "Attention Mechanism", "decision": "reject", "reason": "Duplicate of the existing Attention entry."}
+{"term": "Multimodal AI", "decision": "reject", "reason": "Broad umbrella phrase substantially overlaps the existing Multimodal Model concept."}
+{"term": "On-Device Inference", "decision": "reject", "reason": "Substantially overlaps with existing on-device AI."}
+{"term": "Autoregressive Model", "decision": "reject", "reason": "Duplicate of the existing AR (autoregressive) concept."}
+{"term": "Inference Pricing", "decision": "reject", "reason": "Substantially overlaps with existing inference cost."}
+{"term": "Vector Embedding", "decision": "reject", "reason": "Duplicate of Embedding."}
+{"term": "Codex", "decision": "reject", "reason": "Duplicate of the existing OpenAI Codex entry."}
+{"term": "AI Hallucination", "decision": "reject", "reason": "Duplicate of existing Hallucination"}
+{"term": "Pipeline Parallelism", "decision": "reject", "reason": "A form of model parallelism, substantially covered by the existing Model parallelism entry."}
+{"term": "Chain-of-Thought Prompting", "decision": "reject", "reason": "Duplicate of CoT."}
+{"term": "Rotary Positional Embedding", "decision": "reject", "reason": "Duplicate of the existing RoPE term."}
+{"term": "AWS Trainium", "decision": "reject", "reason": "Duplicate of existing Trainium."}
+{"term": "Long-context language model", "decision": "reject", "reason": "Overlaps the existing Context Window concept and is not a clearly distinct canonical term."}
+{"term": "Tensor Parallelism", "decision": "reject", "reason": "A form of model parallelism, substantially covered by the existing Model parallelism entry."}
+{"term": "Pretraining", "decision": "reject", "reason": "Duplicate of existing pre-training."}
+{"term": "Cybersecurity", "decision": "reject", "reason": "Too broad and generic for a standalone technical glossary entry"}
+{"term": "Gemma 4 12B", "decision": "reject", "reason": "Overly specific model variant; Gemma 4 is already listed."}
+{"term": "Autoregressive Decoding", "decision": "reject", "reason": "Substantially overlaps the existing autoregressive (AR) concept."}
+{"term": "Long-Context Modeling", "decision": "reject", "reason": "Overlaps the existing Context Window concept and is not a clearly distinct canonical term."}
+{"term": "Muse Wonder", "decision": "reject", "reason": "Appears to be a product-specific model name without enough evidence of broad adoption."}
+{"term": "A/B Testing", "decision": "reject", "reason": "Duplicate of existing A/B Test."}
+{"term": "GPT-6 Sol", "decision": "reject", "reason": "Versioned model label without clear evidence of established, independent adoption."}
+{"term": "Model Misalignment", "decision": "reject", "reason": "Substantially overlaps with existing AI Alignment."}
+{"term": "LLM Evaluation", "decision": "reject", "reason": "Overlaps existing Evals and evaluation-focused handbook terms."}
+{"term": "Semiconductor", "decision": "reject", "reason": "Too generic as a standalone glossary term for this AI/CS handbook."}
+{"term": "Gemini 3.7 Flash", "decision": "reject", "reason": "Version-specific model variant; Gemini is already covered."}
+{"term": "FlashAttention", "decision": "reject", "reason": "Duplicate of the existing FlashAttention-4 entry's underlying method."}
+{"term": "AI Guardrails", "decision": "reject", "reason": "Duplicate of the existing Guardrails concept."}
+{"term": "LLM Agent", "decision": "reject", "reason": "Overlaps the existing AI Agent concept; this is a model-specific framing of the same agent category."}
+{"term": "AI Benchmark", "decision": "reject", "reason": "Too generic as a glossary title; benchmark is a broad category rather than a distinct concept."}
+{"term": "Frontier AI model", "decision": "reject", "reason": "Overlaps the existing Frontier Model entry."}
+{"term": "ETL", "decision": "reject", "reason": "Duplicate of existing ETL (Extract, Transform, Load)"}
+{"term": "Simulation", "decision": "reject", "reason": "Too generic without a more specific technical concept"}
+{"term": "Edge AI", "decision": "reject", "reason": "Substantially overlaps the existing edge deployment and on-device AI concepts."}
+{"term": "Inference Routing", "decision": "reject", "reason": "Substantially overlaps the existing Model Router concept."}
+{"term": "Chain-of-Thought Reasoning", "decision": "reject", "reason": "Duplicate of the existing CoT term."}
+{"term": "Muse Spark", "decision": "reject", "reason": "Specific newly launched model without sufficient evidence of broad adoption."}
