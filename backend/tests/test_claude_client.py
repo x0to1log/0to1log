@@ -279,3 +279,14 @@ def test_stray_latex_backslashes_are_repaired_only_when_parsing_fails():
     assert json.loads(json_payload(broken)) == {"body": bs + "sigma(x) + " + bs + "sum_j", "n": 1}
     valid = '{"a": "line' + bs + 'n", "b": "' + bs + bs + 'alpha"}'
     assert json_payload(valid) == valid
+
+
+def test_ko_code_is_handed_to_the_en_advanced_call():
+    from services.agents.advisor import _ko_code_reuse_block
+
+    fence = "`" * 3
+    ko = {"adv_ko_3_code": f"설명\n{fence}python\ndef score(a, b):\n    return a - b  # 차이\n{fence}", "adv_ko_1": "본문"}
+    block = _ko_code_reuse_block(ko)
+    assert "def score(a, b):" in block
+    assert "same function and variable names" in block
+    assert _ko_code_reuse_block({"adv_ko_1": "no code here"}) == ""

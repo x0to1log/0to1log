@@ -56,6 +56,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Remediate one handbook draft by slug.")
     parser.add_argument("--slug", required=True, help="handbook_terms.slug to inspect or update.")
     parser.add_argument("--apply", action="store_true", help="Run LLM remediation and update the draft row.")
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="Remediation model, e.g. claude-sonnet-5-5 (default: the handbook.writer feature model).",
+    )
     return parser.parse_args()
 
 
@@ -85,6 +90,7 @@ async def main_async() -> int:
     remediated, usage, issues, meta = await remediate_handbook_draft_content(
         term,
         row,
+        model=args.model,
         apply_llm=args.apply,
     )
 

@@ -1080,6 +1080,27 @@ def _extract_markdown_code_fences(markdown: str) -> list[dict[str, str]]:
     return fences
 
 
+def _ko_code_reuse_block(advanced_ko_data: dict) -> str:
+    """Prompt block handing the KO Advanced code to the EN Advanced call.
+
+    Warmup 2026-10-25: 15/16 Claude drafts were blocked as code_not_isomorphic
+    (_detect_code_isomorphism_issues) because KO and EN Advanced each wrote
+    their own code. Empty when the KO body has no code block.
+    """
+    blocks = _extract_markdown_code_fences(
+        "\n\n".join(str(value) for value in advanced_ko_data.values() if isinstance(value, str))
+    )
+    if not blocks:
+        return ""
+    return (
+        "\n\n--- Code from the KO Advanced body (reuse it) ---\n"
+        "Use the same code blocks in the English body: the same number of blocks, the same "
+        "function and variable names, and the same logic. Translate only comments and string "
+        "literals into English.\n\n"
+        + "\n\n".join(f"```{block['language']}\n{block['body']}```" for block in blocks)
+    )
+
+
 def _transform_outside_code_fences(text: str, transform) -> str:
     if "```" not in text:
         return transform(text)
@@ -4538,6 +4559,9 @@ async def _run_generate_term(
             + "\n\n".join(advanced_contexts)
             + "\n\nUse these sources primarily for mechanism, the policy-selected technical artifact, tradeoffs, pitfalls, and references."
         )
+    advanced_en_prompt_base = advanced_en_prompt
+    if writer_is_claude:
+        advanced_en_prompt += _ko_code_reuse_block(advanced_ko_data)
 
     async def _call4_gen():
         return await client.chat.completions.create(
@@ -4717,7 +4741,11 @@ async def _run_generate_term(
                     model,
                     messages=[
                         *_writer_system_messages(improved_en_adv_system, GENERATE_ADVANCED_EN_PROMPT, split=writer_is_claude),
-                        {"role": "user", "content": advanced_en_prompt},
+                        # KO Advanced may have been regenerated since Call 4: reuse its current code.
+                        {"role": "user", "content": (
+                            advanced_en_prompt_base + _ko_code_reuse_block(advanced_ko_data)
+                            if writer_is_claude else advanced_en_prompt
+                        )},
                     ],
                     max_tokens=24000,
                     response_format={"type": "json_object"},
