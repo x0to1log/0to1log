@@ -1,0 +1,38 @@
+{"_meta": true, "category": "cs-fundamentals"}
+{"term": "Formal Verification", "aliases": [], "type": "", "note": "news 8 posts, last 2026-10-20"}
+{"_meta": true, "category": "data-engineering"}
+{"term": "Knowledge Graph", "aliases": [], "type": "", "note": "news 6 posts, last 2026-09-19"}
+{"_meta": true, "category": "deep-learning"}
+{"term": "State Space Model", "aliases": ["Mamba", "SSM"], "type": "", "note": "news 13 posts, last 2026-08-13"}
+{"term": "World Model", "aliases": [], "type": "", "note": "news 12 posts, last 2026-10-23"}
+{"term": "Flow Matching", "aliases": [], "type": "training_optimization_method", "note": "news 9 posts, last 2026-10-19"}
+{"term": "Text-to-Speech", "aliases": [], "type": "", "note": "news 7 posts, last 2026-09-24"}
+{"term": "Speech Recognition", "aliases": ["Automatic Speech Recognition", "ASR"], "type": "", "note": "news 7 posts, last 2026-08-22"}
+{"term": "Linear Attention", "aliases": [], "type": "", "note": "news 6 posts, last 2026-10-16"}
+{"term": "Self-Distillation", "aliases": [], "type": "", "note": "news 6 posts, last 2026-08-15"}
+{"_meta": true, "category": "infra-hardware"}
+{"term": "AI Accelerator", "aliases": [], "type": "", "note": "news 9 posts, last 2026-10-12"}
+{"term": "AI Gateway", "aliases": [], "type": "", "note": "news 6 posts, last 2026-10-15"}
+{"_meta": true, "category": "llm-genai"}
+{"term": "Open-Weight Model", "aliases": ["open weight model"], "type": "model_algorithm_family", "note": "news 49 posts, last 2026-10-21"}
+{"term": "Vision-Language-Action Model", "aliases": ["VLA"], "type": "model_algorithm_family", "note": "news 15 posts, last 2026-10-19"}
+{"term": "Multi-Token Prediction", "aliases": [], "type": "", "note": "news 13 posts, last 2026-10-22"}
+{"term": "Embodied AI", "aliases": [], "type": "", "note": "news 12 posts, last 2026-09-20"}
+{"term": "Foundation Model", "aliases": ["foundation model"], "type": "model_algorithm_family", "note": "news 10 posts, last 2026-10-22"}
+{"term": "Human-in-the-Loop", "aliases": ["HITL"], "type": "system_workflow_pattern", "note": "news 8 posts, last 2026-09-12"}
+{"term": "Tokenization", "aliases": ["Tokenizer"], "type": "", "note": "news 7 posts, last 2026-10-14"}
+{"term": "Diffusion Language Model", "aliases": [], "type": "", "note": "news 6 posts, last 2026-05-22"}
+{"_meta": true, "category": "ml-fundamentals"}
+{"term": "Reward Shaping", "aliases": [], "type": "", "note": "news 7 posts, last 2026-10-15"}
+{"term": "Catastrophic Forgetting", "aliases": [], "type": "", "note": "news 6 posts, last 2026-09-10"}
+{"term": "Word Error Rate", "aliases": [], "type": "", "note": "news 6 posts, last 2026-04-13"}
+{"term": "Credit Assignment", "aliases": [], "type": "", "note": "news 5 posts, last 2026-10-22"}
+{"_meta": true, "category": "products-platforms"}
+{"term": "SGLang", "aliases": [], "type": "hardware_runtime_infra", "note": "news 7 posts, last 2026-10-20"}
+{"_meta": true, "category": "safety-ethics"}
+{"term": "Red Teaming", "aliases": ["AI Red Teaming"], "type": "system_workflow_pattern", "note": "news 17 posts, last 2026-09-20"}
+{"term": "Sandboxing", "aliases": ["Sandbox"], "type": "", "note": "news 15 posts, last 2026-10-16"}
+{"term": "Digital Watermarking", "aliases": [], "type": "", "note": "news 9 posts, last 2026-09-25"}
+{"term": "Access Control", "aliases": [], "type": "", "note": "news 6 posts, last 2026-10-24"}
+{"term": "Reward Hacking", "aliases": [], "type": "problem_failure_mode", "note": "news 5 posts, last 2026-10-18"}
+{"term": "C2PA", "aliases": ["Coalition for Content Provenance and Authenticity"], "type": "protocol_format_data_structure", "note": "news 5 posts, last 2026-09-24"}

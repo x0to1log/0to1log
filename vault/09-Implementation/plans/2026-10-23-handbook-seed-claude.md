@@ -137,6 +137,16 @@
 - **Sonnet 파싱 실패:** 로그상 max_tokens·거절 없음, 파서의 fence 대체가 원래 오류를 가림 → 수식 많은 용어의 LaTeX 단일 백슬래시(`\sigma`)가 잘못된 JSON 이스케이프였을 가능성 (**검증 안 된 가설**, 원문 미저장). `json_payload`가 엄격 파싱이 "Invalid \escape"로 실패할 때만 백슬래시 보정.
 - **별도 기존 문제 발견:** `\beta`·`\frac`·`\nabla`처럼 JSON이 유효 이스케이프로 받는 LaTeX는 조용히 깨짐 (`\b`=백스페이스). OpenAI 경로도 동일 → 과제 HB-LATEX-01.
 
+**Warmup 30 (10-25 UTC, Sonnet 5.5, full-quality)** — 후보: [[shortlist-50]] `W` 30개 (A 방식: Claude 사전 표시 → Amy "이대로"), 파일 `warmup/01-warmup.jsonl`, run `handbook-seed-20261025-165908`.
+
+- **22 생성 / 8 실패.** 실행 중 로컬 DNS 끊김 → 7개 네트워크 실패 + Reward Shaping 1800초 시간 초과. 전체 기록 비용 $28.37.
+- **끊김이 실패를 성공으로 바꿈 (2건):** Red Teaming은 검색 3개 모두 실패한 채 작성·저장. safety-ethics 5개 + C2PA는 판정 실패 → 구조 감점만으로 100점·게이트 통과. → `5348c7d0`: 참고 자료가 전혀 없으면 `HandbookRetrievalError`, 판정을 요청했는데 없으면 게이트 blocked (`quality_evaluation_unavailable`) + 가짜 점수 미기록.
+- **정상 판정 16개:** 평균 advanced 70 / basic 74, 용어당 ~$1.0. advanced ≥70은 9/16.
+- **발행 차단 사유는 대부분 코드:** `code_not_isomorphic` 15 (KO·EN Advanced가 각자 다른 코드), `code_capsule_too_large` 8, `unsupported_reference_claim` 3.
+  - 근본 대응: EN Advanced 호출(4번·4b)에 KO Advanced 코드를 넘겨 재사용 (`_ko_code_reuse_block`, Claude 작성만).
+  - 기존 16개: Sonnet remediation (`remediate_handbook_draft.py --model`) 1~2회 → **14/16 admin_ready** ($3.54). 남은 2개 (Foundation Model, Open-Weight Model)는 개념 용어에 코드가 억지로 들어간 경우 → Amy 검수 때 코드 섹션 제거 검토.
+- **남은 처리:** 판정 누락 6개 재채점, Red Teaming(출처 없음) + 실패 8개 재생성.
+
 **결정 (2026-10-26, Amy):** Claude 방향으로 진행하되 **프롬프트 조정 후 재시범.** 그리고 교체 가능한 역할은 모두 Claude API로 옮기는 방향 → 별도 계획 [[2026-10-26-claude-api-migration]].
 
 ## 리스크
