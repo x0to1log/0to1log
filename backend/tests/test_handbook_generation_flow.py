@@ -1679,7 +1679,7 @@ async def test_generate_term_propagates_product_subtype_into_retrieval_and_ko_ba
             "services.agents.advisor._classify_term_type",
             new=AsyncMock(return_value=("product_platform_service", "ecosystem_platform", ["compare"], "fast-changing", 0.94)),
         ) as classify_mock,
-        patch("services.agents.advisor._search_term_context", new=AsyncMock(return_value="")) as tavily_mock,
+        patch("services.agents.advisor._search_term_context", new=AsyncMock(return_value="reference context")) as tavily_mock,
         patch("services.agents.advisor._search_brave_context", new=AsyncMock(return_value="")) as brave_mock,
         patch("services.agents.advisor._search_deep_context", new=AsyncMock(return_value="")) as deep_mock,
         patch(
@@ -1784,7 +1784,7 @@ async def test_generate_term_tolerates_structured_section_values_in_critique_pre
             "services.agents.advisor._classify_term_type",
             new=AsyncMock(return_value=("foundational_concept", None, ["understand"], "stable", 0.9)),
         ),
-        patch("services.agents.advisor._search_term_context", new=AsyncMock(return_value="")),
+        patch("services.agents.advisor._search_term_context", new=AsyncMock(return_value="reference context")),
         patch("services.agents.advisor._search_brave_context", new=AsyncMock(return_value="")),
         patch("services.agents.advisor._search_deep_context", new=AsyncMock(return_value="")),
         patch(
@@ -1844,7 +1844,7 @@ async def test_generate_term_marks_low_quality_output_as_blocked():
             "services.agents.advisor._classify_term_type",
             new=AsyncMock(return_value=("product_platform_service", "ecosystem_platform", ["compare"], "fast-changing", 0.88)),
         ),
-        patch("services.agents.advisor._search_term_context", new=AsyncMock(return_value="")),
+        patch("services.agents.advisor._search_term_context", new=AsyncMock(return_value="reference context")),
         patch("services.agents.advisor._search_brave_context", new=AsyncMock(return_value="")),
         patch("services.agents.advisor._search_deep_context", new=AsyncMock(return_value="")),
         patch(
@@ -1887,6 +1887,101 @@ async def test_generate_term_marks_low_quality_output_as_blocked():
     assert result["term_subtype"] == "ecosystem_platform"
     assert any("advanced_quality_below_min" in reason for reason in gate["reasons"])
     assert any("generation gate" in warning.lower() for warning in warnings)
+
+
+@pytest.mark.asyncio
+async def test_generate_term_refuses_to_write_without_any_reference_material():
+    # Warmup 2026-10-25: a DNS outage emptied every search and "Red Teaming"
+    # was still written from model memory and saved as a draft.
+    from services.agents.advisor import HandbookRetrievalError, _run_generate_term
+
+    client = MagicMock()
+    client.chat.completions.create = AsyncMock()
+    req = HandbookAdviseRequest(action="generate", term_id="t", term="Red Teaming", categories=["safety-ethics"])
+
+    with (
+        patch("services.agents.advisor.get_supabase", return_value=None),
+        patch(
+            "services.agents.advisor._classify_term_type",
+            new=AsyncMock(return_value=("system_workflow_pattern", None, ["understand"], "stable", 0.9)),
+        ),
+        patch("services.agents.advisor._search_term_context", new=AsyncMock(return_value="")),
+        patch("services.agents.advisor._search_brave_context", new=AsyncMock(return_value="")),
+        patch("services.agents.advisor._search_deep_context", new=AsyncMock(return_value="")),
+    ):
+        with pytest.raises(HandbookRetrievalError):
+            await _run_generate_term(req, client, "test-model")
+
+    client.chat.completions.create.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_generate_term_blocks_when_a_requested_judge_fails():
+    # Warmup 2026-10-25: both judges failed during an outage and the
+    # structural-only fallback scored the terms 100/100 with a passing gate.
+    from services.agents.advisor import _run_generate_term
+
+    client = MagicMock()
+    client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_openai_response(_basic_ko_payload()),
+            _mock_openai_response(_basic_en_payload()),
+            _mock_openai_response(_advanced_ko_payload()),
+            _mock_openai_response(_advanced_en_payload()),
+        ]
+    )
+    req = HandbookAdviseRequest(
+        action="generate", term_id="term-3", term="Hugging Face", categories=["products-platforms"],
+    )
+
+    with (
+        patch("services.agents.advisor.get_supabase", return_value=None),
+        patch(
+            "services.agents.advisor._classify_term_type",
+            new=AsyncMock(return_value=("product_platform_service", "ecosystem_platform", ["compare"], "fast-changing", 0.88)),
+        ),
+        patch("services.agents.advisor._search_term_context", new=AsyncMock(return_value="reference context")),
+        patch("services.agents.advisor._search_brave_context", new=AsyncMock(return_value="")),
+        patch("services.agents.advisor._search_deep_context", new=AsyncMock(return_value="")),
+        patch(
+            "services.agents.advisor._build_code_mode_metadata",
+            return_value={
+                "code_mode_hint": "no-code",
+                "mechanism_summary": "Judge-failure gating test.",
+                "has_clear_io_contract": False,
+                "has_official_spec_signal": False,
+                "reference_strength": "medium",
+                "vendor_lock_in_risk": "medium",
+                "insufficient_info_flag": False,
+            },
+        ),
+        patch(
+            "services.agents.advisor._self_critique_basic",
+            new=AsyncMock(return_value=(False, False, "", "", 84, 82, {})),
+        ),
+        patch(
+            "services.agents.advisor._self_critique_advanced",
+            new=AsyncMock(return_value=(False, "", 84, {})),
+        ),
+        patch("services.agents.advisor._validate_ref_urls", new=AsyncMock(side_effect=lambda text: text)),
+        patch("services.agents.advisor._extract_novel_entities", new=AsyncMock(return_value=[])),
+        patch("services.agents.advisor._check_handbook_structural_penalties", return_value=(0, [])),
+        patch(
+            "services.agents.advisor._check_handbook_quality",
+            new=AsyncMock(side_effect=RuntimeError("getaddrinfo failed")),
+        ),
+        patch(
+            "services.agents.advisor._check_basic_quality",
+            new=AsyncMock(return_value=(90, {"engagement": 20}, {})),
+        ),
+    ):
+        result, _usage, _warnings = await _run_generate_term(req, client, "test-model")
+
+    gate = result["generation_gate"]
+    assert gate["status"] == "blocked"
+    assert gate["auto_save_allowed"] is False
+    assert "quality_evaluation_unavailable" in gate["reasons"]
+    assert gate["judges_missing"] == ["advanced"]
 
 
 def test_decide_code_mode_uses_deterministic_rules():
@@ -2372,7 +2467,7 @@ async def test_generate_term_skips_second_pass_for_no_code_mode():
             "services.agents.advisor._classify_term_type",
             new=AsyncMock(return_value=("problem_failure_mode", None, ["debug"], "evolving", 0.9)),
         ),
-        patch("services.agents.advisor._search_term_context", new=AsyncMock(return_value="")),
+        patch("services.agents.advisor._search_term_context", new=AsyncMock(return_value="reference context")),
         patch("services.agents.advisor._search_brave_context", new=AsyncMock(return_value="")),
         patch("services.agents.advisor._search_deep_context", new=AsyncMock(return_value="")),
         patch(

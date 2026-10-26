@@ -53,6 +53,10 @@ from services.agents.prompts_advisor import (
 logger = logging.getLogger(__name__)
 
 
+class HandbookRetrievalError(RuntimeError):
+    """No reference material came back for a term, so it must not be written."""
+
+
 def _writer_system_messages(system: str, base: str, *, split: bool) -> list[dict[str, str]]:
     """Handbook writer system prompt, as [fixed base prompt, per-term guides] when split.
 
@@ -4141,6 +4145,11 @@ async def _run_generate_term(
         "exa": deep_context,
         "tavily": tavily_context,
     }
+    if not article_context and not any(str(value or "").strip() for value in source_bundle.values()):
+        # Warmup 2026-10-25: a DNS outage emptied every search and the term was
+        # still written, from model memory alone. The search helpers swallow
+        # their errors, so "nothing retrieved" is the signal either way.
+        raise HandbookRetrievalError(f"No reference material retrieved for '{req.term}'")
 
     user_prompt = _build_handbook_user_prompt(req)
     call1_contexts: list[str] = []
@@ -4969,6 +4978,21 @@ async def _run_generate_term(
         type_confidence,
         structural_penalty,
     )
+    # A judge that was asked for but did not answer is not a pass. Warmup
+    # 2026-10-25: during a network outage both judges failed and the
+    # structural-only fallback (100 - 2 x penalty) scored terms 100/100.
+    judges_missing = [] if req.skip_quality_check else [
+        level for level, score in (("advanced", semantic_score), ("basic", basic_semantic_score)) if score is None
+    ]
+    if judges_missing:
+        generation_gate = {
+            **generation_gate,
+            "status": "blocked",
+            "auto_save_allowed": False,
+            "review_required": True,
+            "reasons": [*generation_gate["reasons"], "quality_evaluation_unavailable"],
+            "judges_missing": judges_missing,
+        }
     data["generation_gate"] = generation_gate
     if generation_gate["status"] != "pass":
         warnings.append(
@@ -5019,15 +5043,18 @@ async def _run_generate_term(
             adv_q = quality_data.get("advanced", {})
             basic_q = quality_data.get("basic", {})
 
+            # Skip a level whose judge was asked for but failed: its structural-only
+            # fallback is not a quality score (judges_missing in the generation gate).
+            missing = set(generation_gate.get("judges_missing") or [])
             adv_score = _normalize_quality_score_value(adv_q.get("total"))
-            if adv_score is not None:
+            if adv_score is not None and "advanced" not in missing:
                 supabase.table("handbook_quality_scores").insert({
                     **base_row,
                     "score": adv_score,
                     "breakdown": {"level": "advanced", **adv_q},
                 }).execute()
             basic_score = _normalize_quality_score_value(basic_q.get("total"))
-            if basic_score is not None:
+            if basic_score is not None and "basic" not in missing:
                 supabase.table("handbook_quality_scores").insert({
                     **base_row,
                     "score": basic_score,

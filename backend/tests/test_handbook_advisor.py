@@ -128,7 +128,8 @@ async def test_generate_term_returns_all_fields():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.return_value = _mock_openai_response(FULL_GENERATE_RESULT)
 
-    with patch("services.agents.advisor.get_openai_client", return_value=mock_client):
+    with patch("services.agents.advisor.get_openai_client", return_value=mock_client), \
+         patch("services.agents.advisor._search_term_context", new=AsyncMock(return_value="reference context")):
         from services.agents.advisor import run_handbook_advise
 
         req = HandbookAdviseRequest(
@@ -159,7 +160,8 @@ async def test_generate_term_validation_warns_on_short_body():
     mock_client = AsyncMock()
     mock_client.chat.completions.create.return_value = _mock_openai_response(SHORT_GENERATE_RESULT)
 
-    with patch("services.agents.advisor.get_openai_client", return_value=mock_client):
+    with patch("services.agents.advisor.get_openai_client", return_value=mock_client), \
+         patch("services.agents.advisor._search_term_context", new=AsyncMock(return_value="reference context")):
         from services.agents.advisor import run_handbook_advise
 
         req = HandbookAdviseRequest(
