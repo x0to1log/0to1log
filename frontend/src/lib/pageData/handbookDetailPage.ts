@@ -1,9 +1,8 @@
 import { localField } from '../handbookUtils';
 import { orderBySlugs } from '../handbookFacets.js';
 import { renderMarkdown, renderMarkdownWithTerms, renderHandbookMarkdown, type TermsMap } from '../markdown';
-import { fetchPublicTermIndex } from './publicTermIndex';
+import { fetchPublicTermIndex, fetchTermPopups } from './publicTermIndex';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
-import { pickReferencedTerms } from './termReferences';
 
 interface HandbookDetailPageContext extends DetailPageContext {
   previewLevel?: string | null;
@@ -131,15 +130,6 @@ export async function getHandbookDetailPageData({
       const termEntry = { slug: entry.slug, term: entry.term };
       handbookTermsMap.set(entry.term.toLowerCase(), termEntry);
       if (entry.korean_name) handbookTermsMap.set(entry.korean_name.toLowerCase(), termEntry);
-      handbookTermsJson[entry.slug] = {
-        term: entry.term,
-        korean_name: entry.korean_name || '',
-        term_full: entry.term_full || '',
-        categories: entry.categories || [],
-        summary: entry.summary || '',
-        definition: entry.definition || '',
-        basic_plain: entry.basic_plain || '',
-      };
     }
     const hasTerms = handbookTermsMap.size > 0;
     const renderMd = hasTerms
@@ -157,6 +147,9 @@ export async function getHandbookDetailPageData({
 
     if (basicHtml) levelHtmlMap.basic = basicHtml;
     if (advancedHtml) levelHtmlMap.advanced = advancedHtml;
+
+    // Popup data only for the terms these bodies link to (one small query).
+    handbookTermsJson = await fetchTermPopups(publicSupabase, locale, [basicHtml, advancedHtml], pageSlug);
 
     // Only news that actually mentions the term (no latest-news filler).
     relatedArticles = articlesRes.data ?? [];
@@ -188,7 +181,7 @@ export async function getHandbookDetailPageData({
     activeLevel,
     htmlContent,
     showLevelSwitcher,
-    handbookTermsJson: pickReferencedTerms(handbookTermsJson, Object.values(levelHtmlMap)),
+    handbookTermsJson,
     relatedArticles,
     relatedTerms,
     sameCategoryTerms,

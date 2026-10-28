@@ -1,9 +1,8 @@
 import { getArticleFocusItems } from '../articleRail';
 import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markdown';
 import { resolveDisplayTitleExcerpt } from '../personaTitle';
-import { fetchPublicTermIndex } from './publicTermIndex';
+import { fetchPublicTermIndex, fetchTermPopups } from './publicTermIndex';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
-import { pickReferencedTerms } from './termReferences';
 import { kstDay } from '../homeFront.js';
 import { deskDayRange } from '../newsDesks.js';
 
@@ -238,15 +237,6 @@ export async function getNewsDetailPageData({
       const termEntry = { slug: entry.slug, term: entry.term };
       handbookTermsMap.set(entry.term.toLowerCase(), termEntry);
       if (entry.korean_name) handbookTermsMap.set(entry.korean_name.toLowerCase(), termEntry);
-      handbookTermsJson[entry.slug] = {
-        term: entry.term,
-        korean_name: entry.korean_name || '',
-        term_full: entry.term_full || '',
-        categories: entry.categories || [],
-        summary: entry.summary || '',
-        definition: entry.definition || '',
-        basic_plain: entry.basic_plain || '',
-      };
     }
 
     articleData = post.published_at
@@ -310,6 +300,8 @@ export async function getNewsDetailPageData({
 
   // Extract actually-matched term slugs from rendered HTML
   const allRenderedHtml = [htmlContent, analysisHtml, ...Object.values(personaHtmlMap)].join('');
+  // Popup data only for the terms this article links to (one small query).
+  if (publicSupabase) handbookTermsJson = await fetchTermPopups(publicSupabase, locale, [allRenderedHtml]);
   const matchedSlugs: string[] = [];
   const slugRegex = /data-slug="([^"]+)"/g;
   let slugMatch: RegExpExecArray | null;
@@ -378,8 +370,7 @@ export async function getNewsDetailPageData({
     isLiked: previewMode ? false : isLiked,
     likeCount,
     commentCount,
-    // Popup data only for terms this article links to (was the whole index, ~700 KB).
-    handbookTermsJson: pickReferencedTerms(handbookTermsJson, [allRenderedHtml]),
+    handbookTermsJson,
     hasTerms,
     relatedTerms,
     htmlContent,

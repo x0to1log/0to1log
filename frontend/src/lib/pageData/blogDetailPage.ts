@@ -1,7 +1,6 @@
 import { renderMarkdown, renderMarkdownWithTerms, type TermsMap } from '../markdown';
-import { fetchPublicTermIndex } from './publicTermIndex';
+import { fetchPublicTermIndex, fetchTermPopups } from './publicTermIndex';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
-import { pickReferencedTerms } from './termReferences';
 
 export const BLOG_DETAIL_PUBLIC_COLUMNS = [
   'id', 'slug', 'locale', 'status', 'title', 'excerpt', 'category', 'content',
@@ -60,26 +59,18 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
       const handbookTerms = await fetchPublicTermIndex(publicSupabase, locale);
 
       const tMap: TermsMap = new Map();
-      const tJson: Record<string, any> = {};
       for (const entry of handbookTerms) {
         const termEntry = { slug: entry.slug, term: entry.term };
         tMap.set(entry.term.toLowerCase(), termEntry);
         if (entry.korean_name) tMap.set(entry.korean_name.toLowerCase(), termEntry);
-        tJson[entry.slug] = {
-          term: entry.term,
-          korean_name: entry.korean_name || '',
-          term_full: entry.term_full || '',
-          categories: entry.categories || [],
-          summary: entry.summary || '',
-          definition: entry.definition || '',
-          basic_plain: entry.basic_plain || '',
-        };
       }
 
       const renderFn = tMap.size > 0
         ? (md: string) => renderMarkdownWithTerms(md, tMap)
         : (md: string) => renderMarkdown(md);
       const html = rawContent ? await renderFn(rawContent) : '';
+      // Popup data only for the terms this post links to (one small query).
+      const tJson = await fetchTermPopups(publicSupabase, locale, [html]);
       return { termsMap: tMap, termsJson: tJson, html };
     })();
 
@@ -146,7 +137,7 @@ export async function getBlogDetailPageData({ locale, slug, previewMode, locals 
     isLiked: previewMode ? false : isLiked,
     likeCount,
     commentCount,
-    handbookTermsJson: pickReferencedTerms(handbookTermsJson, [htmlContent]),
+    handbookTermsJson,
     hasTerms,
     htmlContent,
   };
