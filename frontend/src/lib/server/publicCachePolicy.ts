@@ -12,10 +12,15 @@ export interface PublicCacheHeaders {
   vary?: string;
 }
 
+// Publishing invalidates the affected section by tag (cacheInvalidation.ts),
+// so TTLs only bound how long untouched pages stay cached. Longer TTLs cut
+// cache-miss renders, the remaining Supabase egress source (2026-10 quota
+// incident). List SWR stays at 1h because home and the glossary show a
+// date-based term of the day.
 const LIST_CDN_POLICY =
-  'public, s-maxage=300, stale-while-revalidate=3600, stale-if-error=86400';
+  'public, s-maxage=3600, stale-while-revalidate=3600, stale-if-error=86400';
 const DETAIL_CDN_POLICY =
-  'public, s-maxage=3600, stale-while-revalidate=86400, stale-if-error=604800';
+  'public, s-maxage=86400, stale-while-revalidate=86400, stale-if-error=604800';
 
 /**
  * Public /en|ko HTML is rendered user-neutral (middleware skips auth there and

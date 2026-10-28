@@ -8,7 +8,7 @@ const list = resolvePublicCachePolicy({ kind: 'list', preview: false, hasError: 
 assert.equal(list.cacheControl, 'public, max-age=0, must-revalidate');
 assert.equal(
   list.vercelCacheControl,
-  'public, s-maxage=300, stale-while-revalidate=3600, stale-if-error=86400',
+  'public, s-maxage=3600, stale-while-revalidate=3600, stale-if-error=86400',
 );
 // Vercel never caches a response that varies on Cookie (high-cardinality header),
 // which silently disabled the CDN from 2026-08 until this fix.
@@ -17,7 +17,7 @@ assert.equal(list.vary, undefined);
 const detail = resolvePublicCachePolicy({ kind: 'detail', preview: false, hasError: false });
 assert.equal(
   detail.vercelCacheControl,
-  'public, s-maxage=3600, stale-while-revalidate=86400, stale-if-error=604800',
+  'public, s-maxage=86400, stale-while-revalidate=86400, stale-if-error=604800',
 );
 assert.equal(detail.vary, undefined);
 
