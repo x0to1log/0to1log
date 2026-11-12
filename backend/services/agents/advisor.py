@@ -7,6 +7,7 @@ import re
 from urllib.parse import urlparse
 
 import httpx
+import openai
 from pydantic import ValidationError
 from tavily import TavilyClient
 
@@ -55,6 +56,22 @@ logger = logging.getLogger(__name__)
 
 class HandbookRetrievalError(RuntimeError):
     """No reference material came back for a term, so it must not be written."""
+
+
+async def _create_flex_with_fallback(client, kwargs: dict):
+    """chat.completions.create on flex, retried once at standard pricing when flex
+    has no capacity — the rule news QC already follows (pipeline_quality).
+
+    2026-10-26: handbook judges hit 429 flex_unavailable, swallowed it, and a
+    structural-only 100 was recorded as the term's quality score.
+    """
+    try:
+        return await client.chat.completions.create(**kwargs)
+    except openai.RateLimitError as exc:
+        if kwargs.get("service_tier") != "flex" or getattr(exc, "code", None) != "flex_unavailable":
+            raise
+        logger.warning("Flex unavailable for %s; retrying at standard tier", kwargs.get("model"))
+        return await client.chat.completions.create(**{**kwargs, "service_tier": "default"})
 
 
 def _writer_system_messages(system: str, base: str, *, split: bool) -> list[dict[str, str]]:
@@ -1024,8 +1041,8 @@ async def _self_critique_advanced(
     else:
         system = SELF_CRITIQUE_PROMPT.format(term=term, term_type=term_type)
     try:
-        resp = await client.chat.completions.create(
-            **build_completion_kwargs(
+        resp = await _create_flex_with_fallback(
+            client, build_completion_kwargs(
                 model=reasoning_model,
                 messages=[
                     {"role": "system", "content": system},
@@ -2515,8 +2532,8 @@ async def _check_handbook_quality(
     system = HANDBOOK_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
     reasoning_model = model_for("handbook.judge", "reasoning")  # gpt-5-mini for quality check
     try:
-        resp = await client.chat.completions.create(
-            **build_completion_kwargs(
+        resp = await _create_flex_with_fallback(
+            client, build_completion_kwargs(
                 model=reasoning_model,
                 messages=[
                     {"role": "system", "content": system},
@@ -2562,8 +2579,8 @@ async def _self_critique_basic(
         )
     combined = f"## Korean Basic\n{basic_ko_content}\n\n## English Basic\n{basic_en_content}"
     try:
-        resp = await client.chat.completions.create(
-            **build_completion_kwargs(
+        resp = await _create_flex_with_fallback(
+            client, build_completion_kwargs(
                 model=light_model,
                 messages=[
                     {"role": "system", "content": system},
@@ -2612,8 +2629,8 @@ async def _check_basic_quality(
     system = BASIC_QUALITY_CHECK_PROMPT.format(term=term, term_type=term_type)
     reasoning_model = model_for("handbook.judge", "reasoning")  # gpt-5-mini for quality check
     try:
-        resp = await client.chat.completions.create(
-            **build_completion_kwargs(
+        resp = await _create_flex_with_fallback(
+            client, build_completion_kwargs(
                 model=reasoning_model,
                 messages=[
                     {"role": "system", "content": system},
@@ -3993,11 +4010,14 @@ def _record_handbook_quality_scores(supabase, data: dict, source: str = "manual"
         base_row["term_id"] = data["id"]
 
     quality_data = data.get("quality") or {}
+    # A judge that was asked for but did not answer leaves a structural-only
+    # fallback total, which is not a quality score (2026-10-26 rescore: 100/100).
+    judges_missing = set(data.get("_judges_missing") or [])
     inserted = 0
     for level in ("advanced", "basic"):
         quality = quality_data.get(level) or {}
         score = _normalize_quality_score_value(quality.get("total"))
-        if score is None:
+        if score is None or level in judges_missing:
             continue
         supabase.table("handbook_quality_scores").insert({
             **base_row,
@@ -4090,6 +4110,19 @@ async def rescore_existing_handbook_quality(
         1.0,
         structural_penalty,
     )
+    judges_missing = [] if not run_semantic else [
+        level for level, score in (("advanced", semantic_score), ("basic", basic_semantic_score)) if score is None
+    ]
+    if judges_missing:
+        data["_judges_missing"] = judges_missing
+        generation_gate = {
+            **generation_gate,
+            "status": "blocked",
+            "auto_save_allowed": False,
+            "review_required": True,
+            "reasons": [*generation_gate["reasons"], "quality_evaluation_unavailable"],
+            "judges_missing": judges_missing,
+        }
     data["generation_gate"] = generation_gate
     if generation_gate["status"] != "pass":
         warnings.append(

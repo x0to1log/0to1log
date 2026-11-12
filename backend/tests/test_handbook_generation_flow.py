@@ -2761,3 +2761,42 @@ async def test_generate_term_function_calling_en_advanced_uses_selected_context_
     assert "EXA_MARKER" in advanced_en_prompt
     assert "SOURCE ROLE: Official docs, code references." not in advanced_en_prompt
     assert "SOURCE ROLE: Deep technical papers." not in advanced_en_prompt
+
+
+def _rate_limit(code: str):
+    import httpx
+    import openai
+
+    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+    response = httpx.Response(429, request=request)
+    return openai.RateLimitError("rate limited", response=response, body={"code": code, "message": "x"})
+
+
+@pytest.mark.asyncio
+async def test_handbook_judge_falls_back_to_standard_tier_only_when_flex_is_unavailable():
+    # 2026-10-26: judges hit 429 flex_unavailable and a structural-only 100 was recorded.
+    from services.agents.advisor import _create_flex_with_fallback
+
+    client = MagicMock()
+    client.chat.completions.create = AsyncMock(side_effect=[_rate_limit("flex_unavailable"), "ok"])
+    assert await _create_flex_with_fallback(client, {"model": "gpt-6.1-sol", "service_tier": "flex"}) == "ok"
+    assert client.chat.completions.create.await_args_list[1].kwargs["service_tier"] == "default"
+
+    client.chat.completions.create = AsyncMock(side_effect=_rate_limit("rate_limit_exceeded"))
+    with pytest.raises(Exception):
+        await _create_flex_with_fallback(client, {"model": "gpt-6.1-sol", "service_tier": "flex"})
+
+
+def test_score_recorder_skips_levels_whose_judge_was_missing():
+    from services.agents.advisor import _record_handbook_quality_scores
+
+    inserted_rows = []
+    supabase = MagicMock()
+    supabase.table.return_value.insert.side_effect = lambda row: inserted_rows.append(row) or MagicMock()
+    data = {
+        "slug": "access-control",
+        "quality": {"advanced": {"total": 100, "method": "structural-only"}, "basic": {"total": 81, "method": "hybrid"}},
+        "_judges_missing": ["advanced"],
+    }
+    assert _record_handbook_quality_scores(supabase, data) == 1
+    assert [row["breakdown"]["level"] for row in inserted_rows] == ["basic"]
