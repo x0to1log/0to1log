@@ -145,7 +145,12 @@
 - **발행 차단 사유는 대부분 코드:** `code_not_isomorphic` 15 (KO·EN Advanced가 각자 다른 코드), `code_capsule_too_large` 8, `unsupported_reference_claim` 3.
   - 근본 대응: EN Advanced 호출(4번·4b)에 KO Advanced 코드를 넘겨 재사용 (`_ko_code_reuse_block`, Claude 작성만).
   - 기존 16개: Sonnet remediation (`remediate_handbook_draft.py --model`) 1~2회 → **14/16 admin_ready** ($3.54). 남은 2개 (Foundation Model, Open-Weight Model)는 개념 용어에 코드가 억지로 들어간 경우 → Amy 검수 때 코드 섹션 제거 검토.
-- **남은 처리:** 판정 누락 6개 재채점, Red Teaming(출처 없음) + 실패 8개 재생성.
+- **남은 처리 (10-26 완료):**
+  - 재채점 5개 (safety-ethics 4 + C2PA): 1차 재채점도 판정이 **429 `flex_unavailable`**로 실패 → 삼켜져 또 구조-only 100점 기록. → 핸드북 판정·비평 4곳에 flex→정가 1회 재시도 (`_create_flex_with_fallback`, 뉴스 QC와 같은 규칙) + 재채점 경로도 판정 누락 시 게이트 blocked·점수 미기록. 재실행 결과 실제 판정: adv 61~72 / basic 66~87.
+  - Red Teaming: 기존 draft 행 갱신 재생성 (삭제 없음) → Sonnet 거절 없음, 77/87 pass, $0.99.
+  - 실패 8개: 시드 배치 재실행 → **8/8 생성**. flex 부족 45회, 정가 대체가 모두 처리.
+- **최종 (30개 전부 실제 판정):** 평균 **advanced 70.3 / basic 74.9**, advanced ≥70 16/30, basic ≥70 23/30. 어드민 게이트 admin_ready **25** / blocked 4 (code_not_isomorphic 3: Foundation Model·Open-Weight Model·Human-in-the-Loop, 근거 없는 주장+관련 용어 규칙 1: Diffusion Language Model) / needs_remediation 1 (SGLang 55/59, 코드 과대).
+- 이 실행에서 찾은 "실패가 성공으로 둔갑" 3건: 검색 전부 실패 → 출처 없이 작성 / 생성 중 판정 실패 → 100점 / 재채점 중 판정 실패 → 100점. 공통 원인 = 예외를 삼키고 정상 결과와 구분되지 않는 기본값 반환.
 
 **결정 (2026-10-26, Amy):** Claude 방향으로 진행하되 **프롬프트 조정 후 재시범.** 그리고 교체 가능한 역할은 모두 Claude API로 옮기는 방향 → 별도 계획 [[2026-10-26-claude-api-migration]].
 
