@@ -25,6 +25,8 @@ async function run() {
       }
       return {
         select(columns) {
+          require('node:assert/strict').match(columns, /warnings:debug_meta->warnings/);
+          require('node:assert/strict').doesNotMatch(columns, /(?:^|,\s*)debug_meta(?:,|$)/);
           if (!columns.includes('pipeline_type')) {
             throw new Error('pipeline_type must be selected');
           }

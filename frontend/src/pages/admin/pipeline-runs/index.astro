@@ -28,7 +28,7 @@ type PipelineLog = {
   pipeline_type: string;
   cost_usd: number | string | null;
   tokens_used: number | null;
-  debug_meta: Record<string, unknown> | null;
+  warnings: unknown;
 };
 
 type RunCard = PipelineRun & {
@@ -156,8 +156,7 @@ try {
       current.hasUsageMetrics = true;
     }
     current.stageCount += 1;
-    const meta = log.debug_meta as Record<string, unknown> | null;
-    const warnings = Array.isArray(meta?.warnings) ? (meta.warnings as string[]) : [];
+    const warnings = Array.isArray(log.warnings) ? log.warnings : [];
     current.warningCount += warnings.length;
     totals.set(log.run_id, current);
   }

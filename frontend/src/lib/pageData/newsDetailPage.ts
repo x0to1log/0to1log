@@ -10,12 +10,16 @@ interface NewsDetailPageContext extends DetailPageContext {
   previewPersona?: string | null;
 }
 
+// No fact_pack: on every published post it is the pipeline's QC object
+// (~17 KB), which the public page never renders. No content_original: it is
+// only read for posts without persona bodies, fetched on demand below.
+// Both were egress on every cache-miss render (2026-11 quota incident).
 export const NEWS_DETAIL_PUBLIC_COLUMNS = [
   'id', 'slug', 'locale', 'status', 'title', 'title_learner', 'title_beginner',
   'excerpt', 'category', 'post_type', 'published_at', 'updated_at', 'reading_time_min',
   'tags', 'og_image_url', 'translation_group_id', 'focus_items', 'guide_items',
-  'content_original', 'content_analysis', 'content_beginner', 'content_learner',
-  'content_expert', 'fact_pack', 'source_cards', 'source_urls',
+  'content_analysis', 'content_beginner', 'content_learner',
+  'content_expert', 'source_cards', 'source_urls',
 ].join(', ');
 
 export const NEWS_SIBLING_COLUMNS = 'id, slug, title, title_learner, title_beginner, excerpt, post_type, reading_time_min';
@@ -243,7 +247,6 @@ export async function getNewsDetailPageData({
       ? { datePublished: post.published_at, dateModified: post.updated_at || post.published_at, image: post.og_image_url }
       : undefined;
 
-    factPack = Array.isArray(post.fact_pack) ? post.fact_pack : [];
     sourceCards = normalizeSourceCards(post);
 
     // Collect FastAPI result (was running in parallel with DB queries + termsMap build)
@@ -287,8 +290,13 @@ export async function getNewsDetailPageData({
         if (key === '__analysis') analysisHtml = html;
         else personaHtmlMap[key] = html;
       }
-    } else {
-      rawContent = post.content_original || '';
+    } else if (detailSupabase) {
+      const { data: original } = await detailSupabase
+        .from('news_posts')
+        .select('content_original')
+        .eq('id', post.id)
+        .maybeSingle();
+      rawContent = original?.content_original || '';
     }
   }
 

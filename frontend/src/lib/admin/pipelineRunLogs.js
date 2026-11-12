@@ -16,7 +16,7 @@ export async function fetchPipelineLogsForRuns(
     const to = from + pageSize - 1;
     const { data, error } = await sb
       .from('pipeline_logs')
-      .select('run_id, pipeline_type, cost_usd, tokens_used, debug_meta')
+      .select('run_id, pipeline_type, cost_usd, tokens_used, warnings:debug_meta->warnings')
       .in('run_id', runIds)
       .order('created_at', { ascending: true })
       .range(from, to);

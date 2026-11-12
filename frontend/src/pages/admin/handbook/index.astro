@@ -21,18 +21,38 @@ const supabase = createClient(
 
 let fetchError: string | null = null;
 
-const { data: terms, error } = await supabase
-  .from('handbook_terms')
-  .select('id, term, slug, korean_name, status, categories, definition_ko, definition_en, body_basic_ko, body_basic_en, body_advanced_ko, body_advanced_en, updated_at, published_at, source')
-  .order('updated_at', { ascending: false })
-  .limit(500);
+// The list only shows whether each body exists (the four completeness dots),
+// so fetch the ids that have each body instead of the bodies themselves:
+// ~30 KB per term otherwise, reloaded after every save (2026-11 egress quota).
+const BODY_FIELDS = ['body_basic_ko', 'body_advanced_ko', 'body_basic_en', 'body_advanced_en'] as const;
+
+const [{ data: terms, error }, ...bodyResults] = await Promise.all([
+  supabase
+    .from('handbook_terms')
+    .select('id, term, slug, korean_name, status, categories, updated_at, published_at, source')
+    .order('updated_at', { ascending: false })
+    .limit(500),
+  ...BODY_FIELDS.map((field) => (
+    supabase
+      .from('handbook_terms')
+      .select('id')
+      .not(field, 'is', null)
+      .neq(field, '')
+      .limit(5000)
+  )),
+]);
 
 if (error) {
   fetchError = error.message;
 }
 
+const idsWithBody = bodyResults.map((result) => new Set((result.data ?? []).map((row) => row.id)));
+
 const STATUS_PRIORITY: Record<string, number> = { queued: 0, draft: 1, published: 2, archived: 3 };
-const allTerms = (terms ?? []).sort((a, b) => {
+const allTerms = (terms ?? []).map((term) => ({
+  ...term,
+  ...Object.fromEntries(BODY_FIELDS.map((field, index) => [field, idsWithBody[index].has(term.id)])),
+} as typeof term & Record<(typeof BODY_FIELDS)[number], boolean>)).sort((a, b) => {
   const pa = STATUS_PRIORITY[a.status] ?? 9;
   const pb = STATUS_PRIORITY[b.status] ?? 9;
   if (pa !== pb) return pa - pb;
@@ -46,24 +66,33 @@ if (!fetchError && allTerms.length > 0) {
   for (let index = 0; index < slugs.length; index += 100) {
     slugChunks.push(slugs.slice(index, index + 100));
   }
+  // Only the JSON paths buildLatestHandbookQualityBySlug reads, not the full
+  // judge breakdown or debug_meta; rows are reshaped to the shape it expects.
   const [scoreResults, { data: logRows }] = await Promise.all([
     Promise.all(slugChunks.map((chunk) => (
       supabase
         .from('handbook_quality_scores')
-        .select('term_slug, score, breakdown, created_at')
+        .select('term_slug, score, level:breakdown->>level, created_at')
         .in('term_slug', chunk)
         .order('created_at', { ascending: false })
         .limit(500)
     ))),
     supabase
       .from('pipeline_logs')
-      .select('pipeline_type, status, debug_meta, created_at')
+      .select('pipeline_type, status, created_at, slug:debug_meta->>slug, quality_gate:debug_meta->quality_gate, remediation_issues:debug_meta->remediation_issues, remediation_status:debug_meta->>remediation_status, warnings:debug_meta->warnings')
       .like('pipeline_type', 'handbook.%')
+      .not('debug_meta->>slug', 'is', null)
       .order('created_at', { ascending: false })
       .limit(2000),
   ]);
-  const scoreRows = scoreResults.flatMap((result) => result.data ?? []);
-  qualityBySlug = buildLatestHandbookQualityBySlug(scoreRows ?? [], logRows ?? []);
+  const scoreRows = scoreResults
+    .flatMap((result) => result.data ?? [])
+    .map(({ level, ...row }: any) => ({ ...row, breakdown: { level } }));
+  const qualityLogRows = (logRows ?? []).map(({ slug, quality_gate, remediation_issues, remediation_status, warnings, ...row }: any) => ({
+    ...row,
+    debug_meta: { slug, quality_gate, remediation_issues, remediation_status, warnings },
+  }));
+  qualityBySlug = buildLatestHandbookQualityBySlug(scoreRows, qualityLogRows);
 }
 
 const queuedCount = allTerms.filter((term) => term.status === 'queued').length;

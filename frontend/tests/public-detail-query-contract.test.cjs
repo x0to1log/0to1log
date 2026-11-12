@@ -21,8 +21,12 @@ for (const [relativePath, constant] of contracts) {
 }
 
 const news = fs.readFileSync(path.join(root, contracts[0][0]), 'utf8');
-for (const field of ['content_analysis', 'content_beginner', 'content_learner', 'content_expert', 'fact_pack', 'source_cards']) {
+for (const field of ['content_analysis', 'content_beginner', 'content_learner', 'content_expert', 'source_cards']) {
   assert.match(news, new RegExp(`\\b${field}\\b`), `news detail contract must retain ${field}`);
+}
+const newsColumns = news.slice(news.indexOf('NEWS_DETAIL_PUBLIC_COLUMNS = ['), news.indexOf("].join(', ')"));
+for (const field of ['fact_pack', 'content_original']) {
+  assert.doesNotMatch(newsColumns, new RegExp(`'${field}'`), `news detail columns must not ship ${field} on every render`);
 }
 
 const handbook = fs.readFileSync(path.join(root, contracts[1][0]), 'utf8');
