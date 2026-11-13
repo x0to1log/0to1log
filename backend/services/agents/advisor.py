@@ -5456,9 +5456,12 @@ async def generate_term_content(
         )
     except ClaudeRefusalError as exc:
         # Safety classifiers decline some security terms (pilot 2026-10-25:
-        # "Red Teaming"). Regenerate that term with the OpenAI role writer.
+        # "Red Teaming"). Sonnet/Opus first get the server-side fallback
+        # (claude_client); if the whole chain still refuses, regenerate that term
+        # with the OpenAI role writer. A refusal from another call (Haiku light
+        # calls, judges) would refuse again on rerun, so it is not retried here.
         fallback = settings.openai_model_main
-        if is_claude_model(fallback):
+        if is_claude_model(fallback) or (exc.model is not None and exc.model != model):
             raise
         logger.warning("Handbook '%s': %s — regenerating with %s", term_name, exc, fallback)
         data, usage, warnings = await _run_generate_term(

@@ -84,7 +84,7 @@ OPENAI_MODEL_PRICING_PER_1M = {
     # cached_input = cache read. Cache writes (1.25x input) are counted as plain
     # input, a small undercount since each system prompt is written once per 5 min.
     "claude-opus-5-5": {"input": Decimal("4.00"), "cached_input": Decimal("0.20"), "output": Decimal("20.00")},
-    "claude-sonnet-5-5": {"input": Decimal("2.00"), "cached_input": Decimal("0.20"), "output": Decimal("10.00")},
+    "claude-sonnet-5-5": {"input": Decimal("2.00"), "cached_input": Decimal("0.10"), "output": Decimal("10.00")},
     # Prompts <= 100K tokens. Above that Haiku 5.5 bills $0.50/$2.50, which no
     # current call reaches. Cache read rate is not in the models reference; 10% assumed.
     "claude-haiku-5-5": {"input": Decimal("0.10"), "cached_input": Decimal("0.01"), "output": Decimal("0.50")},

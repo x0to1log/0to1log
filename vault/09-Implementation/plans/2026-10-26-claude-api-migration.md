@@ -1,7 +1,20 @@
 # Claude API Migration — 교체 가능한 LLM 역할을 Claude로
 
 > 상위: [[2026-10-23-handbook-seed-claude]] (시범 결과 → Amy 결정 2026-10-26)
-> 상태: **Phase A 완료 (2026-10-26)** — 운영 동작 변화 없음 (`model_overrides` 빈 dict). Phase B는 GPT-6 관찰 종료(10-27) 후
+> 상태: **Phase A 완료 (2026-10-26)**, **핸드북 전환 (2026-11-13)** — `handbook.writer` Sonnet 5.5 / `handbook.judge` Opus 5.5 / `handbook.light` Haiku 5.5. 뉴스·weekly·어드바이저는 sol/luna 유지. Phase B는 GPT-6 관찰 종료(10-27) 후
+
+## 핸드북 전환 (2026-11-13)
+
+- 범위 결정 (Amy): 핸드북만. 작성 Sonnet (warmup 실측 ~$1.0/용어), 판정·비평 Opus (작성과 다른 모델 → 자기 채점 편향 완화), 경량 Haiku.
+- 어댑터 보강 (`claude_client`):
+  - Sonnet/Opus에 서버 측 거절 대체 (`fallbacks: "default"`, 베타 `server-side-fallback-2026-07-01`). Haiku 5.5는 지원 없음 → 거절 시 그대로 예외.
+  - 출력 상한 하한 16,000 (판정 1,800×3이 Opus thinking에 잘릴 위험). Claude는 쓴 만큼만 과금.
+  - 빈 JSON 응답 1회 재시도 + 엄격 파싱 실패 시 응답 형태 로그 (Opus 재채점 중 2/60 빈 응답).
+- `generate_term_content`: 작성 모델이 거절한 경우에만 sol 작성으로 재생성 (`ClaudeRefusalError.model`). Haiku·판정 거절은 재실행해도 같으므로 바로 실패.
+- 가격표: Sonnet 5.5 cache read $0.20 → $0.10 (claude-api 스킬 기준).
+- 게이트 재보정: [[opus-rescore-2026-11-13]] — 평균 이동 작음 (adv +0.4, basic −3.7), 일치도 낮음 (adv r=0.34, 게이트 일치 14/30). **55/70 유지** (Amy).
+- 실호출: Haiku/Sonnet/Opus 각 1회 JSON 응답 정상. 테스트 1,015 통과.
+- 주의: Sonnet/Haiku 5.5의 거절 범주에 `frontier_llm` (경쟁 AI 모델 개발 지원) — LoRA·RLHF·distillation 같은 학습 기법 용어에서 거절 가능성. draft의 `_writer_fallback` 관찰.
 
 ## Phase A 결과 (2026-10-26)
 

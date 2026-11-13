@@ -55,8 +55,11 @@ class _FakeStream:
 
 
 def _anthropic(message):
+    # Sonnet/Opus stream through client.beta (server-side refusal fallback),
+    # Haiku through client.messages.
     client = MagicMock()
     client.messages.stream = MagicMock(return_value=_FakeStream(message))
+    client.beta.messages.stream = MagicMock(return_value=_FakeStream(message))
     return client
 
 
@@ -75,6 +78,12 @@ def test_max_tokens_is_capped_at_claude_output_limit():
     kwargs = _writer_kwargs()
     kwargs["max_tokens"] = 60000
     assert to_anthropic_request(kwargs)["max_tokens"] == 128000
+
+
+def test_small_judge_budgets_get_a_floor_so_thinking_cannot_cut_the_json():
+    # Handbook judges ask for 1,800 tokens (x3 = 5,400), sized for OpenAI.
+    kwargs = compat_create_kwargs("claude-opus-5-5", messages=[{"role": "user", "content": "x"}], max_tokens=1800)
+    assert to_anthropic_request(kwargs)["max_tokens"] == 16000
 
 
 def test_json_payload_trims_prose_and_the_outer_fence():
@@ -104,8 +113,8 @@ def test_reply_is_reshaped_so_existing_usage_accounting_prices_it():
     usage = extract_usage_metrics(resp, "claude-sonnet-5-5")
     assert usage["input_tokens"] == 8200
     assert usage["cached_tokens"] == 8000
-    # 200 fresh x $2 + 8000 cache read x $0.20 + 1000 out x $10, per 1M
-    assert usage["cost_usd"] == pytest.approx((200 * 2 + 8000 * 0.2 + 1000 * 10) / 1_000_000)
+    # 200 fresh x $2 + 8000 cache read x $0.10 + 1000 out x $10, per 1M
+    assert usage["cost_usd"] == pytest.approx((200 * 2 + 8000 * 0.1 + 1000 * 10) / 1_000_000)
 
 
 @pytest.mark.asyncio
@@ -119,9 +128,38 @@ async def test_claude_models_go_to_anthropic_and_others_stay_on_openai():
     judge = await router.chat.completions.create(**compat_create_kwargs("gpt-6.1-sol", messages=[], max_tokens=10))
 
     assert claude.choices[0].message.content == '{"a": 1}'
-    anthropic_client.messages.stream.assert_called_once()
+    anthropic_client.beta.messages.stream.assert_called_once()
     assert judge == "openai-response"
     assert openai_client.chat.completions.create.await_args.kwargs["model"] == "gpt-6.1-sol"
+
+
+@pytest.mark.asyncio
+async def test_empty_json_reply_is_retried_once():
+    # 2026-11-13: two Opus judge replies came back with no text.
+    anthropic_client = MagicMock()
+    anthropic_client.beta.messages.stream = MagicMock(
+        side_effect=[_FakeStream(_message(text="")), _FakeStream(_message(text='{"score": 7}'))]
+    )
+    router = ClaudeRoutingClient(MagicMock(), anthropic_client)
+    resp = await router.chat.completions.create(**_writer_kwargs(model="claude-opus-5-5"))
+    assert resp.choices[0].message.content == '{"score": 7}'
+    assert anthropic_client.beta.messages.stream.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_sonnet_and_opus_opt_into_server_fallback_but_haiku_does_not():
+    anthropic_client = _anthropic(_message())
+    router = ClaudeRoutingClient(MagicMock(), anthropic_client)
+
+    await router.chat.completions.create(**_writer_kwargs(model="claude-opus-5-5"))
+    sent = anthropic_client.beta.messages.stream.call_args.kwargs
+    assert sent["fallbacks"] == "default"
+    assert sent["betas"] == ["server-side-fallback-2026-07-01"]
+
+    # Haiku 5.5 has no server-side fallback: a list 400s, "default" does nothing.
+    await router.chat.completions.create(**_writer_kwargs(model="claude-haiku-5-5"))
+    sent = anthropic_client.messages.stream.call_args.kwargs
+    assert "fallbacks" not in sent and "betas" not in sent
 
 
 @pytest.mark.asyncio
@@ -155,6 +193,25 @@ async def test_refused_term_is_regenerated_with_the_openai_writer():
 
 
 @pytest.mark.asyncio
+async def test_refusal_from_a_non_writer_call_is_not_retried_with_the_openai_writer():
+    from services.agents import advisor
+
+    calls = []
+
+    async def fake_run(req, client, model, **kwargs):
+        calls.append(model)
+        raise ClaudeRefusalError("claude-haiku-5-5 refused the request (category=frontier_llm)", model="claude-haiku-5-5")
+
+    with patch.object(advisor, "_run_generate_term", side_effect=fake_run), \
+         patch.object(advisor, "get_openai_client", return_value=MagicMock()):
+        with pytest.raises(ClaudeRefusalError):
+            await advisor.generate_term_content("LoRA", writer_model="claude-sonnet-5-5")
+
+    # The rerun would hit the same Haiku call and refuse again.
+    assert calls == ["claude-sonnet-5-5"]
+
+
+@pytest.mark.asyncio
 async def test_generate_term_content_picks_writer_arg_then_feature_override_then_role(monkeypatch):
     from core.config import settings
     from services.agents import advisor
@@ -165,6 +222,7 @@ async def test_generate_term_content_picks_writer_arg_then_feature_override_then
         captured["model"] = model
         return {}, {}, []
 
+    monkeypatch.setattr(settings, "model_overrides", {})
     with patch.object(advisor, "_run_generate_term", side_effect=fake_run), \
          patch.object(advisor, "get_openai_client", return_value=MagicMock()):
         await advisor.generate_term_content("MoE")

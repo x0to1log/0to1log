@@ -30,11 +30,24 @@ _CLAUDE_MAX_OUTPUT = 128_000
 # Thinking spends max_tokens on Claude too; same 3x headroom the OpenAI
 # reasoning models get in client._apply_reasoning_model_kwargs.
 _THINKING_HEADROOM = 3
+# Floor for the output cap. Budgets sized for OpenAI judges (1,800 x 3) can run
+# out during Claude's thinking and cut the JSON off. Claude bills only the
+# tokens it writes, so a higher cap costs nothing when it is not used.
+_CLAUDE_MIN_OUTPUT = 16_000
 _EFFORTS = frozenset({"low", "medium", "high", "xhigh", "max"})
+# Models that take the server-side refusal fallback (`fallbacks: "default"`):
+# on a safety decline the API reruns the same request on a model it picks by
+# refusal category. Claude Haiku 5.5 has none, so its refusals still raise.
+_SERVER_FALLBACK_MODELS = frozenset({"claude-opus-5-5", "claude-sonnet-5-5"})
+_SERVER_FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 
 class ClaudeRefusalError(RuntimeError):
     """Claude declined the request (stop_reason == "refusal")."""
+
+    def __init__(self, message: str, model: str | None = None) -> None:
+        super().__init__(message)
+        self.model = model
 
 
 def is_claude_model(model: str | None) -> bool:
@@ -82,7 +95,7 @@ def to_anthropic_request(kwargs: dict[str, Any]) -> dict[str, Any]:
     max_tokens = int(kwargs.get("max_completion_tokens") or kwargs.get("max_tokens") or 4096)
     request: dict[str, Any] = {
         "model": kwargs["model"],
-        "max_tokens": min(max_tokens * _THINKING_HEADROOM, _CLAUDE_MAX_OUTPUT),
+        "max_tokens": min(max(max_tokens * _THINKING_HEADROOM, _CLAUDE_MIN_OUTPUT), _CLAUDE_MAX_OUTPUT),
         "messages": [{"role": m["role"], "content": m["content"]} for m in messages if m["role"] != "system"],
     }
     if systems:
@@ -158,7 +171,7 @@ def _repair_invalid_escapes(text: str) -> str:
 
 def to_completion_shape(message: Any, model: str, *, wants_json: bool) -> SimpleNamespace:
     """Reshape an Anthropic Message into the fields our call sites read."""
-    text = "".join(block.text for block in message.content if block.type == "text")
+    text = _reply_text(message)
     if wants_json:
         text = json_payload(text)
     usage = message.usage
@@ -193,17 +206,62 @@ class _RoutedCompletions:
         if not is_claude_model(model):
             return await self._router.openai.chat.completions.create(**kwargs)
         request = to_anthropic_request(kwargs)
-        # Streaming: handbook sections run to tens of thousands of tokens.
-        async with self._router.anthropic.messages.stream(**request) as stream:
-            message = await stream.get_final_message()
+        wants_json = (kwargs.get("response_format") or {}).get("type") in {"json_object", "json_schema"}
+        message = await self._stream(model, request)
+        if wants_json and message.stop_reason == "end_turn" and not _reply_text(message).strip():
+            # 2026-11-13 Opus judge rescore: 2 of 60 replies parsed as empty
+            # ("Expecting value: char 0"); the same request then answered 3/3.
+            # Retry once instead of losing the judge score.
+            logger.warning(
+                "%s returned no text (blocks=%s, output_tokens=%s); retrying once",
+                model, [b.type for b in message.content], getattr(message.usage, "output_tokens", None),
+            )
+            message = await self._stream(model, request)
+        served_by = getattr(message, "model", None)
+        if isinstance(served_by, str) and served_by != model:
+            # Priced at the requested model's rates below; the fallback's differ.
+            logger.warning("%s declined; server-side fallback %s answered", model, served_by)
         if message.stop_reason == "refusal":
             details = getattr(message, "stop_details", None)
             category = getattr(details, "category", None) if details else None
-            raise ClaudeRefusalError(f"{model} refused the request (category={category})")
+            raise ClaudeRefusalError(f"{model} refused the request (category={category})", model=str(model))
         if message.stop_reason == "max_tokens":
             logger.warning("%s hit max_tokens=%d; output may be truncated", model, request["max_tokens"])
-        wants_json = (kwargs.get("response_format") or {}).get("type") in {"json_object", "json_schema"}
-        return to_completion_shape(message, str(model), wants_json=wants_json)
+        shaped = to_completion_shape(message, str(model), wants_json=wants_json)
+        if wants_json:
+            _log_if_unparseable(shaped.choices[0].message.content, message, str(model))
+        return shaped
+
+    async def _stream(self, model: Any, request: dict[str, Any]) -> Any:
+        # Streaming: handbook sections run to tens of thousands of tokens.
+        if model in _SERVER_FALLBACK_MODELS:
+            stream_ctx = self._router.anthropic.beta.messages.stream(
+                **request, betas=[_SERVER_FALLBACK_BETA], fallbacks="default",
+            )
+        else:
+            stream_ctx = self._router.anthropic.messages.stream(**request)
+        async with stream_ctx as stream:
+            return await stream.get_final_message()
+
+
+def _reply_text(message: Any) -> str:
+    return "".join(block.text for block in message.content if block.type == "text")
+
+
+def _log_if_unparseable(text: str, message: Any, model: str) -> None:
+    """Record what a JSON reply looked like when strict parsing fails.
+
+    Callers still run parse_ai_json, which repairs more cases; this only keeps
+    the evidence the 2026-11-13 empty replies did not leave.
+    """
+    try:
+        json.loads(text)
+    except json.JSONDecodeError as exc:
+        logger.warning(
+            "%s JSON reply does not parse strictly (%s); stop=%s blocks=%s len=%d head=%r tail=%r",
+            model, exc.msg, message.stop_reason, [b.type for b in message.content],
+            len(text), text[:160], text[-160:],
+        )
 
 
 class ClaudeRoutingClient:

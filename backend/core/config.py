@@ -22,7 +22,15 @@ class Settings(BaseSettings):
     # not listed uses its role default. Keys and rollout order: vault plan
     # 2026-10-26-claude-api-migration. Like the role defaults, a committed change
     # here is a production switch (Railway sets no model variables).
-    model_overrides: dict[str, str] = {}
+    # Handbook on Claude (2026-11-13, Amy): writer Sonnet, judge/critique Opus
+    # (a different model from the writer, so it does not grade its own drafts),
+    # light calls Haiku. The 55/70 generation gate was set on the gpt-6.1-sol
+    # scale; recalibrate it with the warmup-30 Opus rescore before relying on it.
+    model_overrides: dict[str, str] = {
+        "handbook.writer": "claude-sonnet-5-5",
+        "handbook.judge": "claude-opus-5-5",
+        "handbook.light": "claude-haiku-5-5",
+    }
     pinecone_api_key: str = ""
     pinecone_index_name: str = "news-posts"
     embedding_model: str = "text-embedding-3-small"
