@@ -4049,6 +4049,17 @@ async def regenerate_weekly_persona(
         raise
 
 
+def _final_run_status(total_posts: int, errors: list[str]) -> str:
+    """Final pipeline_runs status, by the daily rule: any error is a failure.
+
+    pipeline_runs.status only allows running/success/failed. Weekly used to
+    write "partial" when posts saved with errors, which the CHECK rejected, so
+    W43 (2026-10-26, published without beginner bodies) was recorded as a
+    constraint violation instead of its real error.
+    """
+    return "success" if total_posts > 0 and not errors else "failed"
+
+
 async def run_weekly_pipeline(
     week_id: str | None = None,
 ) -> PipelineResult:
@@ -4533,7 +4544,7 @@ async def run_weekly_pipeline(
                 logger.warning("Weekly email failed: %s", e)
                 all_errors.append(f"Email: {e}")
 
-        status = "success" if total_posts > 0 and not all_errors else "partial" if total_posts > 0 else "failed"
+        status = _final_run_status(total_posts, all_errors)
         supabase.table("pipeline_runs").update({
             "status": status,
             "finished_at": datetime.now(timezone.utc).isoformat(),
