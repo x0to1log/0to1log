@@ -3610,10 +3610,13 @@ async def _generate_weekly_persona_content(
         en_usage = extract_usage_metrics(en_response, model, requested_service_tier="flex")
         cumulative_usage.update(merge_usage_metrics(cumulative_usage, en_usage))
         en_data = parse_ai_json(en_raw, f"weekly-{persona}-en")
+        en_chars = len((en_data.get("en") or "").strip())
 
+        # An empty body is a failed stage, not a 0-char success (2026-W43).
         await _log_stage(
-            supabase, run_id, f"weekly:{persona}:en", "success", t_en,
-            output_summary=f"en={len(en_data.get('en', ''))}c",
+            supabase, run_id, f"weekly:{persona}:en", "success" if en_chars else "failed", t_en,
+            output_summary=f"en={en_chars}c",
+            error_message=None if en_chars else "empty content",
             usage=en_usage, post_type="weekly",
         )
     except Exception as e:
