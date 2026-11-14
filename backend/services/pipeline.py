@@ -1828,6 +1828,10 @@ async def run_daily_pipeline(
             recent_headlines_by_category=recent_headlines_by_category,
         )
         cumulative_usage = merge_usage_metrics(cumulative_usage, classify_usage)
+        # Read before the fallbacks below replace `classification`.
+        classify_llm_failed = bool(
+            classification.classification_debug.get("llm_call_failed")
+        )
 
         # Fallback: if aggressive dedup rejected every candidate, retry without
         # the ALREADY COVERED block. Slow news days + overlapping time windows
@@ -1879,6 +1883,15 @@ async def run_daily_pipeline(
             )
         classify_usage = merge_usage_metrics(classify_usage, category_repair_usage)
         cumulative_usage = merge_usage_metrics(cumulative_usage, category_repair_usage)
+
+        # How the stories were selected. Saved in the classify checkpoint and
+        # read by selection_block_reason(), here and in a later write-rerun.
+        classify_flags: dict[str, Any] = {
+            "llm_call_failed": classify_llm_failed,
+            "fallback_used": classify_fallback_used,
+            "emergency_fallback_used": classify_emergency_used,
+            "category_starvation_repair": category_repair_meta,
+        }
 
         # Code-level dedup safety net: even if the LLM ignored the ALREADY COVERED
         # block, drop candidates whose entity tokens (company + product) overlap
@@ -1947,9 +1960,7 @@ async def run_daily_pipeline(
         _save_checkpoint(supabase, run_id, "classify", {
             "research_picks": [c.model_dump() for c in classification.research_picks],
             "business_picks": [c.model_dump() for c in classification.business_picks],
-            "fallback_used": classify_fallback_used,
-            "emergency_fallback_used": classify_emergency_used,
-            "category_starvation_repair": category_repair_meta,
+            **classify_flags,
             "classification_debug": classification.classification_debug,
         })
 
@@ -2122,6 +2133,7 @@ async def run_daily_pipeline(
                     run_id=run_id,
                     enriched_map=enriched_map,
                     auto_publish=auto_publish,
+                    publish_block_reason=selection_block_reason(digest_type, classify_flags),
                 )
             )
 
@@ -2991,6 +3003,11 @@ async def rerun_pipeline_stage(
                 _build_personas_and_frontload_from_rows(existing_rows)
             )
 
+        # A rerun keeps the selection the source run made, so it inherits that
+        # run's fallback flags (the 09:00 recovery reruns write with
+        # auto_publish=True).
+        classify_flags = _load_checkpoint(supabase, source_run_id, "classify") or {}
+
         # --- Always run write (digest generation) ---
         digest_tasks = []
         for digest_type, classified_items in [
@@ -3034,6 +3051,7 @@ async def rerun_pipeline_stage(
                     run_id=run_id,
                     enriched_map=enriched_map,
                     auto_publish=auto_publish,
+                    publish_block_reason=selection_block_reason(digest_type, classify_flags),
                     **digest_kwargs,
                 )
             )
@@ -4637,5 +4655,6 @@ from services.pipeline_quality import (  # noqa: E402, F401
     _find_digest_blockers,
     _normalize_quality_issue,
     _normalize_scope,
+    selection_block_reason,
     validate_citation_urls,
 )

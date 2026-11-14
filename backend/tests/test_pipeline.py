@@ -232,7 +232,7 @@ async def test_run_daily_pipeline_happy_path():
          patch("services.pipeline.rank_classified", new_callable=AsyncMock, side_effect=[(SAMPLE_MERGED_RESULT.research, EMPTY_USAGE), (SAMPLE_MERGED_RESULT.business, EMPTY_USAGE)]), \
          patch("services.pipeline.enrich_sources", new_callable=AsyncMock, return_value={}), \
          patch("services.pipeline._fetch_handbook_slugs", return_value=[]), \
-         patch("services.pipeline._generate_digest", new_callable=AsyncMock, return_value=(2, [], EMPTY_USAGE)):
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock, return_value=(2, [], EMPTY_USAGE)) as gen_mock:
         from services.pipeline import run_daily_pipeline
 
         result = await run_daily_pipeline()
@@ -240,6 +240,10 @@ async def test_run_daily_pipeline_happy_path():
     assert result.posts_created == 4
     assert result.errors == []
     assert result.batch_id
+    # A normal LLM selection carries no auto-publish block.
+    assert gen_mock.await_count == 2
+    for call in gen_mock.await_args_list:
+        assert call.kwargs["publish_block_reason"] is None
 
 
 @pytest.mark.asyncio
@@ -335,10 +339,15 @@ async def test_pipeline_uses_emergency_classification_after_zero_pick_retry():
          patch("services.pipeline.rank_classified", new_callable=AsyncMock, side_effect=[(SAMPLE_MERGED_RESULT.research, EMPTY_USAGE), (SAMPLE_MERGED_RESULT.business, EMPTY_USAGE)]), \
          patch("services.pipeline.enrich_sources", new_callable=AsyncMock, return_value={}), \
          patch("services.pipeline._fetch_handbook_slugs", return_value=[]), \
-         patch("services.pipeline._generate_digest", new_callable=AsyncMock, return_value=(2, [], EMPTY_USAGE)):
+         patch("services.pipeline._generate_digest", new_callable=AsyncMock, return_value=(2, [], EMPTY_USAGE)) as gen_mock:
         from services.pipeline import run_daily_pipeline
 
         result = await run_daily_pipeline()
+
+    # Rule-picked stories still become drafts, but must not auto-publish.
+    assert gen_mock.await_count == 2
+    for call in gen_mock.await_args_list:
+        assert "emergency" in call.kwargs["publish_block_reason"]
 
     emergency_classification = merge_mock.await_args.args[0]
     assert classify_mock.await_count == 2
