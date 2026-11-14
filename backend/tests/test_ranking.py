@@ -304,3 +304,21 @@ async def test_classify_candidates_marks_llm_failure_in_debug():
     assert result.research_picks == [] and result.business_picks == []
     assert result.classification_debug["llm_call_failed"] is True
     assert "boom" in result.classification_debug["error"]
+
+
+def test_classification_candidate_shows_published_date():
+    from models.news_pipeline import NewsCandidate
+    from services.agents.ranking import _format_classification_candidate
+
+    dated = NewsCandidate(title="A", url="https://example.com/a", published_at="2026-11-13")
+    undated = NewsCandidate(title="B", url="https://example.com/b")
+
+    assert "Published: 2026-11-13" in _format_classification_candidate(1, dated)
+    assert "Published: unknown" in _format_classification_candidate(2, undated)
+
+
+def test_classification_date_block_names_the_digest_date():
+    from services.agents.ranking import _classification_date_block
+
+    assert "Digest date: 2026-11-14 (KST)" in _classification_date_block("2026-11-14")
+    assert _classification_date_block(None) == ""

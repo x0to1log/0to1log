@@ -345,6 +345,7 @@ def _format_classification_candidate(index: int, candidate: NewsCandidate) -> st
     return (
         f"[{index}] {candidate.title}\n"
         f"    URL: {candidate.url}\n"
+        f"    Published: {candidate.published_at or 'unknown'}\n"
         f"    Source: {candidate.source}\n"
         f"    Source tier: {candidate.source_tier or 'unknown'}\n"
         f"    Source kind: {candidate.source_kind or 'unknown'}\n"
@@ -535,10 +536,23 @@ async def _retranslate_quotes_ko_async(quotes_en: list[str]) -> tuple[list[str],
     return [str(q) if isinstance(q, str) else "" for q in translated], usage
 
 
+def _classification_date_block(digest_date: str | None) -> str:
+    """Date line for the classify prompt. The freshness rule says "relative to
+    today", and without this the model uses its own idea of today's date."""
+    if not digest_date:
+        return ""
+    return (
+        f"Digest date: {digest_date} (KST). \"Today\" in the rules means this date.\n"
+        "Each candidate's Published field is its source date. \"unknown\" means the "
+        "collector found no date; it does not mean the item is old.\n\n"
+    )
+
+
 async def classify_candidates(
     candidates: list[NewsCandidate],
     recent_headlines: list[str] | None = None,
     recent_headlines_by_category: dict[str, list[str]] | None = None,
+    digest_date: str | None = None,
 ) -> tuple[ClassificationResult, dict[str, Any], str]:
     """Classify news candidates into research/business subcategories.
 
@@ -556,7 +570,7 @@ async def classify_candidates(
     candidate_lines = []
     for i, c in enumerate(candidates):
         candidate_lines.append(_format_classification_candidate(i + 1, c))
-    user_prompt = "\n\n".join(candidate_lines)
+    user_prompt = _classification_date_block(digest_date) + "\n\n".join(candidate_lines)
 
     # Add recent headlines for event dedup. Label MUST match the system prompt rule
     # so the LLM connects the rule to the data block.
