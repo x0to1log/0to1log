@@ -1,0 +1,166 @@
+[
+ {
+  "term": "Constrained Decoding",
+  "model": "claude-sonnet-5-5",
+  "error": "",
+  "seconds": 293,
+  "cost_usd": 1.2485,
+  "input_tokens": 327565,
+  "output_tokens": 41011,
+  "cached_tokens": 80997,
+  "advanced": 82,
+  "basic": 78,
+  "structural_penalty": 0,
+  "structural_warnings": [],
+  "gate": "pass",
+  "gate_reasons": [],
+  "chars": {
+   "definition_en": 321,
+   "definition_ko": 133,
+   "summary_en": 507,
+   "summary_ko": 214,
+   "body_basic_en": 6402,
+   "body_basic_ko": 2883,
+   "body_advanced_en": 12371,
+   "body_advanced_ko": 7238
+  },
+  "warnings": [],
+  "pipeline_status": [
+   "draft",
+   ""
+  ],
+  "reviewer_inputs": [
+   {
+    "call": "_self_critique_basic",
+    "term": "Constrained Decoding",
+    "ko_chars": 2809,
+    "en_chars": 6389,
+    "reference_chars": 8094,
+    "result": [
+     true,
+     false,
+     71,
+     78
+    ]
+   },
+   {
+    "call": "_self_critique_advanced",
+    "term": "Constrained Decoding",
+    "draft_chars": 7266,
+    "reference_chars": 97196,
+    "result": [
+     false,
+     78
+    ]
+   },
+   {
+    "call": "_self_critique_advanced",
+    "term": "Constrained Decoding",
+    "draft_chars": 12285,
+    "reference_chars": 97196,
+    "result": [
+     false,
+     82
+    ]
+   },
+   {
+    "call": "_check_handbook_quality",
+    "term": "Constrained Decoding",
+    "content_chars": 19644,
+    "result": [
+     82
+    ]
+   },
+   {
+    "call": "_check_basic_quality",
+    "term": "Constrained Decoding",
+    "content_chars": 9320,
+    "result": [
+     78
+    ]
+   }
+  ]
+ },
+ {
+  "term": "Label Smoothing",
+  "model": "claude-sonnet-5-5",
+  "error": "",
+  "seconds": 390,
+  "cost_usd": 1.673,
+  "input_tokens": 447792,
+  "output_tokens": 54324,
+  "cached_tokens": 80611,
+  "advanced": 81,
+  "basic": 79,
+  "structural_penalty": 0,
+  "structural_warnings": [],
+  "gate": "pass",
+  "gate_reasons": [],
+  "chars": {
+   "definition_en": 305,
+   "definition_ko": 123,
+   "summary_en": 596,
+   "summary_ko": 264,
+   "body_basic_en": 6774,
+   "body_basic_ko": 3024,
+   "body_advanced_en": 10408,
+   "body_advanced_ko": 8009
+  },
+  "warnings": [],
+  "pipeline_status": [
+   "draft",
+   ""
+  ],
+  "reviewer_inputs": [
+   {
+    "call": "_self_critique_basic",
+    "term": "Label Smoothing",
+    "ko_chars": 3030,
+    "en_chars": 6268,
+    "reference_chars": 9719,
+    "result": [
+     true,
+     true,
+     66,
+     72
+    ]
+   },
+   {
+    "call": "_self_critique_advanced",
+    "term": "Label Smoothing",
+    "draft_chars": 6209,
+    "reference_chars": 102383,
+    "result": [
+     true,
+     72
+    ]
+   },
+   {
+    "call": "_self_critique_advanced",
+    "term": "Label Smoothing",
+    "draft_chars": 10324,
+    "reference_chars": 102383,
+    "result": [
+     false,
+     78
+    ]
+   },
+   {
+    "call": "_check_handbook_quality",
+    "term": "Label Smoothing",
+    "content_chars": 18452,
+    "result": [
+     81
+    ]
+   },
+   {
+    "call": "_check_basic_quality",
+    "term": "Label Smoothing",
+    "content_chars": 9833,
+    "result": [
+     79
+    ]
+   }
+  ]
+ }
+]
