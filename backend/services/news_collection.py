@@ -906,6 +906,10 @@ async def _collect_hf_papers(target_date: str | None = None) -> list[NewsCandida
                 snippet=summary[:300],
                 source="hf_papers",
                 raw_content=summary,
+                # The day Daily Papers featured it, not the arXiv submission
+                # date (`publishedAt`), which is often one to two weeks older
+                # and would trip the 7-day stale filter.
+                published_at=_date_string(paper_data.get("submittedOnDailyAt")),
             ))
 
         logger.info("Collected %d papers from HuggingFace Daily Papers", len(candidates))

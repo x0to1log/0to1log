@@ -831,3 +831,47 @@ def test_date_string_keeps_existing_formats_and_rejects_non_dates():
     assert _date_string(None) == ""
     assert _date_string("not a date") == ""
     assert _date_string("Breaking: lab ships model") == ""
+
+
+def _hf_client(papers: list[dict]):
+    response = MagicMock()
+    response.json.return_value = papers
+    client = MagicMock()
+    client.get = AsyncMock(return_value=response)
+    context = MagicMock()
+    context.__aenter__ = AsyncMock(return_value=client)
+    context.__aexit__ = AsyncMock(return_value=False)
+    return MagicMock(return_value=context)
+
+
+@pytest.mark.asyncio
+async def test_hf_papers_use_the_daily_selection_date_as_published_at():
+    """A paper becomes news on the day Daily Papers features it. Its arXiv
+    submission date is often a week older and would trip the stale filter."""
+    from services.news_collection import _collect_hf_papers
+
+    papers = [
+        {
+            "title": "Featured paper",
+            "publishedAt": "2026-11-06T19:00:00.000Z",
+            "paper": {
+                "id": "2611.01234",
+                "summary": "Abstract.",
+                "publishedAt": "2026-11-07T00:00:00.000Z",
+                "submittedOnDailyAt": "2026-11-13T00:00:00.000Z",
+            },
+        },
+        {
+            "title": "Paper without a selection date",
+            "paper": {
+                "id": "2611.05678",
+                "summary": "Abstract.",
+                "publishedAt": "2026-11-07T00:00:00.000Z",
+                "submittedOnDailyAt": None,
+            },
+        },
+    ]
+    with patch("services.news_collection.httpx.AsyncClient", _hf_client(papers)):
+        candidates = await _collect_hf_papers()
+
+    assert [c.published_at for c in candidates] == ["2026-11-13", ""]
