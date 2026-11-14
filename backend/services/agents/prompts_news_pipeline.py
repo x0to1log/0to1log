@@ -3184,8 +3184,9 @@ Pick exactly 1 lead (rarely 2 if truly equal importance).
 Prefer 2-4 kept stories total. Keep a 5th story only when it has strong evidence, a fresh event, and distinct reader value.
 Put weak, stale, duplicate, or thinly supported items in `omit` with a short reason.
 Order supporting by importance (most important first).
+Refer to each item by the number in its square brackets, as an integer.
 
-{{"lead": ["url1"], "supporting": ["url2", "url3"], "omit": [{{"url": "url4", "reason": "weak why-now"}}]}}"""
+{{"lead": [2], "supporting": [4, 1], "omit": [{{"id": 3, "reason": "weak why-now"}}]}}"""
 
 # ---------------------------------------------------------------------------
 # Community Summarizer

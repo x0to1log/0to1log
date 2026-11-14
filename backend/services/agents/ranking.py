@@ -878,7 +878,9 @@ async def rank_classified(
                         {"role": "system", "content": prompt},
                         {"role": "user", "content": "Rank these items."},
                     ],
-                    max_tokens=256,
+                    # Room for five omit reasons: a truncated reply fails to
+                    # parse and falls back to classifier order.
+                    max_tokens=512,
                     response_format={"type": "json_object"},
                     service_tier="flex",
                     prompt_cache_key=f"rank-{category}",
@@ -970,6 +972,13 @@ def _resolve_ranking_refs(refs: Any, groups: list[ClassifiedGroup]) -> list[int]
     seen: set[int] = set()
     for raw_ref in refs:
         ref = _ranking_ref_value(raw_ref)
+        if isinstance(ref, bool):
+            ref = None
+        if isinstance(ref, str):
+            # The prompt asks for integers, but "2" and "[2]" mean the same item.
+            numeric = re.fullmatch(r"\[?\s*(\d+)\s*\]?", ref.strip())
+            if numeric:
+                ref = int(numeric.group(1))
         idx: int | None = None
         if isinstance(ref, int):
             candidate = ref - 1
@@ -985,7 +994,10 @@ def _resolve_ranking_refs(refs: Any, groups: list[ClassifiedGroup]) -> list[int]
                 ):
                     idx = group_idx
                     break
-        if idx is None or idx in seen:
+        if idx is None:
+            logger.warning("Ranking ref did not resolve to a group: %r", raw_ref)
+            continue
+        if idx in seen:
             continue
         seen.add(idx)
         resolved.append(idx)
