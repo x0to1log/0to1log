@@ -1140,6 +1140,7 @@ async def _generate_digest(
     preserved_frontload: dict[str, Any] | None = None,
     preserved_rows_by_locale: dict[str, dict[str, Any]] | None = None,
     preserve_existing_fields: bool = False,
+    publish_block_reason: str | None = None,
 ) -> tuple[int, list[str], dict[str, Any]]:
     """Generate a daily digest post for one category (research or business).
 
@@ -1871,6 +1872,21 @@ async def _generate_digest(
             "quality_version": "v1",
         }
 
+    # The stories were selected by a fallback path. Block with a named cap
+    # rather than auto_publish=False: the promote cron skips ineligible drafts
+    # silently, while a capped draft triggers the draft alert.
+    if publish_block_reason:
+        from services.pipeline_quality import SELECTION_FALLBACK_CAP
+
+        quality_meta["quality_caps_applied"] = [
+            *quality_meta.get("quality_caps_applied", []),
+            SELECTION_FALLBACK_CAP,
+        ]
+        quality_meta["publish_block_reason"] = publish_block_reason
+        logger.warning(
+            "Blocking auto-publish for %s digest: %s", digest_type, publish_block_reason,
+        )
+
     # Phase 2 — URL strict allowlist: force draft if LLM cited URLs outside fact_pack.
     # _check_digest_quality sets these flags on quality_meta; honour them here so
     # caller-provided auto_publish=True cannot override a validation failure.
@@ -2103,6 +2119,7 @@ async def _generate_digest(
                 "structural_penalty": quality_meta.get("structural_penalty", 0),
                 "structural_warnings": quality_meta.get("structural_warnings", []),
                 "auto_publish_eligible": auto_publish,
+                "publish_block_reason": quality_meta.get("publish_block_reason"),
                 # Phase 2 — surface URL validation outcome to DB for admin visibility
                 "url_validation_failed": bool(quality_meta.get("url_validation_failed", False)),
                 "url_validation_failures": quality_meta.get("url_validation_failures", []),
@@ -2237,6 +2254,8 @@ async def _generate_digest(
             }
             if "auto_publish_eligible" not in merged_fact_pack:
                 merged_fact_pack["auto_publish_eligible"] = auto_publish
+            if quality_meta.get("publish_block_reason"):
+                merged_fact_pack["publish_block_reason"] = quality_meta["publish_block_reason"]
 
             patch_row: dict[str, Any] = {
                 "quality_score": quality_score,

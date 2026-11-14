@@ -1506,3 +1506,66 @@ async def test_quiz_verification_failure_keeps_generated_quiz():
 
     assert len(messages) == 2
     assert sum(len(locs) for locs in quizzes.values()) == 6
+
+
+def _three_persona_responses() -> list:
+    return [
+        _mock_openai_response({
+            "en": f"## Research Papers\n\n### {label}\n\nBody [1](https://example.com/story)",
+            "ko": f"## Research Papers\n\n### {label_ko}\n\n본문 [1](https://example.com/story)",
+            "headline": "H", "headline_ko": "헤",
+            "excerpt": "E", "excerpt_ko": "요",
+            "sources": [{"url": "https://example.com/story", "title": "S"}],
+        })
+        for label, label_ko in (("Expert", "전문가"), ("Learner", "학습자"))
+    ] + [_mock_beginner_response()]
+
+
+def _clean_quality_meta() -> dict:
+    return {
+        "score": 95, "quality_score": 95, "quality_version": "v2",
+        "quality_breakdown": {}, "quality_issues": [], "quality_caps_applied": [],
+        "structural_penalty": 0, "structural_warnings": [],
+        "url_validation_failed": False,
+    }
+
+
+@pytest.mark.asyncio
+async def test_generate_digest_records_selection_fallback_cap():
+    """A digest whose stories came from a fallback selection keeps its
+    eligibility flag but carries the blocking cap, so the promote cron keeps it
+    as a draft and sends the alert instead of skipping it silently."""
+    from services.pipeline import _generate_digest
+
+    supabase = _CaptureSupabase()
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_three_persona_responses())
+
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
+         patch("services.pipeline_quality._check_digest_quality",
+               new_callable=AsyncMock, return_value=_clean_quality_meta()):
+
+        posts_created, errors, _usage = await _generate_digest(
+            classified=_sample_group(),
+            digest_type="research",
+            batch_id="2026-04-15",
+            handbook_slugs=[],
+            raw_content_map={"https://example.com/story": "Source body"},
+            community_summary_map={},
+            supabase=supabase,
+            run_id="run-1",
+            enriched_map={},
+            auto_publish=True,
+            publish_block_reason="stories picked by rule-based emergency classification",
+        )
+
+    assert posts_created == 2
+    assert errors == []
+    for _table, payload in supabase.saved_rows:
+        fact_pack = payload["fact_pack"]
+        assert "selection_fallback_block" in fact_pack["quality_caps_applied"]
+        assert fact_pack["publish_block_reason"].startswith("stories picked")
+        assert fact_pack["auto_publish_eligible"] is True
