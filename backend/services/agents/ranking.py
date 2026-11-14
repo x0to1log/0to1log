@@ -595,18 +595,21 @@ async def classify_candidates(
 
     for attempt in range(MAX_RETRIES + 1):
         try:
-            response = await client.chat.completions.create(
-                **build_completion_kwargs(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": CLASSIFICATION_SYSTEM_PROMPT},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    max_tokens=4096,
-                    response_format={"type": "json_object"},
-                    service_tier="flex",
-                    prompt_cache_key="classify-candidates",
-                )
+            create_kwargs = build_completion_kwargs(
+                model=model,
+                messages=[
+                    {"role": "system", "content": CLASSIFICATION_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_tokens=4096,
+                response_format={"type": "json_object"},
+                service_tier="flex",
+                prompt_cache_key="classify-candidates",
+            )
+            # Backs off on 429/5xx; this loop retried immediately, so a short
+            # flex capacity burst used up all attempts.
+            response = await with_flex_retry(
+                lambda: client.chat.completions.create(**create_kwargs)
             )
             raw = response.choices[0].message.content or ""
             data = parse_ai_json(raw, "Classification")
@@ -616,7 +619,12 @@ async def classify_candidates(
             logger.warning("Classification attempt %d failed: %s", attempt + 1, e)
             if attempt == MAX_RETRIES:
                 logger.error("Classification failed after %d retries", MAX_RETRIES + 1)
-                return ClassificationResult(), usage, user_prompt
+                # Mark the failure: an empty result alone reads as "the model
+                # picked nothing" and sends the caller down the dedup fallbacks.
+                failed = ClassificationResult(
+                    classification_debug={"llm_call_failed": True, "error": str(e)[:200]},
+                )
+                return failed, usage, user_prompt
             continue
 
     url_map = {c.url: c for c in candidates}

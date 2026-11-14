@@ -284,3 +284,23 @@ async def test_classify_candidates_empty_list_returns_empty_result():
     assert result.business_picks == []
     assert usage == {}
     assert user_prompt == ""
+
+
+@pytest.mark.asyncio
+async def test_classify_candidates_marks_llm_failure_in_debug():
+    """A failed call must not look like 'the model picked nothing'."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from models.news_pipeline import NewsCandidate
+    from services.agents.ranking import classify_candidates
+
+    fake_client = MagicMock()
+    fake_client.chat.completions.create = AsyncMock(side_effect=RuntimeError("boom"))
+    candidates = [NewsCandidate(title="A paper", url="https://example.com/a")]
+
+    with patch("services.agents.ranking.get_openai_client", return_value=fake_client):
+        result, _usage, _prompt = await classify_candidates(candidates)
+
+    assert result.research_picks == [] and result.business_picks == []
+    assert result.classification_debug["llm_call_failed"] is True
+    assert "boom" in result.classification_debug["error"]
