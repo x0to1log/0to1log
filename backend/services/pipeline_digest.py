@@ -1402,7 +1402,6 @@ async def _generate_digest(
     digest_focus_items: list[str] = _frontload_list("focus_items")
     digest_focus_items_ko: list[str] = _frontload_list("focus_items_ko")
     persona_quizzes: dict[str, dict[str, dict[str, Any]]] = {}
-    persona_prompts: dict[str, str] = {}
     # persona -> {"en", "ko", "citations"} as the writer returned them
     raw_outputs: dict[str, dict[str, Any]] = {}
 
@@ -1411,7 +1410,6 @@ async def _generate_digest(
     for persona_name in target_personas:
         t_p = time.monotonic()
         system_prompt = get_digest_prompt(digest_type, persona_name, handbook_slugs, batch_date=batch_id)
-        persona_prompts[persona_name] = system_prompt
 
         writer_messages = [
             {"role": "system", "content": system_prompt},
