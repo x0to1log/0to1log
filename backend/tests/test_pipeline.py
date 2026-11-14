@@ -680,3 +680,109 @@ async def test_extract_and_create_handbook_terms_passes_category_and_reason_to_g
             "reason": "Article frames it as a transform class for round-trip restoration",
         }
     ]
+
+
+# --- Handbook: status of a generated term, and linking its quality scores ---
+
+def test_generated_term_is_queued_when_generation_gate_is_blocked():
+    from services.pipeline import _status_for_generated_term
+
+    gate = {"status": "blocked", "reasons": ["advanced_quality_below_min"]}
+    # The warning text the advisor actually emits; it used to match no queue trigger.
+    warnings = ["Generation gate: blocked (advanced_quality_below_min)", "Advanced quality: 41/100 (D) — regen recommended"]
+
+    status, reason = _status_for_generated_term(warnings, gate)
+
+    assert status == "queued"
+    assert "advanced_quality_below_min" in reason
+
+
+def test_generated_term_is_queued_when_a_judge_did_not_answer():
+    from services.pipeline import _status_for_generated_term
+
+    gate = {"status": "blocked", "reasons": ["quality_evaluation_unavailable"], "judges_missing": ["advanced"]}
+
+    assert _status_for_generated_term([], gate)[0] == "queued"
+
+
+def test_generated_term_stays_draft_on_pass_and_on_review_required():
+    from services.pipeline import _status_for_generated_term
+
+    assert _status_for_generated_term([], {"status": "pass", "reasons": []}) == ("draft", "")
+    review = {"status": "review_required", "reasons": ["advanced_quality_below_review_threshold"]}
+    assert _status_for_generated_term(["Advanced quality: 64/100 (C) — review recommended"], review) == ("draft", "")
+    # No gate at all (quality check skipped): nothing to act on.
+    assert _status_for_generated_term([], None) == ("draft", "")
+
+
+def test_generated_term_is_still_queued_by_content_warnings():
+    from services.pipeline import _status_for_generated_term
+
+    status, reason = _status_for_generated_term(
+        ["Unverified entities detected: FooBench"], {"status": "pass", "reasons": []},
+    )
+
+    assert (status, reason) == ("queued", "Unverified entities detected: FooBench")
+
+
+def test_quality_scores_are_linked_by_the_slug_generation_recorded():
+    from services.pipeline import _link_quality_scores_to_term
+
+    calls = []
+
+    class _Query:
+        def update(self, payload):
+            calls.append(("update", payload))
+            return self
+
+        def eq(self, column, value):
+            calls.append(("eq", column, value))
+            return self
+
+        def is_(self, column, value):
+            calls.append(("is_", column, value))
+            return self
+
+        def execute(self):
+            return MagicMock(data=[])
+
+    supabase = MagicMock()
+    supabase.table.return_value = _Query()
+
+    # Generation records "a-b-testing"; the term's own slug is "ab-testing".
+    _link_quality_scores_to_term(supabase, "A/B Testing", "ab-testing", "term-1")
+
+    supabase.table.assert_called_once_with("handbook_quality_scores")
+    assert calls == [
+        ("update", {"term_id": "term-1", "term_slug": "ab-testing"}),
+        ("eq", "term_slug", "a-b-testing"),
+        ("is_", "term_id", "null"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_extract_and_create_handbook_terms_queues_term_blocked_by_generation_gate():
+    from services.pipeline import _extract_and_create_handbook_terms
+
+    supabase = _HandbookInsertCaptureSupabase()
+    extracted_terms = [{"term": "Function Calling", "korean_name": "함수 호출", "category": "llm-genai", "confidence": "high"}]
+    generated_content = {
+        "korean_name": "함수 호출",
+        "body_basic_ko": "본문",
+        "generation_gate": {"status": "blocked", "reasons": ["basic_quality_below_min"]},
+        "_warnings": ["Generation gate: blocked (basic_quality_below_min)", "Basic quality: 48/100 (D) — regen recommended"],
+    }
+
+    with patch("services.pipeline.extract_terms_from_content", new=AsyncMock(return_value=(extracted_terms, EMPTY_USAGE))), \
+         patch("services.pipeline.generate_term_content", new=AsyncMock(return_value=(generated_content, EMPTY_USAGE))), \
+         patch("services.pipeline.gate_candidate_terms", new=AsyncMock(return_value=[{"term": "Function Calling", "decision": "accept"}])), \
+         patch("services.pipeline._log_stage", new=AsyncMock()):
+        created, errors = await _extract_and_create_handbook_terms(
+            article_texts=["Function Calling helps models choose tools."],
+            supabase=supabase,
+            run_id="run-1",
+        )
+
+    assert (created, errors) == (1, [])
+    assert supabase.inserted_rows[0]["status"] == "queued"
+    assert supabase.inserted_rows[0]["body_basic_ko"] == "본문"

@@ -3971,6 +3971,17 @@ def _extract_code_section_text(section_data: dict, locale: str) -> str:
     return (section_data.get(f"adv_{locale}_3_code") or "").strip()
 
 
+def quality_score_slug(term: str) -> str:
+    """`handbook_quality_scores.term_slug` for a term that has no DB row yet.
+
+    Generation scores a term before the caller inserts it, so the rows carry
+    this slug and no term_id. It is not always the term's `handbook_terms.slug`
+    ("A/B Testing" gives a-b-testing here, ab-testing there), so callers that
+    link the rows afterwards must look them up with this function.
+    """
+    return re.sub(r"[^a-z0-9]+", "-", str(term or "").lower().strip()).strip("-")
+
+
 def _normalize_quality_score_value(value: object) -> int | None:
     if value is None:
         return None
@@ -4008,8 +4019,7 @@ def _record_handbook_quality_scores(supabase, data: dict, source: str = "manual"
 
     term_slug = str(data.get("slug") or "").strip()
     if not term_slug:
-        term = str(data.get("term") or "").lower().strip()
-        term_slug = re.sub(r"[^a-z0-9]+", "-", term).strip("-")
+        term_slug = quality_score_slug(str(data.get("term") or ""))
     if not term_slug:
         return 0
 
@@ -5087,8 +5097,7 @@ async def _run_generate_term(
     # Record to dedicated quality scores table
     if supabase:
         try:
-            import re as _re
-            term_slug = _re.sub(r'[^a-z0-9]+', '-', req.term.lower().strip()).strip('-')
+            term_slug = quality_score_slug(req.term)
 
             # Resolve actual UUID — batch scripts use fake term_ids like "batch-regen-xxx"
             actual_id = None

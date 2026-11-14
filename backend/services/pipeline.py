@@ -23,6 +23,7 @@ from services.agents.advisor import (
     extract_terms_from_content,
     gate_candidate_terms,
     generate_term_content,
+    quality_score_slug,
 )
 from services.agents.client import compat_create_kwargs, extract_usage_metrics, get_openai_client, merge_usage_metrics, parse_ai_json, with_flex_retry
 from services.agents.ranking import (
@@ -1205,6 +1206,40 @@ def handbook_term_shape_filter(term_info: dict) -> tuple[list[str] | None, str]:
     return [primary_cat] + [c for c in secondary if c in HANDBOOK_VALID_CATEGORIES and c != primary_cat], ""
 
 
+# Warnings that send a generated term to manual review instead of the draft list.
+_HANDBOOK_QUEUE_WARNING_TRIGGERS = ("unverified entit", "section", "empty")
+
+
+def _status_for_generated_term(warnings: list[str], generation_gate: dict | None) -> tuple[str, str]:
+    """('draft' | 'queued', reason) for a term the pipeline just generated.
+
+    A blocked generation gate queues the term: a score under the minimum, a
+    term type the classifier could not settle, or a judge that did not answer.
+    `review_required` (a score of 55-69) stays a draft: drafts are reviewed
+    before publishing anyway, and the 2026-11-14 judge validation found no
+    evidence that a score near 70 tells a publishable term from a rejected one.
+    """
+    gate = generation_gate or {}
+    if gate.get("status") == "blocked":
+        return "queued", "generation gate blocked: " + ", ".join(gate.get("reasons") or ["no reason given"])
+    for warning in warnings:
+        if any(trigger in warning.lower() for trigger in _HANDBOOK_QUEUE_WARNING_TRIGGERS):
+            return "queued", warning
+    return "draft", ""
+
+
+def _link_quality_scores_to_term(supabase, term_name: str, slug: str, term_id: str) -> None:
+    """Attach the score rows written during generation to the term row just inserted.
+
+    Those rows were written before the term existed, keyed by
+    `quality_score_slug(term)`. Give them the term's id and its real slug, which
+    is what later readers (rescore, admin) look them up by.
+    """
+    supabase.table("handbook_quality_scores").update(
+        {"term_id": term_id, "term_slug": slug}
+    ).eq("term_slug", quality_score_slug(term_name)).is_("term_id", "null").execute()
+
+
 async def _extract_and_create_handbook_terms(
     article_texts: list[str],
     supabase,
@@ -1510,11 +1545,27 @@ async def _extract_and_create_handbook_terms(
 
             # Extract quality warnings propagated from advisor
             warnings = content_data.pop("_warnings", [])
-            _queue_triggers = ("quality score", "unverified entit", "section", "empty", "needs_review")
-            term_status = "queued" if any(
-                any(trigger in w.lower() for trigger in _queue_triggers)
-                for w in warnings
-            ) else "draft"
+            generation_gate = content_data.get("generation_gate")
+            term_status, queue_reason = _status_for_generated_term(warnings, generation_gate)
+            if term_status == "queued":
+                logger.info("Queuing term '%s' for quality review: %s", term_name, queue_reason)
+                try:
+                    supabase.table("pipeline_logs").insert({
+                        "run_id": run_id,
+                        "pipeline_type": "handbook.quality_gate",
+                        "status": "queued",
+                        "debug_meta": {
+                            "event": "handbook_term_quality_queued",
+                            "term": term_name,
+                            "reason": queue_reason,
+                            "generation_gate": generation_gate,
+                        },
+                    }).execute()
+                except Exception as _log_err:
+                    logger.warning(
+                        "pipeline_logs insert for quality-queued term failed (non-fatal): %s",
+                        _log_err,
+                    )
 
             # Korean name gate (Task C.4): if korean_name looks invented or missing
             # the required Hangul minimum, queue this term for Amy's manual
@@ -1616,11 +1667,10 @@ async def _extract_and_create_handbook_terms(
                 # P2-4: Link quality_scores to the newly created term
                 if new_term_id:
                     try:
-                        supabase.table("handbook_quality_scores").update(
-                            {"term_id": new_term_id}
-                        ).eq("term_slug", term_name).is_("term_id", "null").execute()
-                    except Exception:
-                        pass  # best-effort linking
+                        _link_quality_scores_to_term(supabase, term_name, slug, new_term_id)
+                    except Exception as link_err:
+                        # The term is saved either way; its scores just stay unlinked.
+                        logger.warning("Could not link quality scores to '%s': %s", term_name, link_err)
 
                 await _log_stage(
                     supabase, run_id, "handbook.auto_generate", "success", t_gen,
