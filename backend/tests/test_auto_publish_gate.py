@@ -9,7 +9,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 import services.pipeline  # noqa: F401 - load re-exports before direct module imports
-from services.pipeline_quality import AUTO_PUBLISH_BLOCKING_CAPS, passes_auto_publish_gate
+from services.pipeline_quality import (
+    AUTO_PUBLISH_BLOCKING_CAPS,
+    SELECTION_FALLBACK_CAP,
+    passes_auto_publish_gate,
+    selection_block_reason,
+)
 
 
 @pytest.fixture
@@ -17,10 +22,33 @@ def threshold_70(monkeypatch):
     monkeypatch.setattr("services.pipeline_quality.settings.auto_publish_threshold", 70)
 
 
-def test_blocking_caps_are_the_major_issue_caps():
+def test_blocking_caps_are_the_major_issue_caps_and_selection_fallback():
     assert AUTO_PUBLISH_BLOCKING_CAPS == {
         "major_source_cap_84", "frontload_overclaim_cap_84", "locale_quality_cap_84",
+        SELECTION_FALLBACK_CAP,
     }
+
+
+@pytest.mark.parametrize(
+    "digest_type, flags, blocked",
+    [
+        ("research", {}, False),
+        ("research", None, False),
+        ("research", {"llm_call_failed": True}, True),
+        ("business", {"emergency_fallback_used": True}, True),
+        ("business", {"fallback_used": True}, True),
+        ("business", {"category_starvation_repair": {"recovered": ["business"]}}, True),
+        ("research", {"category_starvation_repair": {"recovered": ["business"]}}, False),
+        ("research", {"category_starvation_repair": {"recovered": []}}, False),
+    ],
+)
+def test_selection_block_reason(digest_type, flags, blocked):
+    assert bool(selection_block_reason(digest_type, flags)) is blocked
+
+
+def test_selection_fallback_cap_blocks_auto_publish_even_with_high_score(threshold_70):
+    assert passes_auto_publish_gate(95, [SELECTION_FALLBACK_CAP]) is False
+    assert passes_auto_publish_gate(95, []) is True
 
 
 def test_gate_passes_score_at_threshold_without_caps(threshold_70):

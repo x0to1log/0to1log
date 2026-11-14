@@ -703,11 +703,35 @@ def _aggregate_subscores(data: dict) -> int:
 # Caps that mean "a major issue must not auto-publish". They are applied to the
 # score too, but the gate checks them by name: a stricter judge scores clean
 # posts below 84 as well, so "capped below threshold" no longer implies blocked.
+# Not a score cap: the story selection itself came from a fallback path, so the
+# digest must be read by a person whatever the judge scored.
+SELECTION_FALLBACK_CAP = "selection_fallback_block"
+
 AUTO_PUBLISH_BLOCKING_CAPS = frozenset({
     "major_source_cap_84",
     "frontload_overclaim_cap_84",
     "locale_quality_cap_84",
+    SELECTION_FALLBACK_CAP,
 })
+
+
+def selection_block_reason(digest_type: str, classify_flags: dict | None) -> str | None:
+    """Why this digest's story selection must not auto-publish, or None.
+
+    `classify_flags` is the dict saved in the `classify` checkpoint, so the
+    daily run and a later write-rerun decide from the same data.
+    """
+    flags = classify_flags or {}
+    if flags.get("llm_call_failed"):
+        return "classify LLM call failed"
+    if flags.get("emergency_fallback_used"):
+        return "stories picked by rule-based emergency classification"
+    if flags.get("fallback_used"):
+        return "stories picked without the recent-headline dedup block"
+    repair = flags.get("category_starvation_repair") or {}
+    if digest_type in (repair.get("recovered") or []):
+        return f"{digest_type} stories came from starvation repair"
+    return None
 
 
 def _qc_date_context(batch_date: str | None) -> str:
