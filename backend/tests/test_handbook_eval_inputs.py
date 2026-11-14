@@ -109,3 +109,12 @@ async def test_rescore_judges_see_the_tail_of_long_bodies():
 
     assert f"{TAIL}-ADV-EN" in captured["advanced"]
     assert f"{TAIL}-BASIC-EN" in captured["basic"]
+
+
+def test_critique_references_include_each_source_once():
+    bundle = {"curated": "", "brave": "BRAVE-RESULTS", "exa": "EXA-FULL-TEXT", "tavily": "TAVILY-RESULTS"}
+
+    context = advisor._critique_reference_context("foundational_concept", None, bundle)
+
+    for source in ("BRAVE-RESULTS", "EXA-FULL-TEXT", "TAVILY-RESULTS"):
+        assert context.count(source) == 1

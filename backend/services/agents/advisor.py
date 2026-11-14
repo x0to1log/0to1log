@@ -3068,6 +3068,28 @@ def _select_source_context_for_field(
     return "\n\n".join(selected_chunks)
 
 
+def _critique_reference_context(
+    term_type: str,
+    term_subtype: str | None,
+    source_bundle: dict[str, str],
+) -> str:
+    """Sources the advanced reviewer verifies claims against, each included once.
+
+    The definition, advanced and references fields mostly rank the same
+    sources, so joining their three selections sent each source up to three
+    times (~100K chars for a ~35K bundle, live check 2026-11-14).
+    """
+    from services.agents.prompts_handbook_types import get_field_source_priority
+
+    chunks: list[str] = []
+    for field in ("definition", "advanced", "references"):
+        for source_name in get_field_source_priority(term_type, field, term_subtype):
+            chunk = (source_bundle.get(source_name) or "").strip()
+            if chunk and chunk not in chunks:
+                chunks.append(chunk)
+    return "\n\n".join(chunks)
+
+
 def _should_include_advanced_specs(term_type: str | None, term_subtype: str | None = None) -> bool:
     """Return whether the numeric specs block is meaningful for this term kind."""
     if not term_type:
@@ -4722,15 +4744,7 @@ async def _run_generate_term(
 
     # --- Self-critique advanced KO content ---
     adv_ko_preview = _build_section_preview(advanced_ko_data, "adv_ko_")
-    reference_for_critique = "\n".join(
-        chunk
-        for chunk in [
-            _select_source_context_for_field(term_type, term_subtype, "definition", source_bundle),
-            _select_source_context_for_field(term_type, term_subtype, "advanced", source_bundle),
-            _select_source_context_for_field(term_type, term_subtype, "references", source_bundle),
-        ]
-        if chunk
-    )
+    reference_for_critique = _critique_reference_context(term_type, term_subtype, source_bundle)
     if req.skip_self_critique:
         needs_improvement, critique_feedback, critique_score, critique_usage = (False, "", 0, {})
     else:
