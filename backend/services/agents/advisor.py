@@ -1028,7 +1028,12 @@ async def _self_critique_advanced(
     client, model: str,
     reference_context: str = "",
 ) -> tuple[bool, str, int, dict]:
-    """CoVe-style self-critique: verify claims against references + depth check."""
+    """CoVe-style self-critique: verify claims against references + depth check.
+
+    The draft and the references go in whole. Cut to 8,000 / 3,000 chars, the
+    reviewer was asked to verify claims against sources it could not see and to
+    judge code it saw the first third of.
+    """
     from services.agents.prompts_handbook_types import COVE_CRITIQUE_PROMPT, SELF_CRITIQUE_PROMPT
 
     reasoning_model = model_for("handbook.judge", "reasoning")  # gpt-5-mini for critique
@@ -1036,7 +1041,7 @@ async def _self_critique_advanced(
     if reference_context:
         system = COVE_CRITIQUE_PROMPT.format(
             term=term, term_type=term_type,
-            reference_context=reference_context[:3000],
+            reference_context=reference_context,
         )
     else:
         system = SELF_CRITIQUE_PROMPT.format(term=term, term_type=term_type)
@@ -1046,7 +1051,7 @@ async def _self_critique_advanced(
                 model=reasoning_model,
                 messages=[
                     {"role": "system", "content": system},
-                    {"role": "user", "content": advanced_content[:8000]},
+                    {"role": "user", "content": advanced_content},
                 ],
                 max_tokens=2000,
                 response_format={"type": "json_object"},
@@ -2483,8 +2488,9 @@ _BASIC_DIMENSIONS = (
     "engagement", "accuracy", "uniqueness", "structural_completeness",
 )
 _BASIC_MAX_RAW = 100
-_ADVANCED_JUDGE_MAX_CHARS_PER_LOCALE = 12000
-_BASIC_JUDGE_MAX_CHARS_PER_LOCALE = 6000
+# The judge reads both bodies whole. A per-locale cap (12,000 / 6,000 chars)
+# cut the closing sections off long EN bodies, and the rubric scores each
+# sub-score as the weaker locale, so the cut lowered the term's score.
 
 
 def _build_bilingual_judge_content(
@@ -2575,7 +2581,7 @@ async def _self_critique_basic(
     if reference_context:
         system += (
             "\n\n## Reference Materials (for verifying product-technology claims)\n"
-            + reference_context[:2000]
+            + reference_context
         )
     combined = f"## Korean Basic\n{basic_ko_content}\n\n## English Basic\n{basic_en_content}"
     try:
@@ -2584,7 +2590,8 @@ async def _self_critique_basic(
                 model=light_model,
                 messages=[
                     {"role": "system", "content": system},
-                    {"role": "user", "content": combined[:6000]},
+                    # Whole: a 6,000-char cut on KO + EN left little or no EN to score.
+                    {"role": "user", "content": combined},
                 ],
                 max_tokens=1500,
                 response_format={"type": "json_object"},
@@ -3626,7 +3633,12 @@ def _section_value_to_text(
     return ""
 
 
-def _build_section_preview(data: dict, prefix: str, max_chars: int = 1000) -> str:
+def _build_section_preview(data: dict, prefix: str, max_chars: int | None = None) -> str:
+    """Sections under `prefix`, labeled by key, for the self-critique reviewers.
+
+    Whole sections by default: reviewers are asked about shallow sections and
+    weak code, which a 1,000-char cut per section made every long section look like.
+    """
     parts: list[str] = []
     for key, raw_value in data.items():
         if not key.startswith(prefix):
@@ -3637,7 +3649,7 @@ def _build_section_preview(data: dict, prefix: str, max_chars: int = 1000) -> st
             serialize_unknown_structures=True,
         )
         if content:
-            parts.append(f"## {key}: {content[:max_chars]}")
+            parts.append(f"## {key}: {content if max_chars is None else content[:max_chars]}")
     return "\n\n".join(parts)
 
 
@@ -4053,7 +4065,6 @@ async def rescore_existing_handbook_quality(
         adv_combined = _build_bilingual_judge_content(
             data.get("body_advanced_ko", ""),
             data.get("body_advanced_en", ""),
-            max_chars_per_locale=_ADVANCED_JUDGE_MAX_CHARS_PER_LOCALE,
         )
         if adv_combined.strip():
             semantic_score, semantic_breakdown, quality_usage = await _check_handbook_quality(
@@ -4068,7 +4079,6 @@ async def rescore_existing_handbook_quality(
         basic_combined = _build_bilingual_judge_content(
             data.get("body_basic_ko", ""),
             data.get("body_basic_en", ""),
-            max_chars_per_locale=_BASIC_JUDGE_MAX_CHARS_PER_LOCALE,
         )
         if basic_combined.strip():
             basic_semantic_score, basic_semantic_breakdown, basic_quality_usage = await _check_basic_quality(
@@ -4959,7 +4969,6 @@ async def _run_generate_term(
         adv_combined = _build_bilingual_judge_content(
             data.get("body_advanced_ko", ""),
             data.get("body_advanced_en", ""),
-            max_chars_per_locale=_ADVANCED_JUDGE_MAX_CHARS_PER_LOCALE,
         )
         if adv_combined.strip():
             try:
@@ -4978,7 +4987,6 @@ async def _run_generate_term(
         basic_combined = _build_bilingual_judge_content(
             data.get("body_basic_ko", ""),
             data.get("body_basic_en", ""),
-            max_chars_per_locale=_BASIC_JUDGE_MAX_CHARS_PER_LOCALE,
         )
         if basic_combined.strip():
             try:
