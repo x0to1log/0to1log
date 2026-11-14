@@ -4,6 +4,7 @@ import logging
 import re as _re_module
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from functools import lru_cache
 from typing import Any
 from urllib.parse import urlparse
@@ -272,8 +273,17 @@ def _build_source_payload(
 def _date_string(value: Any) -> str:
     if isinstance(value, datetime):
         return value.date().isoformat()
-    text = str(value or "")
-    return _extract_date_string(text)
+    text = str(value or "").strip()
+    extracted = _extract_date_string(text)
+    if extracted or not text:
+        return extracted
+    # RFC 2822 ("Mon, 09 Nov 2026 18:00:00 GMT"): what Tavily news results and
+    # RSS pubDate carry. The date is kept as written, without converting the
+    # timezone, the same as the ISO strings handled above.
+    try:
+        return parsedate_to_datetime(text).date().isoformat()
+    except (TypeError, ValueError):
+        return ""
 
 
 def _extract_date_string(text: str) -> str:

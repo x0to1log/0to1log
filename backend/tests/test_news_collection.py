@@ -807,3 +807,27 @@ def test_classify_source_meta_research_priority_returns_primary_tier():
     result = _classify_source_meta("https://openreview.net/forum?id=abc123", title="paper")
     assert result["source_tier"] == "primary"
     assert result["source_confidence"] == "high"
+
+
+def test_date_string_parses_rfc2822_dates_from_tavily():
+    """Tavily news results carry `published_date` as RFC 2822 text. Left
+    unparsed, every Tavily candidate looked undated: the stale filter never
+    saw them and backfill dropped them all."""
+    from services.news_collection import _date_string, _published_at_from_result
+
+    assert _date_string("Mon, 09 Nov 2026 18:00:00 GMT") == "2026-11-09"
+    assert _date_string("Wed, 11 Nov 2026 16:30:22 +0900") == "2026-11-11"
+    assert _published_at_from_result(
+        {"published_date": "Mon, 09 Nov 2026 18:00:00 GMT"}
+    ) == "2026-11-09"
+
+
+def test_date_string_keeps_existing_formats_and_rejects_non_dates():
+    from services.news_collection import _date_string
+
+    assert _date_string("2026-11-09T18:00:00Z") == "2026-11-09"
+    assert _date_string("November 9, 2026") == "2026-11-09"
+    assert _date_string("") == ""
+    assert _date_string(None) == ""
+    assert _date_string("not a date") == ""
+    assert _date_string("Breaking: lab ships model") == ""
