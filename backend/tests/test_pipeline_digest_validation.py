@@ -1209,9 +1209,10 @@ async def test_generate_digest_recovers_en_when_hangul_leaks_into_en_heading():
                 }
             ),
             _mock_beginner_response(),
+            # Recovery translates the KO body and must keep its [CITE_N] tokens.
             _mock_openai_response(
                 {
-                    "en": "## Research Papers\n\n### ClawBench: Agent performance on everyday web tasks\n\nRecovered expert body [1](https://example.com/story)"
+                    "body": "## Research Papers\n\n### ClawBench: Agent performance on everyday web tasks\n\nRecovered expert body [CITE_1]"
                 }
             ),
         ]
@@ -1239,6 +1240,58 @@ async def test_generate_digest_recovers_en_when_hangul_leaks_into_en_heading():
     assert errors == []
     en_row = next(payload for _table, payload in supabase.saved_rows if payload["locale"] == "en")
     assert "Agent performance on everyday web tasks" in en_row["content_expert"]
+    # The recovered body goes through citation substitution like the first call.
+    assert "[CITE_" not in en_row["content_expert"]
+    assert "[1](https://example.com/story)" in en_row["content_expert"]
+
+
+@pytest.mark.asyncio
+async def test_generate_digest_recovers_missing_ko_by_translating_en():
+    """An empty KO body is rebuilt from the EN body, so its citations resolve
+    to the same URLs instead of whatever numbers a fresh rewrite would pick."""
+    from services.pipeline import _generate_digest
+
+    supabase = _CaptureSupabase()
+    expert, learner, beginner = _three_persona_responses()
+    expert_without_ko = _mock_openai_response({
+        "en": "## Research Papers\n\n### Expert\n\nBody [1](https://example.com/story)",
+        "ko": "",
+        "headline": "H", "headline_ko": "헤",
+        "excerpt": "E", "excerpt_ko": "요",
+    })
+    ko_recovery = _mock_openai_response(
+        {"body": "## Research Papers\n\n### 전문가\n\n번역된 본문 [CITE_1]"}
+    )
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[expert_without_ko, ko_recovery, learner, beginner]
+    )
+
+    with patch("services.pipeline_digest.get_openai_client", return_value=mock_client), \
+         patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"), \
+         patch("services.pipeline_digest._log_stage", new_callable=AsyncMock), \
+         patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness), \
+         patch("services.pipeline_quality._check_digest_quality",
+               new_callable=AsyncMock, return_value=_clean_quality_meta()):
+
+        posts_created, errors, _usage = await _generate_digest(
+            classified=_sample_group(),
+            digest_type="research",
+            batch_id="2026-04-15",
+            handbook_slugs=[],
+            raw_content_map={"https://example.com/story": "Source body"},
+            community_summary_map={},
+            supabase=supabase,
+            run_id="run-1",
+            enriched_map={},
+        )
+
+    assert posts_created == 2
+    assert errors == []
+    recovery_messages = mock_client.chat.completions.create.await_args_list[1].kwargs["messages"]
+    assert "Body [CITE_1]" in recovery_messages[1]["content"]
+    ko_row = next(payload for _table, payload in supabase.saved_rows if payload["locale"] == "ko")
+    assert "번역된 본문 [1](https://example.com/story)" in ko_row["content_expert"]
 
 
 @pytest.mark.asyncio

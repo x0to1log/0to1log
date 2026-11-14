@@ -1403,6 +1403,8 @@ async def _generate_digest(
     digest_focus_items_ko: list[str] = _frontload_list("focus_items_ko")
     persona_quizzes: dict[str, dict[str, dict[str, Any]]] = {}
     persona_prompts: dict[str, str] = {}
+    # persona -> {"en", "ko", "citations"} as the writer returned them
+    raw_outputs: dict[str, dict[str, Any]] = {}
 
     MAX_DIGEST_RETRIES = 2  # 2 retries = 3 total attempts
 
@@ -1503,6 +1505,12 @@ async def _generate_digest(
                 # Writer emits [CITE_N] placeholders + citations[] sidecar.
                 # Strict schema enum guarantees every url is in the allowlist.
                 first_call_citations = data.get("citations") or []
+                # Bodies before substitution, kept for locale recovery.
+                raw_en = data.get("en", "") or ""
+                raw_ko = data.get("ko", "") or ""
+                raw_outputs[persona_name] = {
+                    "en": raw_en, "ko": raw_ko, "citations": first_call_citations,
+                }
                 try:
                     body_en = apply_citations(data.get("en", ""), first_call_citations)
                     body_ko = apply_citations(data.get("ko", ""), first_call_citations)
@@ -1572,131 +1580,51 @@ async def _generate_digest(
                 # NOTE: usage already merged above (right after with_flex_retry)
                 # so any failure between there and here doesn't lose the tokens.
 
-                # Recover missing locale: re-generate missing side
+                # Recover missing locale by translating the one that exists.
+                # (test_digest_writer_tier_fallback.py anchors on this comment.)
+                # The translation keeps the [CITE_N] tokens of the source body,
+                # so they resolve against this call's citations.
                 ko_recovered = False
                 en_recovered = False
-
-                # EN exists but KO empty → recover KO
-                if persona_output.en.strip() and not persona_output.ko.strip():
+                for missing, source_raw in (("ko", raw_en), ("en", raw_ko)):
+                    present = persona_output.en if missing == "ko" else persona_output.ko
+                    absent = persona_output.ko if missing == "ko" else persona_output.en
+                    if not present.strip() or absent.strip():
+                        continue
                     logger.warning(
-                        "Digest %s %s: EN ok (%d chars) but KO empty — re-generating KO only",
-                        digest_type, persona_name, len(persona_output.en),
+                        "Digest %s %s: %s empty — translating from the other locale",
+                        digest_type, persona_name, missing.upper(),
                     )
                     try:
-                        ko_system = (
-                            f"{system_prompt}\n\n"
-                            "IMPORTANT: Generate ONLY the Korean (ko) content using [CITE_N] "
-                            "placeholders that match the citations array from the main output. "
-                            "The English version already exists. Return JSON: "
-                            "{{\"ko\": \"...[CITE_1]...\"}}"
+                        recovered_raw, rec_usage = await _recover_locale_by_translation(
+                            client, model,
+                            target_locale=missing,
+                            source_body_raw=source_raw,
+                            cache_key=f"digest-{digest_type}-{persona_name}-{missing}-recovery",
                         )
-                        async def _ko_recovery_call() -> Any:
-                            return await asyncio.wait_for(
-                                client.chat.completions.create(
-                                    **compat_create_kwargs(
-                                        model,
-                                        messages=[
-                                            {"role": "system", "content": ko_system},
-                                            {"role": "user", "content": user_prompt},
-                                        ],
-                                        response_format={"type": "json_object"},
-                                        max_tokens=8000,
-                                        service_tier="flex",
-                                        prompt_cache_key=f"digest-{digest_type}-{persona_name}-ko-recovery",
-                                    )
-                                ),
-                                timeout=300,  # flex recovery: 5-min headroom
-                            )
-
-                        ko_resp = await with_flex_retry(_ko_recovery_call)
-                        ko_data = parse_ai_json(
-                            ko_resp.choices[0].message.content,
-                            f"Digest-{digest_type}-{persona_name}-ko-recovery",
+                        cumulative_usage = merge_usage_metrics(cumulative_usage, rec_usage)
+                        if not recovered_raw:
+                            continue
+                        recovered = _linkify_cp_section(
+                            _clean_writer_output(apply_citations(recovered_raw, first_call_citations)),
+                            community_summary_map,
                         )
-                        ko_usage = extract_usage_metrics(ko_resp, model, requested_service_tier="flex")
-                        cumulative_usage = merge_usage_metrics(cumulative_usage, ko_usage)
-                        recovered_ko_raw = ko_data.get("ko", "")
-                        if recovered_ko_raw.strip():
-                            try:
-                                recovered_ko = apply_citations(recovered_ko_raw, first_call_citations)
-                            except CitationSubstitutionError as sub_err:
-                                logger.warning(
-                                    "KO recovery substitution failed for %s %s: %s",
-                                    digest_type, persona_name, sub_err,
-                                )
-                                recovered_ko = ""
-                        else:
-                            recovered_ko = ""
-                        if recovered_ko:
-                            persona_output = PersonaOutput(en=persona_output.en, ko=recovered_ko)
+                        raw_outputs[persona_name][missing] = recovered_raw
+                        if missing == "ko":
+                            persona_output = PersonaOutput(en=persona_output.en, ko=recovered)
                             ko_recovered = True
-                            logger.info(
-                                "KO recovery succeeded for %s %s: %d chars",
-                                digest_type, persona_name, len(recovered_ko),
-                            )
-                    except Exception as ko_err:
-                        logger.warning("KO recovery failed for %s %s: %s", digest_type, persona_name, ko_err)
-
-                # KO exists but EN empty → recover EN
-                if persona_output.ko.strip() and not persona_output.en.strip():
-                    logger.warning(
-                        "Digest %s %s: KO ok (%d chars) but EN empty — re-generating EN only",
-                        digest_type, persona_name, len(persona_output.ko),
-                    )
-                    try:
-                        en_system = (
-                            f"{system_prompt}\n\n"
-                            "IMPORTANT: Generate ONLY the English (en) content using [CITE_N] "
-                            "placeholders that match the citations array from the main output. "
-                            "The Korean version already exists. Return JSON: "
-                            "{{\"en\": \"...[CITE_1]...\"}}"
-                        )
-                        async def _en_recovery_call() -> Any:
-                            return await asyncio.wait_for(
-                                client.chat.completions.create(
-                                    **compat_create_kwargs(
-                                        model,
-                                        messages=[
-                                            {"role": "system", "content": en_system},
-                                            {"role": "user", "content": user_prompt},
-                                        ],
-                                        response_format={"type": "json_object"},
-                                        max_tokens=8000,
-                                        service_tier="flex",
-                                        prompt_cache_key=f"digest-{digest_type}-{persona_name}-en-recovery",
-                                    )
-                                ),
-                                timeout=300,  # flex recovery: 5-min headroom
-                            )
-
-                        en_resp = await with_flex_retry(_en_recovery_call)
-                        en_data = parse_ai_json(
-                            en_resp.choices[0].message.content,
-                            f"Digest-{digest_type}-{persona_name}-en-recovery",
-                        )
-                        en_usage = extract_usage_metrics(en_resp, model, requested_service_tier="flex")
-                        cumulative_usage = merge_usage_metrics(cumulative_usage, en_usage)
-                        recovered_en_raw = en_data.get("en", "")
-                        if recovered_en_raw.strip():
-                            try:
-                                recovered_en = apply_citations(recovered_en_raw, first_call_citations)
-                            except CitationSubstitutionError as sub_err:
-                                logger.warning(
-                                    "EN recovery substitution failed for %s %s: %s",
-                                    digest_type, persona_name, sub_err,
-                                )
-                                recovered_en = ""
                         else:
-                            recovered_en = ""
-                        if recovered_en:
-                            persona_output = PersonaOutput(en=recovered_en, ko=persona_output.ko)
+                            persona_output = PersonaOutput(en=recovered, ko=persona_output.ko)
                             en_recovered = True
-                            logger.info(
-                                "EN recovery succeeded for %s %s: %d chars",
-                                digest_type, persona_name, len(recovered_en),
-                            )
-                    except Exception as en_err:
-                        logger.warning("EN recovery failed for %s %s: %s", digest_type, persona_name, en_err)
+                        logger.info(
+                            "%s recovery succeeded for %s %s: %d chars",
+                            missing.upper(), digest_type, persona_name, len(recovered),
+                        )
+                    except Exception as rec_err:
+                        logger.warning(
+                            "%s recovery failed for %s %s: %s",
+                            missing.upper(), digest_type, persona_name, rec_err,
+                        )
 
                 personas[persona_name] = persona_output
 
@@ -1824,62 +1752,43 @@ async def _generate_digest(
     })
     if recoverable_en_personas:
         for persona_name in recoverable_en_personas:
-            system_prompt = persona_prompts.get(persona_name) or get_digest_prompt(
-                digest_type, persona_name, handbook_slugs, batch_date=batch_id,
-            )
+            raw = raw_outputs.get(persona_name)
+            if not raw or not raw.get("ko", "").strip():
+                continue
             try:
-                en_system = (
-                    f"{system_prompt}\n\n"
-                    "IMPORTANT: Generate ONLY the English (en) content. "
-                    "The previous English output leaked Korean in one or more `###` headings. "
-                    "Regenerate the English content so every `###` heading and body line is fully English. "
-                    "Do not include Korean text in the English output. Return JSON: {{\"en\": \"...\"}}"
+                # Translate the KO body instead of regenerating EN: the tokens
+                # then map onto the same citations the first call returned.
+                recovered_raw, en_usage = await _recover_locale_by_translation(
+                    client, model,
+                    target_locale="en",
+                    source_body_raw=raw["ko"],
+                    cache_key=f"digest-{digest_type}-{persona_name}-en-heading-recovery",
                 )
-                async def _en_heading_recovery_call() -> Any:
-                    return await asyncio.wait_for(
-                        client.chat.completions.create(
-                            **compat_create_kwargs(
-                                model,
-                                messages=[
-                                    {"role": "system", "content": en_system},
-                                    {"role": "user", "content": user_prompt},
-                                ],
-                                response_format={"type": "json_object"},
-                                max_tokens=8000,
-                                service_tier="flex",
-                                prompt_cache_key=f"digest-{digest_type}-{persona_name}-en-heading-recovery",
-                            )
-                        ),
-                        timeout=300,  # flex recovery: 5-min headroom
-                    )
-
-                en_resp = await with_flex_retry(_en_heading_recovery_call)
-                en_data = parse_ai_json(
-                    en_resp.choices[0].message.content,
-                    f"Digest-{digest_type}-{persona_name}-en-heading-recovery",
-                )
-                en_usage = extract_usage_metrics(en_resp, model, requested_service_tier="flex")
                 cumulative_usage = merge_usage_metrics(cumulative_usage, en_usage)
-                recovered_en = _clean_writer_output(en_data.get("en", ""))
-                if recovered_en.strip():
-                    personas[persona_name] = PersonaOutput(
-                        en=recovered_en,
-                        ko=personas[persona_name].ko,
-                    )
-                    await _log_stage(
-                        supabase,
-                        run_id,
-                        f"recover:{digest_type}:{persona_name}:en",
-                        "success",
-                        time.monotonic(),
-                        output_summary=f"Recovered EN after locale-heading validation failure ({len(recovered_en)} chars)",
-                        usage=en_usage,
-                        post_type=digest_type,
-                    )
-                    logger.info(
-                        "EN heading recovery succeeded for %s %s: %d chars",
-                        digest_type, persona_name, len(recovered_en),
-                    )
+                if not recovered_raw:
+                    continue
+                recovered_en = _linkify_cp_section(
+                    _clean_writer_output(apply_citations(recovered_raw, raw["citations"])),
+                    community_summary_map,
+                )
+                personas[persona_name] = PersonaOutput(
+                    en=recovered_en,
+                    ko=personas[persona_name].ko,
+                )
+                await _log_stage(
+                    supabase,
+                    run_id,
+                    f"recover:{digest_type}:{persona_name}:en",
+                    "success",
+                    time.monotonic(),
+                    output_summary=f"Recovered EN by translating KO ({len(recovered_en)} chars)",
+                    usage=en_usage,
+                    post_type=digest_type,
+                )
+                logger.info(
+                    "EN heading recovery succeeded for %s %s: %d chars",
+                    digest_type, persona_name, len(recovered_en),
+                )
             except Exception as en_err:
                 logger.warning(
                     "EN heading recovery failed for %s %s: %s",
