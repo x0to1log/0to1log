@@ -384,6 +384,8 @@ async def test_recover_incomplete_daily_batch_recovers_missing_research_and_prom
         batch_id="2026-05-22",
         category="research",
         auto_publish=True,
+        # Recovery keeps the personas the failed run already wrote.
+        reuse_written=True,
     )
     promote_mock.assert_awaited_once_with(batch_id="2026-05-22")
 

@@ -9,6 +9,7 @@ Extracted from pipeline.py during 2026-04-15 Phase 1.
 External callers should still import from services.pipeline (re-exported).
 """
 import asyncio
+import hashlib
 import logging
 import re
 import time
@@ -48,8 +49,10 @@ from services.agents.schemas.news_writer import build_news_writer_json_schema
 from services.pipeline import (  # type: ignore[attr-defined]
     _dedup_source_cards,
     _fill_source_titles,
+    _load_checkpoint,
     _log_stage,
     _renumber_citations,
+    _save_checkpoint,
     _trim,
 )
 
@@ -1224,6 +1227,7 @@ async def _generate_digest(
     preserved_rows_by_locale: dict[str, dict[str, Any]] | None = None,
     preserve_existing_fields: bool = False,
     publish_block_reason: str | None = None,
+    reuse_writer_checkpoint: bool = False,
 ) -> tuple[int, list[str], dict[str, Any]]:
     """Generate a daily digest post for one category (research or business).
 
@@ -1407,6 +1411,35 @@ async def _generate_digest(
 
     MAX_DIGEST_RETRIES = 2  # 2 retries = 3 total attempts
 
+    # Each persona's writer output is checkpointed as soon as it is done, so a
+    # later failure (judge outage, process restart) does not throw away the
+    # most expensive calls of the run. Only a recovery rerun reads it back, and
+    # only when it was written from the same source material.
+    write_stage = f"write:{digest_type}"
+    input_fingerprint = hashlib.sha256(user_prompt.encode("utf-8")).hexdigest()
+    reusable: dict[str, dict[str, Any]] = {}
+    if reuse_writer_checkpoint:
+        saved_write = _load_checkpoint(supabase, run_id, write_stage) or {}
+        if saved_write.get("input_fingerprint") == input_fingerprint:
+            reusable = {
+                name: saved for name, saved in (saved_write.get("personas") or {}).items()
+                if name in target_personas and isinstance(saved, dict)
+            }
+        elif saved_write:
+            logger.info(
+                "Ignoring %s checkpoint: it was written from different inputs", write_stage,
+            )
+    written: dict[str, dict[str, Any]] = dict(reusable)
+    # A single-persona rerun (admin "rerun beginner") would replace the full
+    # checkpoint with one persona, so only full generations write it.
+    checkpoint_writer_output = personas_to_generate is None
+
+    def _save_written() -> None:
+        if checkpoint_writer_output:
+            _save_checkpoint(supabase, run_id, write_stage, {
+                "input_fingerprint": input_fingerprint, "personas": written,
+            })
+
     for persona_name in target_personas:
         t_p = time.monotonic()
         system_prompt = get_digest_prompt(digest_type, persona_name, handbook_slugs, batch_date=batch_id)
@@ -1466,40 +1499,51 @@ async def _generate_digest(
                         timeout=1200,
                     )
 
-                logger.info(
-                    "Digest %s %s attempt %d starting (tier=%s)",
-                    digest_type, persona_name, attempt + 1, tier_label,
-                )
-
-                # Inner try captures call-level failures (timeout, 5xx-after-retry,
-                # network) so we can record best-effort input cost. Without this
-                # the retry-storm tokens disappear from cost books entirely.
-                try:
-                    response = await with_flex_retry(_writer_call)
-                except Exception as call_err:
-                    est = estimate_failed_call_usage(
-                        writer_messages, model, requested_service_tier=tier_for_attempt,
+                reused = attempt == 0 and persona_name in reusable
+                if reused:
+                    # Replay the saved writer JSON through the same post-processing.
+                    # If it fails there, the next attempt calls the writer.
+                    data = reusable[persona_name]
+                    usage = {}
+                    tier_label = "checkpoint"
+                    logger.info(
+                        "Digest %s %s reusing checkpointed writer output", digest_type, persona_name,
                     )
-                    cumulative_usage = merge_usage_metrics(cumulative_usage, est)
-                    logger.warning(
-                        "Digest %s %s attempt %d call failed (%s, tier=%s) — recorded estimated input cost: $%.4f (%d in-tokens)",
-                        digest_type, persona_name, attempt + 1,
-                        type(call_err).__name__,
-                        tier_label,
-                        est.get("cost_usd") or 0,
-                        est.get("input_tokens") or 0,
+                else:
+                    logger.info(
+                        "Digest %s %s attempt %d starting (tier=%s)",
+                        digest_type, persona_name, attempt + 1, tier_label,
                     )
-                    raise
 
-                # Record real usage immediately so any post-parse failure below
-                # still keeps the cost on books (gap-A fix).
-                usage = extract_usage_metrics(response, model, requested_service_tier=tier_for_attempt)
-                cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
+                    # Inner try captures call-level failures (timeout, 5xx-after-retry,
+                    # network) so we can record best-effort input cost. Without this
+                    # the retry-storm tokens disappear from cost books entirely.
+                    try:
+                        response = await with_flex_retry(_writer_call)
+                    except Exception as call_err:
+                        est = estimate_failed_call_usage(
+                            writer_messages, model, requested_service_tier=tier_for_attempt,
+                        )
+                        cumulative_usage = merge_usage_metrics(cumulative_usage, est)
+                        logger.warning(
+                            "Digest %s %s attempt %d call failed (%s, tier=%s) — recorded estimated input cost: $%.4f (%d in-tokens)",
+                            digest_type, persona_name, attempt + 1,
+                            type(call_err).__name__,
+                            tier_label,
+                            est.get("cost_usd") or 0,
+                            est.get("input_tokens") or 0,
+                        )
+                        raise
 
-                data = parse_ai_json(
-                    response.choices[0].message.content,
-                    f"Digest-{digest_type}-{persona_name}",
-                )
+                    # Record real usage immediately so any post-parse failure below
+                    # still keeps the cost on books (gap-A fix).
+                    usage = extract_usage_metrics(response, model, requested_service_tier=tier_for_attempt)
+                    cumulative_usage = merge_usage_metrics(cumulative_usage, usage)
+
+                    data = parse_ai_json(
+                        response.choices[0].message.content,
+                        f"Digest-{digest_type}-{persona_name}",
+                    )
                 # Writer emits [CITE_N] placeholders + citations[] sidecar.
                 # Strict schema enum guarantees every url is in the allowlist.
                 first_call_citations = data.get("citations") or []
@@ -1626,6 +1670,15 @@ async def _generate_digest(
 
                 personas[persona_name] = persona_output
 
+                # Save the writer JSON with the bodies as they stand now (a
+                # recovered locale included), so a replay needs no recovery call.
+                written[persona_name] = {
+                    **data,
+                    "en": raw_outputs[persona_name]["en"],
+                    "ko": raw_outputs[persona_name]["ko"],
+                }
+                _save_written()
+
                 attempts_log.append({
                     "attempt": attempt + 1,
                     "tier": tier_label,
@@ -1643,6 +1696,7 @@ async def _generate_digest(
                     attempt=attempt + 1,
                     debug_meta={
                         "attempt": attempt + 1, "attempts": attempt + 1,
+                        "reused_checkpoint": reused,
                         "ko_recovered": ko_recovered, "en_recovered": en_recovered,
                         "en_length": len(persona_output.en),
                         "ko_length": len(persona_output.ko),
@@ -1773,6 +1827,9 @@ async def _generate_digest(
                     en=recovered_en,
                     ko=personas[persona_name].ko,
                 )
+                if persona_name in written:
+                    written[persona_name]["en"] = recovered_raw
+                    _save_written()
                 await _log_stage(
                     supabase,
                     run_id,

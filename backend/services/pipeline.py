@@ -2571,6 +2571,7 @@ async def rerun_pipeline_stage(
     batch_id: str,
     category: str | None = None,
     auto_publish: bool = False,
+    reuse_written: bool = False,
 ) -> PipelineResult:
     """Rerun pipeline from a specific stage using saved checkpoints.
 
@@ -2583,6 +2584,9 @@ async def rerun_pipeline_stage(
         batch_id: Target date (YYYY-MM-DD).
         category: "research"|"business"|None (both).
         auto_publish: mark regenerated drafts eligible for scheduled promotion.
+        reuse_written: with from_stage="write", reuse personas the earlier run
+            already wrote (its `write:<type>` checkpoint) instead of calling
+            the writer again. For recovery; an admin rerun wants new text.
     """
     from models.news_pipeline import ClassifiedCandidate, NewsCandidate
 
@@ -3142,6 +3146,7 @@ async def rerun_pipeline_stage(
                     enriched_map=enriched_map,
                     auto_publish=auto_publish,
                     publish_block_reason=selection_block_reason(digest_type, classify_flags),
+                    reuse_writer_checkpoint=reuse_written and from_stage == "write",
                     **digest_kwargs,
                 )
             )
@@ -3501,6 +3506,9 @@ async def recover_incomplete_daily_batch(
             batch_id=batch_id,
             category=digest_type,
             auto_publish=auto_publish,
+            # The digest is missing because something after the writer failed
+            # (judge outage, restart). Keep what the writer already produced.
+            reuse_written=True,
         )
         if result.status == "success" and result.posts_created > 0:
             recovered.append(digest_type)

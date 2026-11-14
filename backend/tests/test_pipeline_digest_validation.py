@@ -307,20 +307,41 @@ class _UpsertQuery:
         self.supabase = supabase
         self.table_name = table_name
         self.payload = None
+        self.filters = {}
 
     def upsert(self, payload, on_conflict=None):
         self.payload = payload
         return self
 
+    def select(self, *_args):
+        return self
+
+    def eq(self, key, value):
+        self.filters[key] = value
+        return self
+
+    def single(self):
+        return self
+
     def execute(self):
         if self.payload is not None:
-            self.supabase.saved_rows.append((self.table_name, self.payload))
+            if self.table_name == "pipeline_checkpoints":
+                self.supabase.checkpoints[self.payload["stage"]] = self.payload["data"]
+            else:
+                self.supabase.saved_rows.append((self.table_name, self.payload))
+            return MagicMock(data=[])
+        if self.table_name == "pipeline_checkpoints" and "stage" in self.filters:
+            data = self.supabase.checkpoints.get(self.filters["stage"])
+            return MagicMock(data={"data": data} if data is not None else None)
         return MagicMock(data=[])
 
 
 class _CaptureSupabase:
+    """Captures news_posts upserts in saved_rows and stage checkpoints in checkpoints."""
+
     def __init__(self):
         self.saved_rows = []
+        self.checkpoints = {}
 
     def table(self, name):
         return _UpsertQuery(self, name)
@@ -1622,3 +1643,162 @@ async def test_generate_digest_records_selection_fallback_cap():
         assert "selection_fallback_block" in fact_pack["quality_caps_applied"]
         assert fact_pack["publish_block_reason"].startswith("stories picked")
         assert fact_pack["auto_publish_eligible"] is True
+
+
+def _digest_patches(mock_client, quality):
+    return (
+        patch("services.pipeline_digest.get_openai_client", return_value=mock_client),
+        patch("services.pipeline_digest.get_digest_prompt", return_value="prompt"),
+        patch("services.pipeline_digest._log_stage", new_callable=AsyncMock),
+        patch("services.pipeline_quality._validate_urls_live", new=_noop_url_liveness),
+        patch("services.pipeline_quality._check_digest_quality", quality),
+        # Quizzes share the client; stub them so its calls are writer calls only.
+        patch("services.pipeline_digest._generate_digest_quizzes", new_callable=AsyncMock, return_value=({}, {})),
+    )
+
+
+async def _run_digest(supabase, **kwargs):
+    from services.pipeline import _generate_digest
+
+    return await _generate_digest(
+        classified=_sample_group(),
+        digest_type="research",
+        batch_id="2026-04-15",
+        handbook_slugs=[],
+        raw_content_map={"https://example.com/story": "Source body"},
+        community_summary_map={},
+        supabase=supabase,
+        run_id="run-1",
+        enriched_map={},
+        **kwargs,
+    )
+
+
+@pytest.mark.asyncio
+async def test_writer_output_is_checkpointed_before_the_judge_runs():
+    """A judge outage raises out of _generate_digest. The three writer calls
+    are the expensive part of the run, so they must already be saved."""
+    supabase = _CaptureSupabase()
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_three_persona_responses())
+    judge_down = AsyncMock(side_effect=RuntimeError("Quality evaluation unavailable: expert_body"))
+
+    p1, p2, p3, p4, p5, p6 = _digest_patches(mock_client, judge_down)
+    with p1, p2, p3, p4, p5, p6:
+        with pytest.raises(RuntimeError, match="Quality evaluation unavailable"):
+            await _run_digest(supabase)
+
+    assert supabase.saved_rows == []
+    saved = supabase.checkpoints["write:research"]
+    assert set(saved["personas"]) == {"expert", "learner", "beginner"}
+    assert "[CITE_1]" in saved["personas"]["expert"]["en"]
+    assert saved["input_fingerprint"]
+
+
+@pytest.mark.asyncio
+async def test_write_rerun_reuses_checkpointed_personas_instead_of_calling_the_writer():
+    supabase = _CaptureSupabase()
+    first_client = MagicMock()
+    first_client.chat.completions.create = AsyncMock(side_effect=_three_persona_responses())
+    judge_down = AsyncMock(side_effect=RuntimeError("Quality evaluation unavailable: expert_body"))
+    p1, p2, p3, p4, p5, p6 = _digest_patches(first_client, judge_down)
+    with p1, p2, p3, p4, p5, p6:
+        with pytest.raises(RuntimeError):
+            await _run_digest(supabase)
+
+    second_client = MagicMock()
+    second_client.chat.completions.create = AsyncMock(side_effect=AssertionError("writer must not be called"))
+    judge_up = AsyncMock(return_value=_clean_quality_meta())
+    p1, p2, p3, p4, p5, p6 = _digest_patches(second_client, judge_up)
+    with p1, p2, p3, p4, p5, p6:
+        posts_created, errors, _usage = await _run_digest(supabase, reuse_writer_checkpoint=True)
+
+    assert posts_created == 2
+    assert errors == []
+    second_client.chat.completions.create.assert_not_awaited()
+    en_row = next(payload for _table, payload in supabase.saved_rows if payload["locale"] == "en")
+    assert "Body [1](https://example.com/story)" in en_row["content_expert"]
+    assert en_row["title"] == "H"
+
+
+@pytest.mark.asyncio
+async def test_checkpointed_personas_are_ignored_when_the_inputs_changed():
+    supabase = _CaptureSupabase()
+    supabase.checkpoints["write:research"] = {
+        "input_fingerprint": "written-from-other-sources",
+        "personas": {"expert": {"en": "stale [CITE_1]", "ko": "오래된 [CITE_1]", "citations": []}},
+    }
+    mock_client = MagicMock()
+    mock_client.chat.completions.create = AsyncMock(side_effect=_three_persona_responses())
+    p1, p2, p3, p4, p5, p6 = _digest_patches(mock_client, AsyncMock(return_value=_clean_quality_meta()))
+    with p1, p2, p3, p4, p5, p6:
+        posts_created, _errors, _usage = await _run_digest(supabase, reuse_writer_checkpoint=True)
+
+    assert posts_created == 2
+    assert mock_client.chat.completions.create.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_a_normal_run_does_not_reuse_an_earlier_checkpoint():
+    """Only recovery reuses. An admin "rerun from write" asks for new text."""
+    supabase = _CaptureSupabase()
+    first_client = MagicMock()
+    first_client.chat.completions.create = AsyncMock(side_effect=_three_persona_responses())
+    p1, p2, p3, p4, p5, p6 = _digest_patches(first_client, AsyncMock(return_value=_clean_quality_meta()))
+    with p1, p2, p3, p4, p5, p6:
+        await _run_digest(supabase)
+
+    second_client = MagicMock()
+    second_client.chat.completions.create = AsyncMock(side_effect=_three_persona_responses())
+    p1, p2, p3, p4, p5, p6 = _digest_patches(second_client, AsyncMock(return_value=_clean_quality_meta()))
+    with p1, p2, p3, p4, p5, p6:
+        await _run_digest(supabase)
+
+    assert second_client.chat.completions.create.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_writer_checkpoint_fingerprint_survives_the_checkpoint_round_trip():
+    """Recovery rebuilds the digest inputs from checkpoints: models go through
+    JSON and source text is cut to 15,000 characters. The fingerprint must come
+    out the same, or the saved personas would never be reused."""
+    from models.news_pipeline import CommunityInsight, ThreadInfo
+
+    url = "https://example.com/story"
+    groups = _sample_group()
+    insight = CommunityInsight(threads=[ThreadInfo(
+        platform="hackernews", url="https://news.ycombinator.com/item?id=1", title="Story thread",
+        upvotes=120, comments=40, sentiment="mixed",
+        quotes=["Interesting result."], quotes_ko=["흥미로운 결과다."], key_point="People doubt the benchmark.",
+    )])
+    enriched = {url: [{
+        "url": url, "title": "Primary", "content": "Official details. " * 900,
+        "source_kind": "official_site", "source_confidence": "high", "source_tier": "primary",
+    }]}
+    raw_content = {url: "Long source body. " * 1200}
+
+    async def fingerprint(classified, summary_map, enriched_map, raw_content_map) -> str:
+        from services.pipeline import _generate_digest
+
+        supabase = _CaptureSupabase()
+        mock_client = MagicMock()
+        mock_client.chat.completions.create = AsyncMock(side_effect=_three_persona_responses())
+        p1, p2, p3, p4, p5, p6 = _digest_patches(mock_client, AsyncMock(return_value=_clean_quality_meta()))
+        with p1, p2, p3, p4, p5, p6:
+            await _generate_digest(
+                classified=classified, digest_type="research", batch_id="2026-04-15",
+                handbook_slugs=[], raw_content_map=raw_content_map,
+                community_summary_map=summary_map, supabase=supabase, run_id="run-1",
+                enriched_map=enriched_map,
+            )
+        return supabase.checkpoints["write:research"]["input_fingerprint"]
+
+    live = await fingerprint(groups, {url: insight}, enriched, raw_content)
+    restored = await fingerprint(
+        [ClassifiedGroup(**json.loads(json.dumps(g.model_dump()))) for g in groups],
+        {url: CommunityInsight(**json.loads(json.dumps(insight.model_dump())))},
+        json.loads(json.dumps(enriched)),
+        {k: v[:15000] for k, v in raw_content.items()},
+    )
+
+    assert live == restored
