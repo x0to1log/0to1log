@@ -1092,6 +1092,89 @@ def _map_digest_items_to_group_indexes(
 # Main digest generator
 # ---------------------------------------------------------------------------
 
+_CITE_TOKEN_RE = re.compile(r"\[CITE_(\d+)\]")
+
+_LOCALE_RECOVERY_SYSTEM = (
+    "You translate one news digest body into {target_language}.\n"
+    "Keep the same stories, facts and numbers, and the same `##` / `###` headings in the "
+    "same order. This is a translation, not a rewrite: do not add or remove content.\n"
+    "Tokens such as [CITE_3] are opaque citation markers. Keep every token, with the same "
+    "number, at the end of the paragraph it belongs to. Never add, drop or renumber a token, "
+    "and never write a URL.\n"
+    "{locale_rule}\n"
+    'Return JSON: {{"body": "..."}}'
+)
+
+_LOCALE_RECOVERY_RULES = {
+    "ko": (
+        "Korean",
+        "Write natural Korean in editorial news prose, not a spoken \"~요\" tone. Every `###` "
+        "heading must be in Korean; keep company and product names in their original form.",
+    ),
+    "en": (
+        "English",
+        "Write only English. No Hangul anywhere, including `###` headings.",
+    ),
+}
+
+
+def _cite_numbers(text: str) -> list[int]:
+    return sorted(int(n) for n in _CITE_TOKEN_RE.findall(text or ""))
+
+
+async def _recover_locale_by_translation(
+    client: Any,
+    model: str,
+    *,
+    target_locale: str,
+    source_body_raw: str,
+    cache_key: str,
+) -> tuple[str, dict[str, Any]]:
+    """Rebuild a missing or broken locale by translating the other one.
+
+    `source_body_raw` is the writer's body before citation substitution, so it
+    still carries [CITE_N] tokens. Returns (raw translated body, usage). The
+    body is "" when it does not carry exactly the source's tokens: a translation
+    that lost or renumbered a citation would be published with wrong sources.
+    """
+    target_language, locale_rule = _LOCALE_RECOVERY_RULES[target_locale]
+    messages = [
+        {
+            "role": "system",
+            "content": _LOCALE_RECOVERY_SYSTEM.format(
+                target_language=target_language, locale_rule=locale_rule,
+            ),
+        },
+        {"role": "user", "content": f"SOURCE BODY:\n{source_body_raw}"},
+    ]
+
+    async def _call() -> Any:
+        return await asyncio.wait_for(
+            client.chat.completions.create(
+                **compat_create_kwargs(
+                    model,
+                    messages=messages,
+                    response_format={"type": "json_object"},
+                    max_tokens=8000,
+                    service_tier="flex",
+                    prompt_cache_key=cache_key,
+                )
+            ),
+            timeout=300,  # flex recovery: 5-min headroom
+        )
+
+    response = await with_flex_retry(_call)
+    usage = extract_usage_metrics(response, model, requested_service_tier="flex")
+    body = (parse_ai_json(response.choices[0].message.content, cache_key).get("body") or "").strip()
+    if not body or _cite_numbers(body) != _cite_numbers(source_body_raw):
+        logger.warning(
+            "Locale recovery %s rejected: cite tokens %s != source %s",
+            cache_key, _cite_numbers(body), _cite_numbers(source_body_raw),
+        )
+        return "", usage
+    return body, usage
+
+
 async def _log_frontload_grounding(
     supabase,
     run_id: str,
