@@ -234,7 +234,6 @@ async def _repair_classification_starvation(
     candidates: list[NewsCandidate],
     classification: ClassificationResult,
     recent_headlines: list[str] | None,
-    digest_date: str | None = None,
 ) -> tuple[ClassificationResult, dict[str, Any], str, dict[str, Any]]:
     """Repair one-sided classify results before merge/rank/write.
 
@@ -274,7 +273,6 @@ async def _repair_classification_starvation(
         retry_classification, retry_usage, retry_prompt = await classify_candidates(
             candidates,
             recent_headlines=None,
-            digest_date=digest_date,
         )
         usage = merge_usage_metrics(usage, retry_usage)
         meta["relaxed_retry_used"] = True
@@ -1828,7 +1826,6 @@ async def run_daily_pipeline(
             candidates,
             recent_headlines=recent_headlines,
             recent_headlines_by_category=recent_headlines_by_category,
-            digest_date=batch_id,
         )
         cumulative_usage = merge_usage_metrics(cumulative_usage, classify_usage)
         # Read before the fallbacks below replace `classification`.
@@ -1846,7 +1843,7 @@ async def run_daily_pipeline(
                 "Classify returned 0 picks with dedup block; retrying without ALREADY COVERED (fallback mode)"
             )
             fallback_classification, fallback_usage, fallback_prompt = await classify_candidates(
-                candidates, recent_headlines=None, digest_date=batch_id,
+                candidates, recent_headlines=None,
             )
             cumulative_usage = merge_usage_metrics(cumulative_usage, fallback_usage)
             classification = fallback_classification
@@ -1877,7 +1874,6 @@ async def run_daily_pipeline(
                 candidates,
                 classification,
                 recent_headlines,
-                digest_date=batch_id,
             )
         )
         if category_repair_meta.get("recovered"):
@@ -2861,14 +2857,11 @@ async def rerun_pipeline_stage(
         # --- Load or rerun classify ---
         if from_stage == "classify":
             t0 = time.monotonic()
-            classification, classify_usage, _ = await classify_candidates(
-                candidates, digest_date=batch_id,
-            )
+            classification, classify_usage, _ = await classify_candidates(candidates)
             classification, repair_usage, _, category_repair_meta = await _repair_classification_starvation(
                 candidates,
                 classification,
                 recent_headlines=None,
-                digest_date=batch_id,
             )
             classify_usage = merge_usage_metrics(classify_usage, repair_usage)
             cumulative_usage = merge_usage_metrics(cumulative_usage, classify_usage)
