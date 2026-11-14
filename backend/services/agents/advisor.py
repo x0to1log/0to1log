@@ -58,6 +58,10 @@ class HandbookRetrievalError(RuntimeError):
     """No reference material came back for a term, so it must not be written."""
 
 
+class TermGateError(RuntimeError):
+    """The term gate could not decide, so its candidates have no decision."""
+
+
 async def _create_flex_with_fallback(client, kwargs: dict):
     """chat.completions.create on flex, retried once at standard pricing when flex
     has no capacity — the rule news QC already follows (pipeline_quality).
@@ -5357,8 +5361,14 @@ async def gate_candidate_terms(
 ) -> list[dict]:
     """Evaluate candidate terms through the handbook gate before generation.
 
-    Uses nano model to classify candidates as accept, queue, or reject.
+    Uses the light model to classify candidates as accept, queue, or reject.
     Returns one decision object per candidate term.
+
+    Raises TermGateError when the call or its reply fails. It used to return
+    "accept" for every candidate instead, which sent the whole batch to
+    generation exactly when nothing had checked it. A candidate the reply
+    leaves out, or answers with an unknown decision, is queued for the same
+    reason: no decision is not an approval.
     """
     if not candidates:
         return []
@@ -5368,9 +5378,9 @@ async def gate_candidate_terms(
     client = get_openai_client()
     model = model_for("handbook.light", "nano")
 
-    existing_str = ", ".join(existing_terms[:500])  # cap at 500 for token budget
-
-    prompt = TERM_GATE_PROMPT.format(existing_terms=existing_str)
+    # Every existing term: a cut here (it was 500) makes the gate miss
+    # duplicates of whatever fell outside it.
+    prompt = TERM_GATE_PROMPT.format(existing_terms=", ".join(existing_terms))
     user_msg = json.dumps({"candidates": candidates}, ensure_ascii=False)
 
     try:
@@ -5387,46 +5397,30 @@ async def gate_candidate_terms(
             )
         )
         data = parse_ai_json(resp.choices[0].message.content, "term-gate")
-        decisions = {d["term"]: d for d in data.get("decisions", [])}
-
-        resolved_decisions: list[dict] = []
-        accepted_count = 0
-        queued_count = 0
-        rejected_count = 0
-        for candidate in candidates:
-            term = candidate.get("term", "")
-            decision_info = decisions.get(term, {})
-            decision = str(decision_info.get("decision", "accept")).lower()
-            if decision not in {"accept", "queue", "reject"}:
-                decision = "accept"
-            reason = decision_info.get("reason", "")
-            resolved_decisions.append({
-                "term": term,
-                "decision": decision,
-                "reason": reason,
-            })
-            if decision == "reject":
-                rejected_count += 1
-            elif decision == "queue":
-                queued_count += 1
-            else:
-                accepted_count += 1
-
-        logger.info(
-            "Term gate: %d candidates -> %d accepted, %d queued, %d rejected",
-            len(candidates), accepted_count, queued_count, rejected_count,
-        )
-        return resolved_decisions
+        decisions = {d["term"]: d for d in data["decisions"]}
     except Exception as e:
-        logger.warning("Term gate failed, accepting all candidates: %s", e)
-        return [
-            {
-                "term": candidate.get("term", ""),
-                "decision": "accept",
-                "reason": "gate failure fallback",
-            }
-            for candidate in candidates
-        ]
+        raise TermGateError(f"term gate failed for {len(candidates)} candidates: {type(e).__name__}: {e}") from e
+
+    resolved_decisions: list[dict] = []
+    counts = {"accept": 0, "queue": 0, "reject": 0}
+    for candidate in candidates:
+        term = candidate.get("term", "")
+        decision_info = decisions.get(term)
+        if decision_info is None:
+            decision, reason = "queue", "gate returned no decision for this term"
+        else:
+            decision = str(decision_info.get("decision", "")).lower()
+            reason = decision_info.get("reason", "")
+            if decision not in counts:
+                decision, reason = "queue", f"gate returned an unknown decision: {decision or 'none'}"
+        counts[decision] += 1
+        resolved_decisions.append({"term": term, "decision": decision, "reason": reason})
+
+    logger.info(
+        "Term gate: %d candidates -> %d accepted, %d queued, %d rejected",
+        len(candidates), counts["accept"], counts["queue"], counts["reject"],
+    )
+    return resolved_decisions
 
 
 async def generate_term_content(

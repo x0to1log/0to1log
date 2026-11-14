@@ -202,6 +202,12 @@ class _InsertCaptureQuery:
     def limit(self, *args, **kwargs):
         return self
 
+    def order(self, *args, **kwargs):
+        return self
+
+    def range(self, *args, **kwargs):
+        return self
+
     def is_(self, *args, **kwargs):
         return self
 
@@ -567,7 +573,7 @@ async def test_extract_and_create_handbook_terms_persists_hero_and_references_fi
 
     with patch("services.pipeline.extract_terms_from_content", new=AsyncMock(return_value=(extracted_terms, EMPTY_USAGE))), \
          patch("services.pipeline.generate_term_content", new=AsyncMock(return_value=(generated_content.copy(), EMPTY_USAGE))), \
-         patch("services.pipeline.gate_candidate_terms", new=AsyncMock(return_value=[{"term": "Function Calling", "korean_name": "함수 호출"}])), \
+         patch("services.pipeline.gate_candidate_terms", new=AsyncMock(return_value=[{"term": "Function Calling", "decision": "accept"}])), \
          patch("services.pipeline._log_stage", new=AsyncMock()):
         created, errors = await _extract_and_create_handbook_terms(
             article_texts=["Function Calling helps models choose tools."],
@@ -786,3 +792,143 @@ async def test_extract_and_create_handbook_terms_queues_term_blocked_by_generati
     assert (created, errors) == (1, [])
     assert supabase.inserted_rows[0]["status"] == "queued"
     assert supabase.inserted_rows[0]["body_basic_ko"] == "본문"
+
+
+# --- Handbook: the term gate fails closed and sees the whole handbook ---
+
+def _gate_client(reply: str | None = None, error: Exception | None = None):
+    """A stand-in LLM client for gate_candidate_terms; returns (client, create mock)."""
+    from types import SimpleNamespace
+
+    response = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=reply))], usage=None)
+    create = AsyncMock(side_effect=error) if error else AsyncMock(return_value=response)
+    return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create))), create
+
+
+@pytest.mark.asyncio
+async def test_term_gate_raises_instead_of_accepting_when_the_call_fails():
+    from services.agents import advisor
+
+    client, _ = _gate_client(error=RuntimeError("network down"))
+    with patch.object(advisor, "get_openai_client", return_value=client):
+        with pytest.raises(advisor.TermGateError, match="network down"):
+            await advisor.gate_candidate_terms([{"term": "LoRA"}], ["RAG"])
+
+
+@pytest.mark.asyncio
+async def test_term_gate_raises_on_a_reply_without_decisions():
+    from services.agents import advisor
+
+    client, _ = _gate_client(reply='{"note": "no decisions key"}')
+    with patch.object(advisor, "get_openai_client", return_value=client):
+        with pytest.raises(advisor.TermGateError):
+            await advisor.gate_candidate_terms([{"term": "LoRA"}], ["RAG"])
+
+
+@pytest.mark.asyncio
+async def test_term_gate_queues_candidates_it_got_no_usable_decision_for():
+    from services.agents import advisor
+
+    reply = (
+        '{"decisions": [{"term": "LoRA", "decision": "accept", "reason": "established"},'
+        ' {"term": "Muse Spark", "decision": "maybe", "reason": "unsure"}]}'
+    )
+    client, _ = _gate_client(reply=reply)
+    with patch.object(advisor, "get_openai_client", return_value=client):
+        decisions = await advisor.gate_candidate_terms(
+            [{"term": "LoRA"}, {"term": "Muse Spark"}, {"term": "Left Out"}], ["RAG"],
+        )
+
+    assert [(d["term"], d["decision"]) for d in decisions] == [
+        ("LoRA", "accept"), ("Muse Spark", "queue"), ("Left Out", "queue"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_term_gate_prompt_lists_every_existing_term():
+    from services.agents import advisor
+
+    existing = [f"term-{i:04d}" for i in range(1200)]  # past the old 500 cut
+    client, create = _gate_client(reply='{"decisions": [{"term": "LoRA", "decision": "accept", "reason": ""}]}')
+    with patch.object(advisor, "get_openai_client", return_value=client):
+        await advisor.gate_candidate_terms([{"term": "LoRA"}], existing)
+
+    system_prompt = create.call_args.kwargs["messages"][0]["content"]
+    assert "term-0000" in system_prompt
+    assert "term-1199" in system_prompt
+
+
+def test_existing_handbook_term_names_are_read_past_the_first_page():
+    from services.pipeline import _fetch_existing_handbook_term_names
+
+    all_rows = [{"term": f"term-{i:04d}"} for i in range(2300)]
+    requested = []
+
+    class _Query:
+        def __getattr__(self, name):  # select / neq / order chain through
+            return lambda *args, **kwargs: self
+
+        def range(self, start, end):
+            requested.append((start, end))
+            self._page = all_rows[start:end + 1]
+            return self
+
+        def execute(self):
+            return MagicMock(data=self._page)
+
+    supabase = MagicMock()
+    supabase.table.return_value = _Query()
+
+    names = _fetch_existing_handbook_term_names(supabase)
+
+    assert len(names) == 2300
+    assert requested == [(0, 999), (1000, 1999), (2000, 2999)]
+
+
+@pytest.mark.asyncio
+async def test_extract_and_create_handbook_terms_queues_candidates_when_term_gate_fails():
+    from services.agents.advisor import TermGateError
+    from services.pipeline import _extract_and_create_handbook_terms
+
+    supabase = _HandbookInsertCaptureSupabase()
+    extracted_terms = [{"term": "Function Calling", "korean_name": "함수 호출", "category": "llm-genai", "confidence": "high"}]
+    generate_mock = AsyncMock()
+
+    with patch("services.pipeline.extract_terms_from_content", new=AsyncMock(return_value=(extracted_terms, EMPTY_USAGE))), \
+         patch("services.pipeline.generate_term_content", new=generate_mock), \
+         patch("services.pipeline.gate_candidate_terms", new=AsyncMock(side_effect=TermGateError("term gate failed: timeout"))), \
+         patch("services.pipeline._log_stage", new=AsyncMock()):
+        created, errors = await _extract_and_create_handbook_terms(
+            article_texts=["Function Calling helps models choose tools."],
+            supabase=supabase,
+            run_id="run-1",
+        )
+
+    generate_mock.assert_not_awaited()
+    assert created == 0
+    assert len(errors) == 1 and "term gate failed" in errors[0]
+    assert [(row["term"], row["status"]) for row in supabase.inserted_rows] == [("Function Calling", "queued")]
+    assert "definition_ko" not in supabase.inserted_rows[0]
+
+
+@pytest.mark.asyncio
+async def test_extract_and_create_handbook_terms_queues_candidate_the_gate_left_undecided():
+    from services.pipeline import _extract_and_create_handbook_terms
+
+    supabase = _HandbookInsertCaptureSupabase()
+    extracted_terms = [{"term": "Function Calling", "korean_name": "함수 호출", "category": "llm-genai", "confidence": "high"}]
+    generate_mock = AsyncMock()
+
+    with patch("services.pipeline.extract_terms_from_content", new=AsyncMock(return_value=(extracted_terms, EMPTY_USAGE))), \
+         patch("services.pipeline.generate_term_content", new=generate_mock), \
+         patch("services.pipeline.gate_candidate_terms", new=AsyncMock(return_value=[])), \
+         patch("services.pipeline._log_stage", new=AsyncMock()):
+        created, errors = await _extract_and_create_handbook_terms(
+            article_texts=["Function Calling helps models choose tools."],
+            supabase=supabase,
+            run_id="run-1",
+        )
+
+    generate_mock.assert_not_awaited()
+    assert (created, errors) == (0, [])
+    assert supabase.inserted_rows[0]["status"] == "queued"

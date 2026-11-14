@@ -1228,6 +1228,26 @@ def _status_for_generated_term(warnings: list[str], generation_gate: dict | None
     return "draft", ""
 
 
+def _fetch_existing_handbook_term_names(supabase) -> list[str]:
+    """Names of every non-archived handbook term, for the term gate's duplicate check.
+
+    Paged: a single select stops at the API's row limit (1,000), which would
+    hide the rest of the handbook from the gate without any error.
+    """
+    page_size = 1000
+    names: list[str] = []
+    start = 0
+    while True:
+        page = (
+            supabase.table("handbook_terms").select("term").neq("status", "archived")
+            .order("term").range(start, start + page_size - 1).execute().data or []
+        )
+        names.extend(row["term"] for row in page if row.get("term"))
+        if len(page) < page_size:
+            return names
+        start += page_size
+
+
 def _link_quality_scores_to_term(supabase, term_name: str, slug: str, term_id: str) -> None:
     """Attach the score rows written during generation to the term row just inserted.
 
@@ -1446,8 +1466,7 @@ async def _extract_and_create_handbook_terms(
     # LLM gate: verify candidates against existing handbook terms before expensive generation
     if valid_terms:
         try:
-            existing = supabase.table("handbook_terms").select("term").neq("status", "archived").execute()
-            existing_names = [r["term"] for r in (existing.data or [])]
+            existing_names = _fetch_existing_handbook_term_names(supabase)
             gate_candidates = [
                 {
                     "term": term_info["term"],
@@ -1469,13 +1488,14 @@ async def _extract_and_create_handbook_terms(
             rejected_count = 0
             for term_info in valid_terms:
                 decision_info = decisions.get(term_info["term"], {})
-                decision = str(decision_info.get("decision", "accept")).lower()
+                # No decision is not an approval: only an explicit accept is generated.
+                decision = str(decision_info.get("decision", "queue")).lower()
                 reason = decision_info.get("reason", "")
                 if decision == "reject":
                     rejected_count += 1
                     logger.info("LLM gate rejected '%s': %s", term_info["term"], reason or "no reason")
                     continue
-                if decision == "queue":
+                if decision != "accept":
                     queued_from_gate += 1
                     queued_terms.append(term_info)
                     logger.info("LLM gate queued '%s': %s", term_info["term"], reason or "no reason")
@@ -1492,7 +1512,27 @@ async def _extract_and_create_handbook_terms(
                     rejected_count,
                 )
         except Exception as e:
-            logger.warning("LLM gate failed, proceeding with all candidates: %s", e)
+            # The gate could not decide (model call, reply, or the existing-term
+            # read). Generating anyway would spend ~$1 per unchecked term, so the
+            # candidates wait in the review queue as titles instead.
+            error_msg = f"Handbook term gate failed; queued {len(valid_terms)} candidates without generating: {e}"
+            logger.warning(error_msg)
+            errors.append(error_msg)
+            try:
+                supabase.table("pipeline_logs").insert({
+                    "run_id": run_id,
+                    "pipeline_type": "handbook.term_gate",
+                    "status": "failed",
+                    "error_message": str(e),
+                    "debug_meta": {
+                        "event": "handbook_term_gate_failed",
+                        "queued_terms": [term_info["term"] for term_info in valid_terms],
+                    },
+                }).execute()
+            except Exception as _log_err:
+                logger.warning("pipeline_logs insert for failed term gate failed (non-fatal): %s", _log_err)
+            queued_terms.extend(valid_terms)
+            valid_terms = []
 
     # Generate terms concurrently (max 2 at a time)
     sem = asyncio.Semaphore(2)
