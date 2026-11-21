@@ -2244,6 +2244,42 @@ body:has(.newsprint-article--news):has(.site-header--fixed.site-header--hidden) 
     flex: 1;
     min-height: 2.75rem;
   }
+
+  /* Phones: keep the meta line on one row and pull the body up. */
+  body:has(.newsprint-article--news) .newsprint-crumb {
+    gap: 0.25rem 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  body:has(.newsprint-article--news) .newsprint-crumb-desk + span {
+    display: none;
+  }
+
+  .newsprint-article--news .newsprint-deck {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  body:has(.newsprint-article--news) .handbook-search-sticky--detail {
+    margin-bottom: 0.5rem;
+  }
+
+  .news-edition-bar {
+    margin-top: 0.75rem;
+  }
+
+  .newsprint-article--news .news-briefing {
+    margin-bottom: 1.1rem;
+    padding: 0.9rem 0 1rem;
+  }
+
+  .newsprint-article--news .news-briefing-list {
+    gap: 0.35rem;
+  }
+
+  .newsprint-article--news .news-briefing-list li {
+    font-size: 1rem;
+  }
 }
 
 .news-end-title {
