@@ -10,6 +10,7 @@ import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro
 import NewsArticleTerms from '../../../components/newsprint/NewsArticleTerms.astro';
 import NewsTwinDesks from '../../../components/newsprint/NewsTwinDesks.astro';
 import NewsReadNext from '../../../components/newsprint/NewsReadNext.astro';
+import { postTypeLabel } from '../../../lib/postType.js';
 
 const { slug } = Astro.params;
 const pageSlug = slug ?? '';
@@ -65,6 +66,9 @@ const pageTitle = post ? (displayTitle || post.title) : 'Not Found';
 const pageDescription = (displayExcerpt || post?.excerpt || '').slice(0, 155) || undefined;
 const altSlugValue = pairedSlug || undefined;
 const isWeekly = post?.post_type === 'weekly';
+const deskBase = postTypeLabel('en', post?.post_type);
+const crumbDesk = deskBase ? (isWeekly ? deskBase : `${deskBase} desk`) : undefined;
+const crumbReading = post?.reading_time_min ? `${post.reading_time_min} min read` : undefined;
 const weekTerms: Array<{slug: string; term: string; definition: string}> = isWeekly ? (post?.guide_items?.week_terms || []) : [];
 const weekTool: {name?: string; description?: string; url?: string} | null = isWeekly ? (post?.guide_items?.week_tool || null) : null;
 ---
@@ -77,6 +81,8 @@ const weekTool: {name?: string; description?: string; url?: string} | null = isW
     backHref="/en/news/"
     backLabel="AI News"
     publishedAt={post?.published_at}
+    crumbDesk={crumbDesk}
+    crumbReading={crumbReading}
   >
     <form class="handbook-detail-search handbook-search-sticky handbook-search-sticky--detail" action="/en/news/" method="get">
       <input
