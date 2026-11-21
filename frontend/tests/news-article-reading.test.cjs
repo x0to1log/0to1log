@@ -49,4 +49,19 @@ for (const p of ['pages/admin/news/edit/[slug].astro', 'pages/admin/blog/edit/[s
   assert(!read(p).includes('newsReading'), `${p}: admin editors do not pass newsReading`);
 }
 
+// --- CSS: head ---
+const css = read('styles/global.css');
+function block(selector) {
+  const at = css.indexOf(`\n${selector} {`);
+  assert(at > 0, `css rule exists: ${selector}`);
+  return css.slice(at, css.indexOf('}', at));
+}
+assert(/color:\s*var\(--color-accent\)/.test(block('.newsprint-crumb-desk')), 'crumb desk in accent');
+assert(/font-size:\s*1\.125rem/.test(block('.newsprint-article--news .newsprint-deck')) && /word-break:\s*keep-all/.test(block('.newsprint-article--news .newsprint-deck')), 'deck: 18px, keep-all');
+assert(/border-top:\s*2px solid var\(--color-text-primary\)/.test(block('.news-edition-bar')), 'edition bar: heavy top rule');
+assert(/background:\s*var\(--color-text-primary\)/.test(block('.news-edition-bar .persona-switcher-btn--active')), 'edition bar: active segment inverted');
+assert(/background:\s*none/.test(block('.newsprint-article--news .news-briefing')), 'briefing: no box');
+assert(/grid-template-columns:\s*minmax\(0, 1fr\)/.test(block('.newsprint-article--news .news-briefing-list')), 'briefing: one column list');
+assert(/font-size:\s*1\.0625rem/.test(block('.newsprint-article--news .news-briefing-list li')), 'briefing: body-size text');
+
 console.log('news-article-reading.test.cjs passed');
