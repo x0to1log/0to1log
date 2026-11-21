@@ -73,6 +73,8 @@ interface Props {
   postType?: string | null;
   briefingItems?: string[];
   sibling?: { slug: string; title: string; excerpt?: string | null; post_type: string; reading_time_min?: number | null } | null;
+  /** Public news article reading mode: one meta line, edition bar, tags at the end. */
+  newsReading?: boolean;
 }
 
 const {
@@ -110,6 +112,7 @@ const {
   postType = null,
   briefingItems = [],
   sibling = null,
+  newsReading = false,
 } = Astro.props;
 
 const isKo = locale === 'ko';
@@ -235,79 +238,84 @@ const copy = {
 const previewCommentsReadonly = 'Preview mode · comments are read-only.';
 const siblingDesk = sibling?.post_type === 'research' ? 'research' : 'business';
 const siblingLead = !sibling ? '' : siblingDesk === 'research'
-  ? (isKo ? '리서치 데스크는 이렇게 봤어요 →' : "The research desk's take →")
-  : (isKo ? '비즈니스 데스크는 이렇게 봤어요 →' : "The business desk's take →");
+  ? (isKo ? '리서치 데스크의 시선 →' : "The research desk's take →")
+  : (isKo ? '비즈니스 데스크의 시선 →' : "The business desk's take →");
 ---
 
-<article class="newsprint-article">
+<article class={`newsprint-article${newsReading ? ' newsprint-article--news' : ''}`}>
   {previewMode && (
     <>
       <!-- Admin preview -->
       <PreviewReadonlyBanner locale={locale} />
     </>
   )}
-  <div class="newsprint-article-topline">
-    <div class="newsprint-article-topline-left">
-      {categoryLabel && (
-        <span class="newsprint-card-kicker newsprint-article-kicker">{categoryLabel}{postType && <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${postType}`}>{postTypeLabel(locale, postType)}</span>}</span>
-      )}
+  {!newsReading && (
+    <div class="newsprint-article-topline">
+      <div class="newsprint-article-topline-left">
+        {categoryLabel && (
+          <span class="newsprint-card-kicker newsprint-article-kicker">{categoryLabel}{postType && <span class={`newsprint-card-kicker-type newsprint-card-kicker-type--${postType}`}>{postTypeLabel(locale, postType)}</span>}</span>
+        )}
+      </div>
+      <div class="newsprint-article-topline-right">
+        {readingLabel && <span class="newsprint-reading-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{readingLabel}</span>}
+        {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}
+      </div>
     </div>
-    <div class="newsprint-article-topline-right">
-      {readingLabel && <span class="newsprint-reading-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>{readingLabel}</span>}
-      {dateLabel && <time datetime={publishedAt ?? undefined}>{dateLabel}</time>}
-    </div>
-  </div>
+  )}
 
   <h1 class="newsprint-lead-title">{title}</h1>
   {excerpt && <p class="newsprint-deck">{excerpt}</p>}
-  {tags && tags.length > 0 && (
+  {!newsReading && tags && tags.length > 0 && (
     <div class="newsprint-article-tags">
       {tags.slice(0, 6).map((tag) => (
         <span class="newsprint-tag">{tag}</span>
       ))}
     </div>
   )}
-  <div class="newsprint-divider"></div>
+  {!newsReading && <div class="newsprint-divider"></div>}
 
-  {sibling && (
-    <a class={`newsprint-twin-link newsprint-twin-link--${siblingDesk}`} href={`/${locale}/news/${sibling.slug}/`}>
-      <span class="newsprint-twin-link-label">{siblingLead}</span>
-      <span class="newsprint-twin-link-title">{sibling.title}</span>
-    </a>
-  )}
-
-  {showPersonaSwitcher && (
-    <>
-      <div class="switcher-bar">
-        <div class="switcher-bar-line"></div>
-        <span class="switcher-bar-label">{locale === 'ko' ? '판 선택' : 'Edition'}</span>
-        <div class="persona-switcher">
-        {(['beginner', 'learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
-          <button
-            type="button"
-            class={`persona-switcher-btn ${p === activePersona ? 'persona-switcher-btn--active' : ''}`}
-            data-persona={p}
-          >
-            {personaLabels[locale]?.[p] || p}
-          </button>
-        ))}
-        </div>
-        <div class="switcher-bar-line"></div>
-      </div>
-      <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)} data-display={JSON.stringify(personaDisplayMap || {})} data-quizzes={JSON.stringify({
-        expert: guideItemsAny?.quiz_poll_expert || null,
-        learner: guideItemsAny?.quiz_poll_learner || null,
-        beginner: guideItemsAny?.quiz_poll_beginner || null,
-      })} data-weekly-quizzes={JSON.stringify({
-        expert: Array.isArray(guideItemsAny?.weekly_quiz_expert) ? guideItemsAny!.weekly_quiz_expert : [],
-        learner: Array.isArray(guideItemsAny?.weekly_quiz_learner) ? guideItemsAny!.weekly_quiz_learner : [],
-        beginner: Array.isArray(guideItemsAny?.weekly_quiz_beginner) ? guideItemsAny!.weekly_quiz_beginner : [],
-      })} data-sources={JSON.stringify({
-        expert: guideItemsAny?.sources_expert || null,
-        learner: guideItemsAny?.sources_learner || null,
-        beginner: guideItemsAny?.sources_beginner || null,
-      })}></template>
-    </>
+  {(showPersonaSwitcher || sibling) && (
+    <div class={newsReading ? 'news-edition-bar' : undefined}>
+      {showPersonaSwitcher && (
+        <>
+          <div class="switcher-bar">
+            {!newsReading && <div class="switcher-bar-line"></div>}
+            <span class="switcher-bar-label">{locale === 'ko' ? '판 선택' : 'Edition'}</span>
+            <div class="persona-switcher">
+            {(['beginner', 'learner', 'expert'] as const).filter(p => personaHtmlMap![p]).map(p => (
+              <button
+                type="button"
+                class={`persona-switcher-btn ${p === activePersona ? 'persona-switcher-btn--active' : ''}`}
+                data-persona={p}
+              >
+                {personaLabels[locale]?.[p] || p}
+              </button>
+            ))}
+            </div>
+            {!newsReading && <div class="switcher-bar-line"></div>}
+          </div>
+          <template id="persona-data" data-map={JSON.stringify(personaHtmlMap)} data-display={JSON.stringify(personaDisplayMap || {})} data-quizzes={JSON.stringify({
+            expert: guideItemsAny?.quiz_poll_expert || null,
+            learner: guideItemsAny?.quiz_poll_learner || null,
+            beginner: guideItemsAny?.quiz_poll_beginner || null,
+          })} data-weekly-quizzes={JSON.stringify({
+            expert: Array.isArray(guideItemsAny?.weekly_quiz_expert) ? guideItemsAny!.weekly_quiz_expert : [],
+            learner: Array.isArray(guideItemsAny?.weekly_quiz_learner) ? guideItemsAny!.weekly_quiz_learner : [],
+            beginner: Array.isArray(guideItemsAny?.weekly_quiz_beginner) ? guideItemsAny!.weekly_quiz_beginner : [],
+          })} data-sources={JSON.stringify({
+            expert: guideItemsAny?.sources_expert || null,
+            learner: guideItemsAny?.sources_learner || null,
+            beginner: guideItemsAny?.sources_beginner || null,
+          })}></template>
+        </>
+      )}
+      {sibling && (
+        <a class={`newsprint-twin-link newsprint-twin-link--${siblingDesk}`} href={`/${locale}/news/${sibling.slug}/`}>
+          <span class="newsprint-twin-link-label">{siblingLead}</span>
+          <span class="newsprint-twin-link-title">{sibling.title}</span>
+        </a>
+      )}
+    </div>
   )}
 
   {briefingItems.length > 0 && (
@@ -454,6 +462,13 @@ const siblingLead = !sibling ? '' : siblingDesk === 'research'
   )}
 
   <slot name="after-guide" />
+  {newsReading && tags && tags.length > 0 && (
+    <div class="newsprint-article-tags newsprint-article-tags--end">
+      {tags.slice(0, 6).map((tag) => (
+        <span class="newsprint-tag">{tag}</span>
+      ))}
+    </div>
+  )}
   {hasSources && (
     <section class="newsprint-sources">
       <h2 class="newsprint-section-title">{sectionCopy.sources} <span class="newsprint-sources-count">{(sourceCards || []).length}</span></h2>

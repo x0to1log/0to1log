@@ -28,4 +28,25 @@ for (const [locale, page] of Object.entries(pages)) {
 assert(pages.ko.includes('`${deskBase} 데스크`') && pages.ko.includes('`읽는 데 ${post.reading_time_min}분`'), 'ko: crumb copy');
 assert(pages.en.includes('`${deskBase} desk`') && pages.en.includes('`${post.reading_time_min} min read`'), 'en: crumb copy');
 
+// --- layout: newsReading mode ---
+const layout = read('components/newsprint/NewsprintArticleLayout.astro');
+assert(/newsReading\?: boolean;/.test(layout) && /newsReading = false,/.test(layout), 'layout: newsReading prop, off by default');
+assert(layout.includes("class={`newsprint-article${newsReading ? ' newsprint-article--news' : ''}`}"), 'layout: scope class on the article root');
+assert(/\{!newsReading && \(\s*<div class="newsprint-article-topline">/.test(layout), 'layout: topline only outside newsReading');
+assert(layout.includes('{!newsReading && tags && tags.length > 0 && ('), 'layout: head tags only outside newsReading');
+assert(layout.includes('{!newsReading && <div class="newsprint-divider"></div>}'), 'layout: head divider only outside newsReading');
+assert(layout.includes("<div class={newsReading ? 'news-edition-bar' : undefined}>"), 'layout: edition bar wrapper');
+assert(layout.includes('{!newsReading && <div class="switcher-bar-line"></div>}'), 'layout: switcher rules only outside newsReading');
+const endTags = layout.indexOf('class="newsprint-article-tags newsprint-article-tags--end"');
+assert(endTags > layout.indexOf('<slot name="after-guide" />') && endTags < layout.indexOf('class="newsprint-sources"'), 'layout: tags move to the end, between the slot and sources');
+for (const s of ['리서치 데스크의 시선 →', '비즈니스 데스크의 시선 →', "The research desk's take →", "The business desk's take →"]) {
+  assert(layout.includes(s), `layout copy: ${s}`);
+}
+for (const [locale, page] of Object.entries(pages)) {
+  assert(/<NewsprintArticleLayout[\s\S]*?\n\s+newsReading\s*\n/.test(page), `${locale}: public news page turns newsReading on`);
+}
+for (const p of ['pages/admin/news/edit/[slug].astro', 'pages/admin/blog/edit/[slug].astro']) {
+  assert(!read(p).includes('newsReading'), `${p}: admin editors do not pass newsReading`);
+}
+
 console.log('news-article-reading.test.cjs passed');

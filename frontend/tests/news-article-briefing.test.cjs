@@ -26,11 +26,11 @@ assert(shell.includes('class="newsprint-crumb"') && shell.includes('newsprint-ma
 
 const layout = read('components/newsprint/NewsprintArticleLayout.astro');
 assert(/briefingItems\?: string\[\];/.test(layout) && /sibling\?: \{/.test(layout), 'layout: new optional props');
-const idx = ['newsprint-twin-link', 'class="switcher-bar"', 'class="news-briefing"', 'class="newsprint-article-find"'].map((s) => layout.indexOf(s));
-assert(idx.every((i) => i > 0) && idx[0] < idx[1] && idx[1] < idx[2] && idx[2] < idx[3], 'order: twin link → edition switcher → briefing → find');
+const idx = ['class="switcher-bar"', 'newsprint-twin-link', 'class="news-briefing"', 'class="newsprint-article-find"'].map((s) => layout.indexOf(s));
+assert(idx.every((i) => i > 0) && idx[0] < idx[1] && idx[1] < idx[2] && idx[2] < idx[3], 'order: edition switcher → twin link → briefing → find');
 const slotAt = layout.indexOf('<slot name="after-guide" />');
 assert(slotAt > layout.indexOf('class="newsprint-guide-items"') && slotAt < layout.indexOf('class="newsprint-sources"'), 'after-guide slot sits between guide items and sources');
-for (const s of ['30초 브리핑', '30-second briefing', '리서치 데스크는 이렇게 봤어요', "The research desk's take", '비즈니스 데스크는 이렇게 봤어요', "The business desk's take"]) {
+for (const s of ['30초 브리핑', '30-second briefing', '리서치 데스크의 시선', "The research desk's take", '비즈니스 데스크의 시선', "The business desk's take"]) {
   assert(layout.includes(s), `layout copy: ${s}`);
 }
 
