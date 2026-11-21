@@ -73,4 +73,12 @@ assert(css.includes('.newsprint-article--news .newsprint-prose h2:has(+ h3) {'),
 assert(/border-left:\s*none/.test(block('.newsprint-article--news .newsprint-prose h3')), 'story headline: no accent bar');
 assert(css.includes('.newsprint-article--news .newsprint-prose:not(.newsprint-prose--analysis) > h2:first-child:not(:has(+ h3)) + p {'), 'lead sentence: main prose only, not Core Analysis');
 
+// --- CSS: bars hide while reading down (reuses the header's scroll state, no new script) ---
+assert(css.includes('body:has(.site-header--fixed.site-header--hidden) .newsprint-article--news .persona-float:not(:has(:focus-visible)) {'), 'edition float hides on the way down, unless keyboard focus is inside');
+assert(css.includes('body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-article--news .persona-float--back {'), 'back float shows on the way up on news articles');
+const searchRule = 'body:has(.newsprint-article--news):has(.site-header--fixed.site-header--hidden) .handbook-search-sticky--detail:not(:focus-within)';
+assert(/position:\s*static/.test(block(searchRule)), 'mobile search stops sticking on the way down (no blank gap at the top)');
+assert(!fs.existsSync(path.join(src, 'scripts', 'readingScrollDirection.ts')), 'no second scroll-direction script');
+assert(!/data-reading-scroll/.test(css), 'no separate scroll-state attribute');
+
 console.log('news-article-reading.test.cjs passed');

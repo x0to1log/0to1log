@@ -2204,6 +2204,27 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   letter-spacing: -0.02em;
 }
 
+/* News article: floating bars step aside while reading down.
+   The header already tracks scroll direction (Navigation.astro): on the way down it
+   carries .site-header--fixed.site-header--hidden, on the way up it drops --hidden. */
+body:has(.site-header--fixed.site-header--hidden) .newsprint-article--news .persona-float:not(:has(:focus-visible)) {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(12px);
+}
+
+/* Single-edition articles: the back-to-list float used to show on the way down. Flip it. */
+body:has(.site-header--fixed:not(.site-header--hidden)) .newsprint-article--news .persona-float--back {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Mobile search: stop sticking rather than fade, so no blank gap appears near the top. */
+body:has(.newsprint-article--news):has(.site-header--fixed.site-header--hidden) .handbook-search-sticky--detail:not(:focus-within) {
+  position: static;
+}
+
 /* Two classes: the base .newsprint-article-tags rule sits later in the file. */
 .newsprint-article-tags.newsprint-article-tags--end {
   margin: 1.75rem 0 0;
