@@ -4,6 +4,7 @@ import { resolveDisplayTitleExcerpt } from '../personaTitle';
 import { fetchPublicTermIndex, fetchTermPopups } from './publicTermIndex';
 import { getAuthorizedSupabase, getPublicSupabase, type DetailPageContext } from './shared';
 import { kstDay } from '../homeFront.js';
+import { normalizeNewsBold } from '../newsBold.js';
 import { deskDayRange } from '../newsDesks.js';
 
 interface NewsDetailPageContext extends DetailPageContext {
@@ -258,8 +259,8 @@ export async function getNewsDetailPageData({
 
   const hasTerms = handbookTermsMap.size > 0;
   const renderMd = hasTerms
-    ? (md: string) => renderMarkdownWithTerms(md, handbookTermsMap)
-    : (md: string) => renderMarkdown(md);
+    ? (md: string) => renderMarkdownWithTerms(normalizeNewsBold(md), handbookTermsMap)
+    : (md: string) => renderMarkdown(normalizeNewsBold(md));
 
   let activePersona: string | null = null;
   let personaHtmlMap: Record<string, string> = {};
