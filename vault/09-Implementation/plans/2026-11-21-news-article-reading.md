@@ -1,5 +1,7 @@
 # 뉴스 기사 본문 읽기 개선 Implementation Plan
 
+**Status:** Task 1–8 실행 완료 (2026-11-21, `main`, push 전). Task 1 Step 5(`isLongBold` 기준)만 Amy 확정 대기. 실행 결과는 문서 끝 참조.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 공개 뉴스 기사 상세에서 단어 중간 줄바꿈과 깨진·과한 굵은 글씨를 없애고, 머리 부분을 줄여 본문을 위로 올리고, 내려 읽는 동안 떠 있는 막대를 숨긴다.
@@ -1163,3 +1165,33 @@ git commit -m "docs: record the news article reading pass"
 ```
 
 `ACTIVE_SPRINT.md`에는 다른 미커밋 변경이 있으므로 이 커밋에 넣지 않는다. 스프린트 반영은 Amy가 `/sprint-sync`로 한다.
+
+---
+
+## 실행 결과 (2026-11-21)
+
+- 작업 폴더: `C:\Users\amy\Desktop\0to1log-news-reading` (`main`의 worktree). 원래 폴더는 `fix/handbook-writer-grounding`에 미커밋 변경이 있어 전환하지 않았다.
+- 테스트: 전체 실행 시 실패 목록이 시작 전 16개와 같다. 새 테스트 `news-bold-normalize`, `news-article-reading` 통과.
+- 빌드: `npm run build` 오류 0.
+- 화면(개발 서버, 11월 21일 비즈니스·리서치 기사, w46 주간 정리, EN 비즈니스 기사)
+
+| 항목 | 전 | 후 |
+|---|---|---|
+| 본문 시작(데스크톱 1280) | 820px | 708px |
+| 본문 시작(모바일 390) | 974px | 843px |
+| 본문에 보이는 `**` | 2곳 | 0 |
+| 굵은 글씨 비율(비즈니스 학습판) | 14% | 3.5% |
+| 단어 중간 줄바꿈 | 있음 | 없음(`keep-all`) |
+
+- 계획과 달라진 것
+  - Task 1 Step 5(사람이 정하는 단계)를 건너뛰고 기본 제안으로 커밋한 뒤 나머지를 진행했다. 기준이 바뀌면 `isLongBold`만 고쳐 따로 커밋한다.
+  - Task 8에서 모바일 간격 조정을 추가했다(스펙 "모바일" 참조). 데스크톱 값 그대로는 모바일 본문 시작이 그대로였다.
+  - 뉴스 페이지와 레이아웃 파일은 `main`에서 LF였다. CRLF는 원래 작업 폴더의 체크아웃 상태였다.
+- 확인하지 못한 것
+  - 관리자 뉴스 편집의 미리보기(로그인 필요).
+  - 순백 테마는 따로 보지 않았다(종이·다크만 확인). 새 색을 쓰지 않고 토큰만 썼다.
+  - Core Analysis가 있는 기사: 확인한 네 기사에는 분석 영역이 없었다.
+  - 키보드 포커스가 막대 안에 있을 때 숨지 않는 동작은 CSS 규칙만 확인했다.
+- 눈에 띈 것(이번 범위 밖)
+  - 원문에 띄어쓰기 없이 굵은 글씨가 붙은 곳은 그대로 붙어 보인다(`없이**처음 보는**` → "없이처음 보는"). 글 쪽 문제다.
+  - 리서치 기사는 짧은 숫자 강조가 많아 굵은 글씨가 11% 남는다. `isLongBold` 기준을 정할 때 함께 본다.
