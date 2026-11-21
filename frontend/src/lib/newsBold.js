@@ -19,8 +19,8 @@ const LABEL_TAIL = /^(?:[:：]|\s[—–-]\s)/;
  * @returns {boolean}
  */
 export function isLongBold(inner) {
-  // ── Amy 결정 지점 (Task 1 Step 5) ──────────────────────────────────────
-  // 기본 제안: 공백 포함 24자를 넘거나 문장 끝 부호로 끝나면 "길다".
+  // Longer than 24 characters (spaces included), or ending like a sentence.
+  // Editorial choice, confirmed 2026-11-22; change here if emphasis feels too heavy or too thin.
   const text = inner.trim();
   return text.length > 24 || /[.?!。]$/.test(text);
 }

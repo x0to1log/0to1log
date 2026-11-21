@@ -1,6 +1,6 @@
 # 뉴스 기사 본문 읽기 개선 (B 머리 정리 + 기사형 본문) — Design Spec
 
-**Status:** implemented (2026-11-21) — [[2026-11-21-news-article-reading]]. "긴 굵은 글씨" 기준은 기본 제안으로 들어가 있고 Amy 확정 대기.
+**Status:** implemented (2026-11-21) — [[2026-11-21-news-article-reading]]. "긴 굵은 글씨" 기준은 기본 제안(24자 초과 또는 문장 끝)으로 확정(2026-11-22).
 **Mockup:** `.superpowers/brainstorm/article2/article-reading-v1.html` (B안)
 **관련:** [[2026-10-16-news-article-briefing-design]], [[2026-10-14-site-redesign-soft-newsprint-design]]
 
