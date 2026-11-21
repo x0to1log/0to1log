@@ -64,4 +64,13 @@ assert(/background:\s*none/.test(block('.newsprint-article--news .news-briefing'
 assert(/grid-template-columns:\s*minmax\(0, 1fr\)/.test(block('.newsprint-article--news .news-briefing-list')), 'briefing: one column list');
 assert(/font-size:\s*1\.0625rem/.test(block('.newsprint-article--news .news-briefing-list li')), 'briefing: body-size text');
 
+// --- CSS: prose ---
+const prose = block('.newsprint-article--news .newsprint-prose');
+assert(/word-break:\s*keep-all/.test(prose) && /overflow-wrap:\s*break-word/.test(prose), 'prose: no mid-word breaks, long URLs still wrap');
+assert(/font-size:\s*1\.0625rem/.test(prose) && /line-height:\s*1\.85/.test(prose), 'prose: 17px / 1.85');
+assert(/font-weight:\s*600/.test(block('.newsprint-article--news .newsprint-prose strong')), 'prose: strong at 600');
+assert(css.includes('.newsprint-article--news .newsprint-prose h2:has(+ h3) {'), 'category h2 picked by :has(+ h3)');
+assert(/border-left:\s*none/.test(block('.newsprint-article--news .newsprint-prose h3')), 'story headline: no accent bar');
+assert(css.includes('.newsprint-article--news .newsprint-prose:not(.newsprint-prose--analysis) > h2:first-child:not(:has(+ h3)) + p {'), 'lead sentence: main prose only, not Core Analysis');
+
 console.log('news-article-reading.test.cjs passed');

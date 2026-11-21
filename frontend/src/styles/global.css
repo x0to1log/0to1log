@@ -2121,6 +2121,89 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   font-size: 1.3rem;
 }
 
+/* News article prose: article-style hierarchy without touching the markdown */
+.newsprint-article--news .newsprint-prose {
+  font-size: 1.0625rem;
+  line-height: 1.85;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.newsprint-article--news .newsprint-prose p + p {
+  margin-top: 1.1rem;
+}
+
+.newsprint-article--news .newsprint-prose strong {
+  font-weight: 600;
+}
+
+.newsprint-article--news .newsprint-prose h2 {
+  margin-top: 2.6rem;
+  margin-bottom: 0.75rem;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Category h2 ("Big Tech"): a small tab above the story headline that follows it. */
+.newsprint-article--news .newsprint-prose h2:has(+ h3) {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 2.9rem;
+  margin-bottom: 0;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.newsprint-article--news .newsprint-prose h2:has(+ h3)::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+/* Story headline h3 */
+.newsprint-article--news .newsprint-prose h3 {
+  margin-top: 2rem;
+  margin-bottom: 0.9rem;
+  padding-left: 0;
+  border-left: none;
+  font-size: clamp(1.25rem, 1.8vw, 1.44rem);
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.03em;
+  word-break: keep-all;
+}
+
+.newsprint-article--news .newsprint-prose h2 + h3 {
+  margin-top: 0.9rem;
+}
+
+/* First section ("한 줄 요약"): quiet label, then one serif sentence. Main prose only. */
+.newsprint-article--news .newsprint-prose:not(.newsprint-prose--analysis) > h2:first-child:not(:has(+ h3)) {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.newsprint-article--news .newsprint-prose:not(.newsprint-prose--analysis) > h2:first-child:not(:has(+ h3)) + p {
+  font-family: var(--font-article-heading);
+  font-size: 1.22rem;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: -0.02em;
+}
+
 /* Two classes: the base .newsprint-article-tags rule sits later in the file. */
 .newsprint-article-tags.newsprint-article-tags--end {
   margin: 1.75rem 0 0;
