@@ -329,7 +329,8 @@ const siblingLead = !sibling ? '' : siblingDesk === 'research'
     </section>
   )}
 
-  <div class="newsprint-article-find">
+  <!-- Shown only when the reader arrived with a search (?q=), e.g. from a news list search. -->
+  <div class="newsprint-article-find" data-active={initialFindQuery ? 'true' : undefined}>
     <label class="newsprint-article-find-label" for="article-find">{copy.articleFindLabel}</label>
     <div class="newsprint-article-find-row">
       <input

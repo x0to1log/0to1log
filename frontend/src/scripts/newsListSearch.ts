@@ -1,3 +1,5 @@
+import { withFindQuery } from '../lib/newsSearchLink.js';
+
 function initNewsListSearch(): void {
   const results = document.getElementById('news-list-results');
   const search = document.getElementById('news-search') as HTMLInputElement | null;
@@ -41,9 +43,24 @@ function initNewsListSearch(): void {
     history.replaceState(history.state, '', url.toString());
   }
 
+  // A story opened from a search carries the search text (?q=): the article highlights it and
+  // shows its find box. Links are rewritten rather than intercepted so that opening in a new
+  // tab and link prefetching carry it too.
+  const storyLinks = Array.from(
+    results.querySelectorAll<HTMLAnchorElement>('a.newsprint-card-stretched-link'),
+  );
+
+  function syncStoryLinks(text: string): void {
+    storyLinks.forEach((link) => {
+      const href = link.getAttribute('href');
+      if (href) link.setAttribute('href', withFindQuery(href, text));
+    });
+  }
+
   function applySearch(updateUrl = false): void {
     if (!search) return;
     const query = search.value.trim().toLowerCase();
+    syncStoryLinks(search.value);
     const activeFilter = getActiveFilter();
     let visibleCount = 0;
 
