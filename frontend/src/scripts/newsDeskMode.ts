@@ -25,6 +25,26 @@ document.addEventListener('astro:before-swap', (event) => {
   incoming?.querySelector('.news-desks')?.setAttribute('data-expanded', 'true');
 });
 
+// Back (a full reload on this site) lands on the server-rendered list: every story, folded.
+// Astro's router restores scroll against that shape, and a desk tab or search query then
+// reshapes the list, so the page ends up somewhere else. The saved position is therefore
+// applied again each time the list settles, for a short while after load. The target is
+// captured by the inline script in NewsDeskList, before the router can clamp and overwrite it.
+const SETTLE_MS = 2000;
+let pendingScrollY = 0;
+let pendingUntil = 0;
+
+function reapplyScroll(): void {
+  if (pendingScrollY <= 0) return;
+  if (performance.now() > pendingUntil) { pendingScrollY = 0; return; }
+  if (Math.abs(window.scrollY - pendingScrollY) > 1) window.scrollTo({ top: pendingScrollY, behavior: 'instant' });
+}
+
+// The reader's own input always wins over a pending restore.
+for (const type of ['wheel', 'touchstart', 'keydown', 'pointerdown']) {
+  window.addEventListener(type, () => { pendingScrollY = 0; }, { passive: true, capture: true });
+}
+
 function activeFilter(): string {
   const tab = document.querySelector<HTMLElement>(
     '.newsprint-filter-tabs[data-filter-key="post_type"] .newsprint-filter-tab[aria-selected="true"]',
@@ -46,12 +66,19 @@ function update(): void {
     if (hasVisible) row.removeAttribute('data-row-empty');
     else row.setAttribute('data-row-empty', 'true');
   });
+  reapplyScroll();
 }
 
 function init(): void {
   const root = document.querySelector<HTMLElement>('.news-desks');
   if (!root || root.dataset.deskModeReady === 'true') return;
   root.dataset.deskModeReady = 'true';
+  // Take the captured target once. Astro skips an inline script it has already run, so on a
+  // later in-app visit the value stays 0 and nothing is re-applied (those start at the top anyway).
+  const captured = window as Window & { __newsListScrollY?: number };
+  pendingScrollY = captured.__newsListScrollY || 0;
+  captured.__newsListScrollY = 0;
+  pendingUntil = performance.now() + SETTLE_MS;
   if (wasExpanded()) expand(root, false);
   root.querySelector<HTMLElement>('[data-news-more]')?.addEventListener('click', () => expand(root, true));
   window.addEventListener('newsprint:filter-change', () => requestAnimationFrame(update));

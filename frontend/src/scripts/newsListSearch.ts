@@ -38,7 +38,7 @@ function initNewsListSearch(): void {
     } else {
       url.searchParams.delete('q');
     }
-    history.replaceState(null, '', url.toString());
+    history.replaceState(history.state, '', url.toString());
   }
 
   function applySearch(updateUrl = false): void {

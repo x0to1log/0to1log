@@ -73,8 +73,11 @@ const olderAttr = (entry: any) => (entry.older ? 'true' : undefined);
     <button type="button" class="news-desks-more" data-news-more>{copy.more}<span> · {isKo ? `${olderCount}편` : olderCount}</span></button>
   )}
 </div>
-<!-- Unfold before first paint when "more" was pressed earlier in this tab (back from an article). -->
+<!-- Runs while the page is parsed, before the router and the list scripts:
+     1. remember where Back should land (newsDeskMode.ts re-applies it once a tab or search has reshaped the list);
+     2. unfold before first paint when "more" was pressed earlier in this tab. -->
 <script is:inline nonce={nonce}>
+  window.__newsListScrollY = (history.state && history.state.scrollY) || 0;
   try {
     if (sessionStorage.getItem('news-list-expanded') === '1') {
       document.getElementById('news-list-results').setAttribute('data-expanded', 'true');

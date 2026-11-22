@@ -107,7 +107,7 @@ function initArticleFind(): void {
     } else {
       url.searchParams.delete('q');
     }
-    history.replaceState(null, '', url.toString());
+    history.replaceState(history.state, '', url.toString());
   }
 
   function updateCount(query: string, matches: number): void {

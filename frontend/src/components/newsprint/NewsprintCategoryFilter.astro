@@ -93,7 +93,8 @@ const tabs: FilterItem[] = items
       } else {
         url.searchParams.set(filterKey, value);
       }
-      history.replaceState(null, '', url.toString());
+      // Keep history.state: Astro's router stores the scroll position there, and this runs on every init.
+      history.replaceState(history.state, '', url.toString());
 
       window.dispatchEvent(
         new CustomEvent('newsprint:filter-change', {

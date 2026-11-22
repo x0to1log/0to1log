@@ -41,11 +41,19 @@ const clarityId = import.meta.env.PUBLIC_CLARITY_ID || '';
   <!-- Theme boot: before paint + after every ViewTransitions swap (source: lib/theme.js) -->
   <script is:inline nonce={nonce} set:html={THEME_BOOT_SCRIPT}></script>
 
-  <!-- Fall back to full reload on back/forward (SSR pages can't reliably swap) -->
+  <!-- Fall back to full reload on back/forward (SSR pages can't reliably swap).
+       This is the only back/forward handler: registered before the view-transition router, it
+       stops the router's own popstate listener. Left running, the router races the reload; when
+       its in-place swap finished first it restored scroll against the server-rendered page and
+       saved that position over the real one. Admin pages load no router and keep their own
+       popstate listeners, so nothing is stopped there. -->
   <script is:inline nonce={nonce}>
     if (!window.__hardReloadOnTraverseBound) {
       window.__hardReloadOnTraverseBound = true;
-      window.addEventListener('popstate', function() {
+      window.addEventListener('popstate', function(event) {
+        if (document.querySelector('meta[name="astro-view-transitions-enabled"]')) {
+          event.stopImmediatePropagation();
+        }
         window.location.reload();
       });
     }
