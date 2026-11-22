@@ -2607,6 +2607,11 @@ a.news-twin-desk:hover .news-twin-desk-title {
   gap: 0.75rem;
 }
 
+/* The 44px bookmark target keeps its size but stops stretching one-line titles */
+.news-desk-head .newsprint-bookmark-icon {
+  margin: -0.6rem -0.5rem -0.6rem 0;
+}
+
 .news-desk-title {
   flex: 1;
   font-family: var(--font-heading);
@@ -2689,8 +2694,9 @@ a.news-twin-desk:hover .news-twin-desk-title {
 .news-desk-weekly-when span {
   font-family: var(--font-masthead);
   font-variant-numeric: lining-nums;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
 .news-desk-weekly .newsprint-card {
@@ -2739,7 +2745,6 @@ a.news-twin-desk:hover .news-twin-desk-title {
 }
 
 .news-desks-more span {
-  margin-left: 0.4rem;
   font-weight: 400;
   color: var(--color-text-muted);
 }
@@ -2804,6 +2809,10 @@ a.news-twin-desk:hover .news-twin-desk-title {
   gap: 0.5rem;
 }
 
+.news-desks[data-mode="list"] .news-desk-weekly .newsprint-card {
+  max-width: none;
+}
+
 @media (max-width: 767px) {
   .news-desks-heads {
     display: none;
@@ -2849,6 +2858,15 @@ a.news-twin-desk:hover .news-twin-desk-title {
     flex-direction: row;
     align-items: baseline;
     gap: 0.5rem;
+  }
+
+  .news-desk-weekly .newsprint-card {
+    max-width: none;
+  }
+
+  /* 0,3,0: the list-mode row gap would stack on top of the cell margins here */
+  .news-desks[data-mode="list"] .news-desk-row {
+    gap: 0;
   }
 }
 

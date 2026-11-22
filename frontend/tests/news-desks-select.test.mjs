@@ -110,6 +110,12 @@ const firstOctober = listed.findIndex((e) => e.kind === 'month');
 assert.equal(listed[firstOctober].older, listed[firstOctober + 1].older, 'month marker follows the entry after it');
 assert.ok(listed.some((e) => e.older) && listed.some((e) => !e.older), '20 days: some shown, some folded');
 
+// 접힌 구간 안에서 달이 바뀌면 그 month 항목도 접힌다
+const longRun = Array.from({ length: RECENT_DAYS + 12 }, (_, i) => dayEntry(i < 20 ? `2026-11-${pad(21 - i)}` : `2026-10-${pad(51 - i)}`));
+listed = addListBreaks(longRun);
+const foldedMonth = listed.find((e) => e.kind === 'month');
+assert.deepEqual([foldedMonth.month, foldedMonth.older], ['2026-10', true], 'a month divider inside the folded part is folded too');
+
 // 같은 날의 주간 정리와 날짜 줄은 같은 쪽에 놓인다
 listed = addListBreaks([{ kind: 'weekly', day: '2026-11-15', post: { slug: 'w' } }, dayEntry('2026-11-15')]);
 assert.equal(listed[0].older, listed[1].older);

@@ -13,6 +13,7 @@ interface Props {
 
 const { locale, entries } = Astro.props;
 const isKo = locale === 'ko';
+const nonce = Astro.locals.cspNonce || '';
 const copy = isKo
   ? {
       business: '비즈니스 데스크', businessSub: '돈과 시장',
@@ -46,7 +47,7 @@ const olderAttr = (entry: any) => (entry.older ? 'true' : undefined);
     if (entry.kind === 'weekly') {
       return (
         <div class="news-desk-weekly" data-older={olderAttr(entry)}>
-          <p class="news-desk-weekly-when"><b>{copy.weekly}</b><span>{date.short} · {date.issue}</span></p>
+          <p class="news-desk-weekly-when"><b aria-hidden="true">{copy.weekly}</b>{' '}<span>{date.short} · {date.issue}</span></p>
           <NewsDeskCell locale={locale} post={entry.post} side="weekly" />
         </div>
       );
@@ -69,6 +70,14 @@ const olderAttr = (entry: any) => (entry.older ? 'true' : undefined);
     );
   })}
   {olderCount > 0 && (
-    <button type="button" class="news-desks-more" data-news-more>{copy.more}<span>{isKo ? `${olderCount}편` : olderCount}</span></button>
+    <button type="button" class="news-desks-more" data-news-more>{copy.more}<span> · {isKo ? `${olderCount}편` : olderCount}</span></button>
   )}
 </div>
+<!-- Unfold before first paint when "more" was pressed earlier in this tab (back from an article). -->
+<script is:inline nonce={nonce}>
+  try {
+    if (sessionStorage.getItem('news-list-expanded') === '1') {
+      document.getElementById('news-list-results').setAttribute('data-expanded', 'true');
+    }
+  } catch (e) { /* storage blocked: stay folded */ }
+</script>

@@ -17,6 +17,14 @@ function expand(root: HTMLElement, moveFocus: boolean): void {
   if (moveFocus) root.querySelector<HTMLElement>('[data-older="true"] a')?.focus();
 }
 
+// View-transition navigations restore scroll before astro:page-load, so the incoming list
+// must already be unfolded when it is swapped in (full loads use the inline script in NewsDeskList).
+document.addEventListener('astro:before-swap', (event) => {
+  if (!wasExpanded()) return;
+  const incoming = (event as Event & { newDocument?: Document }).newDocument;
+  incoming?.querySelector('.news-desks')?.setAttribute('data-expanded', 'true');
+});
+
 function activeFilter(): string {
   const tab = document.querySelector<HTMLElement>(
     '.newsprint-filter-tabs[data-filter-key="post_type"] .newsprint-filter-tab[aria-selected="true"]',
