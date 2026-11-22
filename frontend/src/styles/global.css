@@ -1028,6 +1028,25 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   widows: 3;
 }
 
+/* Korean line breaks: wrap between words, not inside them, in every article body (news, handbook,
+   blog) and in the text blocks around the handbook and blog bodies. A string longer than the line
+   (URL, identifier) still wraps. */
+.newsprint-prose,
+.handbook-hero-card__definition,
+.handbook-hero-card__news-line,
+.handbook-references__annotation,
+.handbook-today-def,
+.handbook-intro,
+.blog-article-title,
+.blog-post-dek,
+.blog-post-pager-title,
+.blog-lead-title,
+.blog-lead-excerpt,
+.blog-serial-title {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
 .newsprint-lead-title,
 .handbook-detail-title {
   scroll-margin-top: calc(var(--header-h, 4rem) + 1rem);
