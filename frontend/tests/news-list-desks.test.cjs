@@ -49,6 +49,10 @@ assert(/rail\?: boolean/.test(shell) && /\{rail && \(/.test(shell), 'shell can d
 const mode = read('scripts/newsDeskMode.ts');
 assert(mode.includes('deskModeReady') && mode.includes("'news:list-updated'") && mode.includes("'newsprint:filter-change'"), 'mode script: guard + both signals');
 assert(mode.includes('data-row-empty'), 'mode script hides empty rows');
+assert(mode.includes("'[data-news-more]'") && mode.includes("root.dataset.expanded = 'true'"), 'mode script: more button expands the list');
+assert(mode.includes("sessionStorage.setItem(EXPANDED_KEY, '1')") && mode.includes("sessionStorage.getItem(EXPANDED_KEY) === '1'"), 'mode script: expanded state survives a visit to an article');
+assert(/try \{[^}]*sessionStorage\.setItem/.test(mode) && /try \{[^}]*sessionStorage\.getItem/.test(mode), 'storage access is guarded');
+assert(mode.includes("'[data-older=\"true\"] a'"), 'focus moves to the first revealed story');
 assert(read('scripts/newsListSearch.ts').includes("new CustomEvent('news:list-updated')"), 'search announces updates');
 
 assert(/grid-template-areas:\s*"date business research"/.test(css), 'desk grid: date | business | research');
