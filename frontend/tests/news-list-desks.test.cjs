@@ -45,6 +45,16 @@ for (const locale of ['ko', 'en']) {
 
 const shell = read('components/newsprint/NewsprintShell.astro');
 assert(/rail\?: boolean/.test(shell) && /\{rail && \(/.test(shell), 'shell can drop the rail');
+assert(/tight\?: boolean;/.test(shell) && shell.includes("class={`newsprint-header${tight ? ' newsprint-header--tight' : ''}`}"), 'shell: tight masthead is opt-in');
+assert(/\.newsprint-header--tight \.newsprint-masthead\s*\{[^}]*font-size:\s*clamp\(1\.7rem, 4\.4vw, 2\.4rem\)/.test(css), 'tight masthead is about half size');
+for (const locale of ['ko', 'en']) {
+  const page = read(`pages/${locale}/news/index.astro`);
+  assert(/<NewsprintShell[\s\S]*?\n\s+tight\s*\n/.test(page), `${locale}: news list uses the tight masthead`);
+  assert(!/subkicker|parseJsonArray/.test(page), `${locale}: no subkicker row on the news list`);
+}
+for (const p of ['pages/ko/handbook/index.astro', 'pages/en/handbook/index.astro']) {
+  assert(!/\n\s+tight\s*\n/.test(read(p)), `${p}: handbook list keeps the full masthead`);
+}
 
 const mode = read('scripts/newsDeskMode.ts');
 assert(mode.includes('deskModeReady') && mode.includes("'news:list-updated'") && mode.includes("'newsprint:filter-change'"), 'mode script: guard + both signals');

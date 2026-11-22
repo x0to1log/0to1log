@@ -266,6 +266,17 @@
   }
 }
 
+/* Tight masthead (news list): half-size name so the first story starts sooner */
+.newsprint-header--tight {
+  margin-bottom: 1rem;
+}
+
+.newsprint-header--tight .newsprint-masthead {
+  margin-top: 0.5rem;
+  margin-bottom: 0.6rem;
+  font-size: clamp(1.7rem, 4.4vw, 2.4rem);
+}
+
 .newsprint-grid {
   display: grid;
   grid-template-columns: 1fr;

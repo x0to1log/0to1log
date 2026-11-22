@@ -11,7 +11,7 @@ import NewsDeskList from '../../../components/newsprint/NewsDeskList.astro';
 import { buildDeskRows } from '../../../lib/newsDesks.js';
 import NewsprintCategoryFilter from '../../../components/newsprint/NewsprintCategoryFilter.astro';
 import NewsprintNotice from '../../../components/newsprint/NewsprintNotice.astro';
-import { getSiteContents, parseJsonArray } from '../../../lib/siteContent';
+import { getSiteContents } from '../../../lib/siteContent';
 
 let posts: any[] = [];
 let fetchError: string | null = null;
@@ -45,7 +45,7 @@ const [dailyRes, weeklyRes, sc] = await Promise.all([
         .limit(20)
     : Promise.resolve({ data: null, error: null }),
   getSiteContents(
-    ['editorial_note', 'news_masthead', 'news_edition_label', 'news_subkicker'],
+    ['editorial_note', 'news_masthead', 'news_edition_label'],
     'en',
   ),
 ]);
@@ -73,7 +73,6 @@ const postTypeItems = [
   { value: 'research', label: getPostTypeLabel('en', 'research') },
   { value: 'weekly', label: 'Weekly' },
 ];
-const subkicker = parseJsonArray<string>(sc.news_subkicker, ['AI · Papers', 'Daily Curation', 'Open Access']);
 const searchPlaceholder = 'Search AI news';
 const searchHints = [searchPlaceholder, 'OpenAI', 'Gemini', 'MCP'];
 const searchEmptyMessage = 'No AI news matches that search.';
@@ -84,7 +83,7 @@ const searchEmptyMessage = 'No AI news matches that search.';
     locale="en"
     masthead={sc.news_masthead || 'Latest AI News'}
     editionLabel={sc.news_edition_label || 'Log Daily'}
-    subkicker={subkicker}
+    tight
     rail={false}
   >
     {sc.editorial_note && <p class="news-desks-note">{sc.editorial_note}</p>}
