@@ -23,11 +23,18 @@ for (const file of walk(src)) {
   if (!/\.(astro|ts|js)$/.test(rel)) continue;
   // Admin pages do not load the view-transition router, so its state is not at stake there.
   if (rel.startsWith('pages/admin/')) continue;
+  // The admin editors' preview toggle keeps its own {mode} state and only runs on admin pages.
+  if (rel === 'scripts/adminEditorPreview.ts') continue;
   read(rel).split('\n').forEach((line, i) => {
-    if (/history\.replaceState\(\s*null\b/.test(line)) offenders.push(`${rel}:${i + 1}`);
+    const call = line.match(/history\.replaceState\(\s*([^,]+),/);
+    if (!call) return;
+    // null wipes the state; a fresh literal such as {} keeps it truthy but drops index and scroll.
+    const first = call[1].trim();
+    const keepsState = /^(window\.)?history\.state$/.test(first) || first.includes('...history.state');
+    if (!keepsState) offenders.push(`${rel}:${i + 1} passes ${first}`);
   });
 }
-assert.deepEqual(offenders, [], 'public scripts must not wipe history.state when rewriting the URL');
+assert.deepEqual(offenders, [], 'public scripts must pass the existing history.state when rewriting the URL');
 
 for (const file of ['components/newsprint/NewsprintCategoryFilter.astro', 'scripts/newsListSearch.ts', 'scripts/articleFind.ts']) {
   assert(read(file).includes("history.replaceState(history.state, '', url.toString());"), `${file}: URL rewrite keeps the router's history state`);

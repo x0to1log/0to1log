@@ -656,7 +656,8 @@ const userIdUnlockDate = usernameChangedAt
         if (isOnboarding) {
           const banner = document.getElementById('onboarding-banner');
           if (banner) banner.hidden = true;
-          window.history.replaceState({}, '', '/settings/');
+          // Keep the router's history state (index + scroll position); only the URL changes.
+          window.history.replaceState(window.history.state, '', '/settings/');
         }
       } catch {
         showFeedback('Save failed', 'error');
