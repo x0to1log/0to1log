@@ -1,9 +1,10 @@
 ---
 // frontend/src/components/newsprint/NewsDeskList.astro
-// Two-desk news list: business | date spine | research, one row per KST day.
-// DOM order is date → business → research (reading order); desktop columns come from grid-template-areas.
+// News list: date | business | research, one row per KST day. A day with one desk's
+// story lets it span both columns. Month dividers and the recent/older split come
+// from addListBreaks(); older entries are folded by CSS until "more" is pressed.
 import NewsDeskCell from './NewsDeskCell.astro';
-import { deskDateParts } from '../../lib/newsDesks.js';
+import { addListBreaks, deskDateParts, monthLabel } from '../../lib/newsDesks.js';
 
 interface Props {
   locale: 'en' | 'ko';
@@ -16,50 +17,58 @@ const copy = isKo
   ? {
       business: '비즈니스 데스크', businessSub: '돈과 시장',
       research: '리서치 데스크', researchSub: '논문과 기술',
-      noBusiness: '이날은 비즈니스 기사가 없어요', noResearch: '이날은 리서치 기사가 없어요',
-      today: '오늘',
+      today: '오늘', weekly: '주간 정리', more: '이전 기사 더 보기',
     }
   : {
       business: 'Business desk', businessSub: 'Money and markets',
       research: 'Research desk', researchSub: 'Papers and tech',
-      noBusiness: 'No business story this day', noResearch: 'No research story this day',
-      today: 'Today',
+      today: 'Today', weekly: 'Weekly', more: 'Show earlier stories',
     };
+
+const listed = addListBreaks(entries);
+const storyCount = (entry: any) =>
+  entry.kind === 'weekly' ? 1 : entry.kind === 'day' ? (entry.business ? 1 : 0) + (entry.research ? 1 : 0) : 0;
+const olderCount = listed.reduce((n: number, entry: any) => (entry.older ? n + storyCount(entry) : n), 0);
+const olderAttr = (entry: any) => (entry.older ? 'true' : undefined);
 ---
 
-<div id="news-list-results" class="news-desks" data-mode="desks">
+<div id="news-list-results" class="news-desks" data-mode="desks" data-expanded="false">
   <div class="news-desks-heads" aria-hidden="true">
-    <p class="news-desks-head news-desks-head--business">{copy.business} <small>· {copy.businessSub}</small></p>
     <span></span>
+    <p class="news-desks-head news-desks-head--business">{copy.business} <small>· {copy.businessSub}</small></p>
     <p class="news-desks-head news-desks-head--research">{copy.research} <small>· {copy.researchSub}</small></p>
   </div>
-  {entries.map((entry) => {
+  {listed.map((entry: any) => {
+    if (entry.kind === 'month') {
+      return <p class="news-desk-month" data-older={olderAttr(entry)}>{monthLabel(entry.month, locale)}</p>;
+    }
     const date = deskDateParts(entry.day, locale);
     if (entry.kind === 'weekly') {
       return (
-        <div class="news-desk-weekly">
-          <p class="news-desk-weekly-when">{date.short} · {date.issue}</p>
+        <div class="news-desk-weekly" data-older={olderAttr(entry)}>
+          <p class="news-desk-weekly-when"><b>{copy.weekly}</b><span>{date.short} · {date.issue}</span></p>
           <NewsDeskCell locale={locale} post={entry.post} side="weekly" />
         </div>
       );
     }
+    const solo = !entry.business !== !entry.research;
     return (
-      <div class={`news-desk-row${entry.isToday ? ' news-desk-row--today' : ''}${entry.showDate ? '' : ' news-desk-row--cont'}`}>
+      <div class={`news-desk-row${entry.isToday ? ' news-desk-row--today' : ''}${entry.showDate ? '' : ' news-desk-row--cont'}${solo ? ' news-desk-row--solo' : ''}`} data-older={olderAttr(entry)}>
         <p class="news-desk-date">
           {entry.showDate && (
             <>
               <b>{date.short}</b>
-              <span>{date.weekday} · {date.issue}{entry.isToday ? ` · ${copy.today}` : ''}</span>
+              <span>{date.weekday} · {date.issue}</span>
+              {entry.isToday && <em class="news-desk-today">{copy.today}</em>}
             </>
           )}
         </p>
-        {entry.business
-          ? <NewsDeskCell locale={locale} post={entry.business} side="business" isToday={entry.isToday} />
-          : <p class="news-desk-empty news-desk-empty--business">{copy.noBusiness}</p>}
-        {entry.research
-          ? <NewsDeskCell locale={locale} post={entry.research} side="research" isToday={entry.isToday} />
-          : <p class="news-desk-empty news-desk-empty--research">{copy.noResearch}</p>}
+        {entry.business && <NewsDeskCell locale={locale} post={entry.business} side="business" isToday={entry.isToday} />}
+        {entry.research && <NewsDeskCell locale={locale} post={entry.research} side="research" isToday={entry.isToday} />}
       </div>
     );
   })}
+  {olderCount > 0 && (
+    <button type="button" class="news-desks-more" data-news-more>{copy.more}<span>{isKo ? `${olderCount}편` : olderCount}</span></button>
+  )}
 </div>

@@ -20,10 +20,17 @@ assert(!/newsprint-tags-inline|newsprint-tag\b|getCategoryLabel/.test(cell), 'no
 
 const list = read('components/newsprint/NewsDeskList.astro');
 assert(list.includes('id="news-list-results"') && list.includes('data-mode="desks"'), 'results root starts in desk mode');
-for (const s of ['비즈니스 데스크', '리서치 데스크', 'Business desk', 'Research desk', '이날은 리서치 기사가 없어요', 'No research story this day']) {
+for (const s of ['비즈니스 데스크', '리서치 데스크', 'Business desk', 'Research desk', '주간 정리', 'Weekly', '이전 기사 더 보기', 'Show earlier stories', '오늘', 'Today']) {
   assert(list.includes(s), `copy: ${s}`);
 }
-assert(/<p class="news-desk-empty news-desk-empty--business">/.test(list) && !/news-desk-empty[^>]*(data-search-text|newsprint-card)/.test(list), 'empty placeholders are plain elements');
+assert(!list.includes('news-desk-empty') && !/없어요|No (business|research) story/.test(list), 'no empty-cell placeholders: a lone story takes both columns');
+assert(list.includes("solo ? ' news-desk-row--solo' : ''") && /const solo = !entry\.business !== !entry\.research;/.test(list), 'solo row when exactly one desk has a story');
+assert(list.includes('addListBreaks(entries)') && list.includes('class="news-desk-month"') && list.includes('monthLabel(entry.month, locale)'), 'month dividers from addListBreaks');
+assert((list.match(/data-older=\{olderAttr\(entry\)\}/g) || []).length === 3, 'month, weekly and day entries carry data-older');
+assert(list.includes('data-expanded="false"') && list.includes('data-news-more') && list.includes('{olderCount > 0 && ('), 'more button only when something is folded');
+assert(list.includes('<em class="news-desk-today">{copy.today}</em>'), 'today marker on its own line');
+const heads = ['<span></span>', 'news-desks-head--business', 'news-desks-head--research'].map((s) => list.indexOf(s));
+assert(heads.every((i) => i > 0) && heads[0] < heads[1] && heads[1] < heads[2], 'column heads: blank date column first');
 const order = ['class="news-desk-date"', '<NewsDeskCell locale={locale} post={entry.business}', '<NewsDeskCell locale={locale} post={entry.research}'].map((s) => list.indexOf(s));
 assert(order.every((i) => i > 0) && order[0] < order[1] && order[1] < order[2], 'DOM order: date, business, research');
 
