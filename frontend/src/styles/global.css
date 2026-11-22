@@ -1029,8 +1029,8 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
 }
 
 /* Korean line breaks: wrap between words, not inside them, in every article body (news, handbook,
-   blog) and in the text blocks around the handbook and blog bodies. A string longer than the line
-   (URL, identifier) still wraps. */
+   blog) and in the text blocks around those bodies (terms, quiz, next reads, weekly cards).
+   A string longer than the line (URL, identifier) still wraps. */
 .newsprint-prose,
 .handbook-hero-card__definition,
 .handbook-hero-card__news-line,
@@ -1042,7 +1042,16 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
 .blog-post-pager-title,
 .blog-lead-title,
 .blog-lead-excerpt,
-.blog-serial-title {
+.blog-serial-title,
+.news-article-terms,
+.news-read-next-title,
+.news-twin-desk-title,
+.news-twin-desk-excerpt,
+.weekly-card-heading,
+.weekly-card-def,
+.newsprint-quiz-question,
+.newsprint-quiz-option,
+.newsprint-quiz-explanation {
   word-break: keep-all;
   overflow-wrap: break-word;
 }

@@ -29,6 +29,15 @@ for (const selector of [
   '.blog-lead-title',
   '.blog-lead-excerpt',
   '.blog-serial-title',
+  '.news-article-terms',
+  '.news-read-next-title',
+  '.news-twin-desk-title',
+  '.news-twin-desk-excerpt',
+  '.weekly-card-heading',
+  '.weekly-card-def',
+  '.newsprint-quiz-question',
+  '.newsprint-quiz-option',
+  '.newsprint-quiz-explanation',
 ]) {
   assert(selectors.includes(selector), `${selector} wraps between words`);
 }
