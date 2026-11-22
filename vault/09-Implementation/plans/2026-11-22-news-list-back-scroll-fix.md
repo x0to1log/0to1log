@@ -1,6 +1,6 @@
 # 뉴스 목록 뒤로 가기 스크롤 복원 — 원인과 수정
 
-**Status:** fixed (2026-11-22), 커밋 `fix: restore the scroll position when coming back to the news list`. push 전.
+**Status:** fixed and verified on production (2026-11-22), 커밋 `667d3720`.
 **관련:** [[2026-11-22-news-list-reading]] (실행 결과의 "눈에 띈 것"에서 넘어온 문제)
 
 ## 증상
@@ -59,9 +59,12 @@
 - 가드 테스트 `frontend/tests/history-state-preserved.test.cjs`: 공개 페이지 소스에 `history.replaceState(null` 금지(관리자 제외), 레이아웃 처리기의 전파 차단, 목록의 확보·재적용 코드.
 - 전체 테스트의 실패 목록은 기존 16개 그대로, 빌드 오류 0.
 
+### 운영 확인 (배포 후, 2026-11-22)
+
+같은 스크립트를 `https://0to1log.com`으로 돌렸다. 목록 7가지(전체 접힘 1800, 더 보기 후 7000, 리서치 3000, 검색 "Gemini" 1200, 검색 "AI" 4200, 주간 정리 1500, 비즈니스 + "OpenAI" 2600)와 두 번 왕복, 홈·용어집·블로그·제품 목록·모바일 크기 목록·기사 페이지 모두 떠난 위치로 돌아왔다. 제품 목록의 `#cat-video` 점프 후 뒤로 가기도 원래 위치다.
+
 ## 확인하지 못한 것
 
-- 운영 빌드에서의 최종 동작. 개발 서버에서만 재현·확인했다. 배포 후 같은 스크립트를 운영 주소로 돌려 확인한다.
 - 관리자 화면. 로그인이 필요하다. 라우터가 없는 페이지에서는 전파를 막지 않으므로 코드상 변화가 없다.
 - Safari·Firefox. Chromium으로만 확인했다.
 
