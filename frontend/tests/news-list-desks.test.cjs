@@ -51,10 +51,16 @@ assert(mode.includes('deskModeReady') && mode.includes("'news:list-updated'") &&
 assert(mode.includes('data-row-empty'), 'mode script hides empty rows');
 assert(read('scripts/newsListSearch.ts').includes("new CustomEvent('news:list-updated')"), 'search announces updates');
 
-assert(/grid-template-areas:\s*"business date research"/.test(css), 'desk grid: business | date | research');
+assert(/grid-template-areas:\s*"date business research"/.test(css), 'desk grid: date | business | research');
 assert(/\.news-desks\[data-mode="list"\] \.news-desk-row\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/.test(css), 'list mode is one column');
 assert(/\.news-desk-row\[data-row-empty="true"\],\s*\n\.news-desk-weekly\[data-row-empty="true"\]\s*\{\s*display:\s*none;/.test(css), 'empty rows hidden');
-assert(/\[data-theme="dark"\] \.news-desk-weekly\s*\{/.test(css), 'dark weekly band rule');
+assert(!/\[data-theme="dark"\] \.news-desk-weekly\s*\{/.test(css) && !/\.news-desk-weekly\s*\{[^}]*background:/.test(css), 'weekly recap is ruled, not a filled band');
+assert(/\.news-desk-row--solo > \.news-desk-cell\s*\{[^}]*grid-column:\s*2 \/ 4/.test(css), 'solo story spans both desk columns');
+assert(!/\.news-desk-empty/.test(css) && !/text-align:\s*right/.test(css.slice(css.indexOf('.news-desks-heads {'), css.indexOf('.newsprint-article-topline {'))), 'no empty-cell styles, nothing right-aligned in the desk block');
+assert(/\.news-desk-excerpt\s*\{[^}]*-webkit-line-clamp:\s*2[^}]*word-break:\s*keep-all/.test(css), 'excerpt: two lines, no mid-word breaks');
+assert(css.includes('.news-desks[data-mode="desks"]:not([data-expanded="true"]) [data-older="true"] {'), 'older entries fold only in desk mode');
+assert(css.includes('.news-desks[data-mode="desks"] .news-desk-row:not(.news-desk-row--solo) .news-desk-label {'), 'desk label hidden only where the column already says it');
+assert(/\.news-desks\[data-mode="list"\] \.news-desks-more,\s*\n\.news-desks\[data-expanded="true"\] \.news-desks-more\s*\{\s*display:\s*none;/.test(css), 'more button gone in list mode and once expanded');
 assert(/\.news-desk-cell--business\s*\{\s*--desk:\s*var\(--tier-paid\);/.test(css) && /\.news-desk-cell--research\s*\{\s*--desk:\s*var\(--tier-freemium\);/.test(css), 'desk colours reuse tier tokens');
 assert(!/\.news-desk[a-z-]*[^{]*\{[^}]*(?:^|[\s;{])order:/m.test(css), 'no CSS order on desk items');
 
