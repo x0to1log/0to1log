@@ -76,8 +76,8 @@ export const RECENT_DAYS = 14;
  * @returns {string|null}
  */
 export function recentCutoff(days) {
-  // ── Amy 결정 지점 (Task 1 Step 5) ──────────────────────────────────────
-  // 기본 제안: 발행된 날 RECENT_DAYS개까지가 "최근"이다(달력 날짜가 아니다).
+  // The newest RECENT_DAYS days that have stories count as recent (publishing days, not
+  // calendar days). Editorial choice, confirmed 2026-11-22.
   if (days.length === 0) return null;
   return days[Math.min(days.length, RECENT_DAYS) - 1];
 }

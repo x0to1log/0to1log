@@ -1,6 +1,6 @@
 # 뉴스 목록 읽기 개선 (B 날짜를 왼쪽으로) — Design Spec
 
-**Status:** implemented (2026-11-22) — [[2026-11-22-news-list-reading]]. "최근"의 기준은 기본 제안으로 들어가 있고 Amy 확정 대기.
+**Status:** implemented (2026-11-22) — [[2026-11-22-news-list-reading]]. "최근"의 기준은 기본 제안(발행된 날 14개)으로 확정(2026-11-22).
 **Mockup:** `.superpowers/brainstorm/newslist2/news-list-reading-v1.html` (B안)
 **관련:** [[2026-10-16-news-list-desks-design]], [[2026-11-21-news-article-reading-design]]
 

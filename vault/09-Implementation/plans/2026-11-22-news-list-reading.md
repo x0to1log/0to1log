@@ -1,6 +1,6 @@
 # 뉴스 목록 읽기 개선 Implementation Plan
 
-**Status:** Task 1–6 실행 완료 (2026-11-22, `main`, push 전). Task 1 Step 5(`recentCutoff` 기준)만 Amy 확정 대기. 실행 결과는 문서 끝 참조.
+**Status:** done (2026-11-22). `recentCutoff` 기준은 기본 제안으로 확정. 실행 결과는 문서 끝 참조.
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
