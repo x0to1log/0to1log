@@ -66,3 +66,48 @@ export function deskDayRange(day) {
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
   return { start: start.toISOString(), end: end.toISOString() };
 }
+
+/** How many days the list shows before the "more" button. */
+export const RECENT_DAYS = 14;
+
+/**
+ * Oldest KST day (YYYY-MM-DD) still shown before "more".
+ * @param {string[]} days distinct days that have entries, newest first
+ * @returns {string|null}
+ */
+export function recentCutoff(days) {
+  // ── Amy 결정 지점 (Task 1 Step 5) ──────────────────────────────────────
+  // 기본 제안: 발행된 날 RECENT_DAYS개까지가 "최근"이다(달력 날짜가 아니다).
+  if (days.length === 0) return null;
+  return days[Math.min(days.length, RECENT_DAYS) - 1];
+}
+
+/**
+ * Adds month dividers and an `older` flag to buildDeskRows() output. Pure; input untouched.
+ * @param {Array<{kind: 'weekly'|'day', day: string}>} entries newest first
+ * @returns {Array<object>} same entries plus {kind: 'month', month: 'YYYY-MM', older}
+ */
+export function addListBreaks(entries) {
+  const cutoff = recentCutoff([...new Set(entries.map((entry) => entry.day))]);
+  const out = [];
+  let month = entries[0]?.day.slice(0, 7);
+  for (const entry of entries) {
+    const older = cutoff !== null && entry.day < cutoff;
+    const entryMonth = entry.day.slice(0, 7);
+    if (entryMonth !== month) {
+      out.push({ kind: 'month', month: entryMonth, older });
+      month = entryMonth;
+    }
+    out.push({ ...entry, older });
+  }
+  return out;
+}
+
+/** "2026년 10월" / "October 2026" for a YYYY-MM month. */
+export function monthLabel(month, locale) {
+  return new Date(`${month}-15T12:00:00+09:00`).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: 'long',
+  });
+}

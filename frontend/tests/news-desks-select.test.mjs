@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const { buildDeskRows, deskDateParts, deskDayRange } = await import(pathToFileURL(path.join(here, '../src/lib/newsDesks.js')).href);
+const { buildDeskRows, deskDateParts, deskDayRange, addListBreaks, recentCutoff, monthLabel, RECENT_DAYS } = await import(pathToFileURL(path.join(here, '../src/lib/newsDesks.js')).href);
 
 const NOW = new Date('2026-10-15T12:00:00+09:00');
 const p = (slug, post_type, published_at) => ({ slug, post_type, published_at });
@@ -79,4 +79,51 @@ assert.equal(deskDayRange(null), null);
 assert.equal(deskDayRange('bad'), null);
 assert.equal(deskDayRange('2026-13-40'), null);
 
+// --- addListBreaks: 달 구분과 최근/이전 ---
+const dayEntry = (day) => ({ kind: 'day', day, showDate: true, isToday: false, business: { slug: `b-${day}` }, research: null });
+const pad = (n) => String(n).padStart(2, '0');
+
+// 빈 입력
+assert.deepEqual(addListBreaks([]), []);
+
+// 한 달 안, 14일 이하 → 달 구분 없음, 전부 최근
+let listed = addListBreaks([dayEntry('2026-11-21'), dayEntry('2026-11-20')]);
+assert.deepEqual(listed.map((e) => [e.kind, e.older]), [['day', false], ['day', false]]);
+
+// 달이 바뀌는 첫 항목 앞에 month 항목. 가장 최근 달 앞에는 없다
+listed = addListBreaks([dayEntry('2026-11-13'), dayEntry('2026-10-27'), dayEntry('2026-10-26'), dayEntry('2026-09-30')]);
+assert.deepEqual(listed.map((e) => (e.kind === 'month' ? `month:${e.month}` : e.day)), [
+  '2026-11-13', 'month:2026-10', '2026-10-27', '2026-10-26', 'month:2026-09', '2026-09-30',
+]);
+
+// 해가 바뀌는 경우
+listed = addListBreaks([dayEntry('2027-01-02'), dayEntry('2026-12-31')]);
+assert.deepEqual(listed.map((e) => (e.kind === 'month' ? `month:${e.month}` : e.day)), ['2027-01-02', 'month:2026-12', '2026-12-31']);
+
+// 최근/이전 경계: recentCutoff가 정한 날까지가 최근이다. month 항목은 뒤따르는 항목의 older를 따른다
+const twenty = Array.from({ length: 20 }, (_, i) => dayEntry(i < 10 ? `2026-11-${pad(21 - i)}` : `2026-10-${pad(40 - i)}`));
+const cutoff = recentCutoff(twenty.map((e) => e.day));
+assert.ok(typeof cutoff === 'string' && twenty.some((e) => e.day === cutoff), 'cutoff is one of the listed days');
+listed = addListBreaks(twenty);
+for (const e of listed.filter((x) => x.kind === 'day')) assert.equal(e.older, e.day < cutoff, `older flag for ${e.day}`);
+const firstOctober = listed.findIndex((e) => e.kind === 'month');
+assert.equal(listed[firstOctober].older, listed[firstOctober + 1].older, 'month marker follows the entry after it');
+assert.ok(listed.some((e) => e.older) && listed.some((e) => !e.older), '20 days: some shown, some folded');
+
+// 같은 날의 주간 정리와 날짜 줄은 같은 쪽에 놓인다
+listed = addListBreaks([{ kind: 'weekly', day: '2026-11-15', post: { slug: 'w' } }, dayEntry('2026-11-15')]);
+assert.equal(listed[0].older, listed[1].older);
+
+// 입력을 바꾸지 않는다
+const frozen = [Object.freeze(dayEntry('2026-11-21'))];
+addListBreaks(frozen);
+assert.equal('older' in frozen[0], false);
+
+assert.equal(Number.isInteger(RECENT_DAYS) && RECENT_DAYS > 0, true);
+assert.equal(recentCutoff([]), null);
+
+// --- monthLabel ---
+assert.equal(monthLabel('2026-10', 'ko'), '2026년 10월');
+assert.equal(monthLabel('2026-10', 'en'), 'October 2026');
+assert.equal(monthLabel('2027-01', 'ko'), '2027년 1월');
 console.log('news-desks-select.test.mjs passed');
