@@ -1,6 +1,6 @@
 # 뉴스 목록 읽기 개선 (B 날짜를 왼쪽으로) — Design Spec
 
-**Status:** design approved (2026-11-22), 구현 전
+**Status:** implemented (2026-11-22) — [[2026-11-22-news-list-reading]]. "최근"의 기준은 기본 제안으로 들어가 있고 Amy 확정 대기.
 **Mockup:** `.superpowers/brainstorm/newslist2/news-list-reading-v1.html` (B안)
 **관련:** [[2026-10-16-news-list-desks-design]], [[2026-11-21-news-article-reading-design]]
 
@@ -49,7 +49,7 @@
 
 - **주간 정리** `.news-desk-weekly`: 배경을 없애고 위 2px·아래 1px `--color-text-primary` 선으로 구분한다. 격자 `96px minmax(0,1fr)`.
   - 첫 칸: "주간 정리"/"Weekly"(700)와 "11.15 · 제243호"(Newsreader, muted).
-  - 둘째 칸: 기존 `NewsDeskCell`(제목, 북마크, 요약 한 줄, 읽는 시간). 칸 안의 점 라벨은 첫 칸과 겹치므로 화면에서만 숨긴다.
+  - 둘째 칸: 기존 `NewsDeskCell`(제목, 북마크, 요약 한 줄, 읽는 시간). 칸 안의 점 라벨은 첫 칸과 겹치므로 화면에서만 숨긴다. 첫 칸의 "주간 정리"는 `aria-hidden`이라 한 번만 읽힌다.
   - 다크 테마 전용 배경 규칙은 지운다.
 - **달 구분선** `.news-desk-month`: 가장 최근 달을 뺀 각 달의 첫 항목 앞에 "2026년 10월"/"October 2026"과 가는 선을 둔다.
 
@@ -57,12 +57,13 @@
 
 - 새 순수 함수 `addListBreaks(entries)`를 `frontend/src/lib/newsDesks.js`에 둔다. `buildDeskRows`의 결과를 받아 달 구분 항목(`{kind:'month'}`)을 끼우고 각 항목에 `older`(boolean)를 붙인다.
   - "최근"의 경계는 작은 함수 `recentCutoff(days)` 하나가 정한다. 기본 제안은 **발행된 날 14개**(달력 14일이 아니다)다. 최종 기준은 구현 때 Amy가 정한다.
-- `NewsDeskList`는 `older`인 항목에 `data-older="true"`를 붙이고, 목록 끝에 버튼을 둔다: "이전 기사 더 보기 N편" / "Show earlier stories N". N은 접힌 기사 수다. 접힌 것이 없으면 버튼을 렌더하지 않는다.
+- `NewsDeskList`는 `older`인 항목에 `data-older="true"`를 붙이고, 목록 끝에 버튼을 둔다: "이전 기사 더 보기 · N편" / "Show earlier stories · N". 가운뎃점은 실제 글자로 넣는다(읽기 프로그램이 "더 보기99편"으로 읽지 않게). N은 접힌 기사 수다. 접힌 것이 없으면 버튼을 렌더하지 않는다.
 - 접기는 CSS다: `.news-desks[data-mode="desks"]:not([data-expanded="true"]) [data-older="true"] { display: none }`.
   - 기사는 지금처럼 모두 DOM에 있다. 검색어가 있거나 탭이 "전체"가 아니면 `data-mode="list"`가 되어 접기가 풀리고 전체에서 찾는다. 검색 스크립트는 바꾸지 않는다.
   - 목록 모드와 펼친 뒤에는 버튼을 숨긴다.
 - 버튼 동작은 `newsDeskMode.ts`에 더한다.
-  - 누르면 `data-expanded="true"`를 쓰고 `sessionStorage`(`news-list-expanded`)에 기억한다. 초기화할 때 값이 있으면 펼친 채로 시작한다(기사를 읽고 돌아왔을 때 위치를 잃지 않게).
+  - 누르면 `data-expanded="true"`를 쓰고 `sessionStorage`(`news-list-expanded`)에 기억한다. 한 번 누르면 그 탭에서는 계속 펼친 상태다.
+  - 펼친 상태는 화면이 그려지기 전에 복원한다. 전체 로드는 `NewsDeskList` 바로 뒤의 인라인 스크립트(CSP nonce 포함)가, 페이지 전환은 `astro:before-swap`에서 들어오는 문서에 속성을 써서 한다. `astro:page-load`에서 하면 스크롤 복원보다 늦다.
   - 누른 뒤 포커스를 새로 보이는 첫 기사 링크로 옮긴다(버튼이 사라지므로).
   - `sessionStorage`를 못 쓰면 조용히 넘어간다.
 - 자바스크립트가 꺼진 환경에서는 접힌 기사를 펼칠 수 없다. 검색과 탭도 같은 조건이므로 받아들인다. 링크는 DOM에 있어 검색 엔진에는 보인다.

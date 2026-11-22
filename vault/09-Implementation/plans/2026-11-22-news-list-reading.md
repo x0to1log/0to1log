@@ -1,5 +1,7 @@
 # 뉴스 목록 읽기 개선 Implementation Plan
 
+**Status:** Task 1–6 실행 완료 (2026-11-22, `main`, push 전). Task 1 Step 5(`recentCutoff` 기준)만 Amy 확정 대기. 실행 결과는 문서 끝 참조.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 뉴스 목록에서 날짜를 왼쪽 끝으로 옮겨 모든 글을 왼쪽 정렬로 읽게 하고, 한쪽 데스크만 있는 날의 빈 칸을 없애고, 최근 기사만 먼저 보여 페이지를 줄인다.
@@ -371,7 +373,7 @@ Expected: `AssertionError … desk grid: date | business | research`
 
 - [ ] **Step 3: CSS 블록을 교체한다**
 
-`frontend/src/styles/global.css`에서 `.news-desks-heads {` 줄부터 `.newsprint-article-topline {` 줄 **바로 앞**까지(두 줄 모두 파일에 한 번씩만 있다)를 통째로 아래로 바꾼다. 그 위의 `.news-desks-note` 규칙과 그 아래의 `.newsprint-article-topline` 규칙은 건드리지 않는다.
+`frontend/src/styles/global.css`에서 줄 맨 앞에서 시작하는 `.news-desks-heads {` 규칙(같은 선택자가 뒤에 다른 선택자의 일부로 더 나온다. 첫 번째 것이다)부터 줄 맨 앞의 `.newsprint-article-topline {` **바로 앞**까지를 통째로 아래로 바꾼다. 그 위의 `.news-desks-note` 규칙과 그 아래의 `.newsprint-article-topline` 규칙은 건드리지 않는다.
 
 ```css
 .news-desks-heads {
@@ -967,3 +969,33 @@ git commit -m "feat: half-size masthead on the news list"
 git add vault/09-Implementation/plans/2026-11-22-news-list-reading-design.md vault/09-Implementation/plans/2026-11-22-news-list-reading.md
 git commit -m "docs: record the news list reading pass"
 ```
+
+---
+
+## 실행 결과 (2026-11-22)
+
+- 작업 폴더: `C:UsersamyDesktop to1log-news-list` (`main`의 worktree).
+- 테스트: 전체 실행 시 실패 목록이 시작 전 16개와 같다. `news-list-desks`, `news-desks-select` 통과.
+- 빌드: `npm run build` 오류 0.
+- 화면(개발 서버, `/ko/news/`, 2026-11-22 데이터)
+
+| 항목 | 전 | 후 |
+|---|---|---|
+| 첫 기사 위치(데스크톱 1280) | 507px | 414px |
+| 첫 기사 위치(모바일 390) | 467px | 404px |
+| 페이지 길이(데스크톱) | 11,917px | 3,197px (펼치면 13,087px) |
+| 페이지 길이(모바일) | 24,637px | 5,419px |
+| 처음 보이는 기사 | 120편 | 21편(날짜 줄 13개 + 주간 2개), 나머지 99편은 더 보기 |
+| 빈 칸 문구 | 날짜 줄 56개 중 12개 | 0 |
+
+- 확인한 동작: 한쪽만 있는 날의 넓은 칸과 라벨, 검색("Gemini" 18/120, 접혀 있던 8월 기사까지), 탭(주간 정리 20/120), 더 보기 후 포커스 이동, 기사에 들어갔다 뒤로 왔을 때 펼친 상태 유지, 다크 테마, 모바일 한 단, EN 문구("October 2026", "Show earlier stories · 99"), 용어집 목록 마스트헤드는 그대로.
+- 계획과 달라진 것(검토 결과 반영, 커밋 `fix: restore the unfolded news list before paint…`)
+  - 펼친 상태 복원을 `astro:page-load`가 아니라 인라인 스크립트와 `astro:before-swap`에서 한다.
+  - 더 보기 문구의 가운뎃점을 실제 글자로 넣었다. 주간 정리의 보이는 라벨은 `aria-hidden`.
+  - 모바일 목록 모드의 간격 중복, 주간 정리 칸의 최대 폭, 주간 정리 날짜 줄바꿈("제243/호")을 고쳤다.
+  - 북마크 버튼(44px)이 한 줄 제목의 줄 높이를 늘리던 것을 음수 여백으로 없앴다. 누르는 영역은 그대로다.
+  - Task 1 Step 5(사람이 정하는 단계)는 기본 제안으로 커밋하고 진행했다.
+- 확인하지 못한 것: 순백 테마, 키보드만으로 더 보기를 눌렀을 때의 실제 읽기 프로그램 출력.
+- 눈에 띈 것(이번 범위 밖)
+  - 기사에서 뒤로 오면 스크롤이 맨 위로 간다. 운영 사이트(바꾸기 전)에서도 같다. `NewsprintCategoryFilter`가 초기화 때 `history.replaceState(null, …)`로 Astro의 기록 상태를 지우는 것이 원인으로 보인다.
+  - `recentCutoff`는 주간 정리만 있는 날도 하루로 센다. 주간 정리 쿼리(20건)가 일간(100건)보다 훨씬 과거까지 가서, 펼친 목록의 끝부분은 달 구분선과 주간 정리만 이어진다.
