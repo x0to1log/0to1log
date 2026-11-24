@@ -1260,6 +1260,32 @@ body:has(.site-header--fixed.site-header--hidden) .persona-float--back {
   scrollbar-color: var(--color-border) transparent;
 }
 
+/* Phones: tighter cells, so most comparison tables fit the column without sideways scrolling. */
+@media (max-width: 640px) {
+  #handbook-body table {
+    font-size: 0.86em;
+  }
+
+  #handbook-body th,
+  #handbook-body td {
+    padding: 0.45rem 0.5rem;
+  }
+}
+
+/* A table that still does not fit is marked by scripts/handbookTableFit.ts and may break inside a
+   word. Never give this to every table: the browser then squeezes columns that had room. */
+#handbook-body table[data-fit="tight"] th,
+#handbook-body table[data-fit="tight"] td {
+  overflow-wrap: anywhere;
+  padding: 0.4rem 0.35rem;
+}
+
+/* The row labels keep their words whole; the other columns give way. */
+#handbook-body table[data-fit="tight"] th:first-child,
+#handbook-body table[data-fit="tight"] td:first-child {
+  overflow-wrap: break-word;
+}
+
 #handbook-body table::-webkit-scrollbar {
   height: 6px;
 }
